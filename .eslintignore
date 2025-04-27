@@ -1,0 +1,6 @@
+# .eslintignore
+node_modules
+dist
+.eslintrc.js
+src/common/constants/error-codes.ts
+*.sql

@@ -1,0 +1,21 @@
+# Node
+node_modules/
+
+# Build
+dist/
+
+# Docker
+docker/
+
+# IDE
+*.iml
+
+# Infisical
+.infisical*
+
+# Logs
+/logs/
+*.log
+
+# macOS
+.DS_Store

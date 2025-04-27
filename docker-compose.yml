@@ -1,0 +1,35 @@
+services:
+  recipot-mariadb:
+    container_name: recipot-mariadb
+    image: mariadb:10.8.2
+    ports: 
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: recipot
+      MYSQL_USER: recipot
+      MYSQL_PASSWORD: recipot1!11
+      MYSQL_ROOT_PASSWORD: recipot1!11
+      TZ: Asia/Seoul
+    volumes:
+      - ./docker/mariadb/data:/var/lib/mysql
+    networks:
+      - docker-network
+    restart: always
+
+  recipot-redis:
+    container_name: recipot-redis
+    image: redis:7.2.4-alpine3.19
+    ports:
+      - 6379:6379
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./docker/redis/data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./docker/redis/user.acl:/usr/local/etc/redis/user.acl
+    networks:
+      - docker-network
+    restart: always
+
+networks:
+  docker-network:
+    external: true
