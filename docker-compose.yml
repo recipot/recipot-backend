@@ -30,6 +30,31 @@ services:
       - docker-network
     restart: always
 
+  recipot-nginx:
+    container_name: recipot-nginx
+    image: nginx:1.25.2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - docker-network
+    restart: always
+  
+  recipot-api:
+    container_name: recipot-api
+    image: recipot-api:1.01
+    command: npm run start:dev
+    port:
+      - "8080:8080"
+    depends_on:
+      - recipot-mariadb
+      - recipot-redis
+    networks:
+      - docker-network
+    restart: always
+
 networks:
   docker-network:
     external: true
