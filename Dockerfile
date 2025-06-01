@@ -1,8 +1,8 @@
 FROM node:20.17.0 AS builder
 WORKDIR /app
 COPY . .
-RUN yarn install
-RUN yarn build
+RUN npm install
+RUN npm run build
 
 FROM node:20.17.0-alpine
 WORKDIR /app

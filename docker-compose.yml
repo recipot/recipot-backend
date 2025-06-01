@@ -44,10 +44,13 @@ services:
   
   recipot-api:
     container_name: recipot-api
-    image: recipot-api:1.01
-    command: npm run start:dev
-    port:
+    image: recipot-api:1.03
+    command: npm run start:prod
+    ports:
       - "8080:8080"
+    volumes:
+      - ./docker/log:/app/dist/log
+      - ./docker/.env:/app/.env
     depends_on:
       - recipot-mariadb
       - recipot-redis
