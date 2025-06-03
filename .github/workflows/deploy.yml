@@ -12,40 +12,57 @@ jobs:
       IMAGE_TAG: 1.01
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+      # Infisical CLI 캐시 복원
+      - name: Restore Infisical CLI from cache
+        id: cache-infisical
+        uses: actions/cache@v4
+        with:
+          path: ~/.infisical-bin/infisical
+          key: infisical-cli-cache-v1
 
-    - name: Build Docker image
-      run: |
-        docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
+      # Infisical CLI를 PATH에 추가
+      - name: Add Infisical CLI to PATH
+        run: echo "$HOME/.infisical-bin" >> $GITHUB_PATH
 
-    - name: Tag Docker image
-      run: |
-        docker tag ${{ secrets.ECR_REPOSITORY }}:latest 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-        docker tag ${{ secrets.ECR_REPOSITORY }}:latest 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+      # Infisical 로그인
+      - name: Infisical login
+        run: infisical login --token ${{ secrets.INFISICAL_SERVICE_TOKEN }}
 
-    - name: Push to ECR
-      run: |
-        docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-        docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+      # ECR 로그인
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-    - name: Deploy to EC2 via SSH
-      run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
-        chmod 600 private_key.pem
-        ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ubuntu/recipot-backend
-          docker compose -p recipot-api up -d
-        EOF
+      # Docker 이미지 빌드 및 푸시
+      - name: Build, Tag, Push Docker image
+        run: |
+          infisical run --env production -- sh -c "
+            docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
+            docker tag ${{ secrets.ECR_REPOSITORY }}:latest 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+          "
+
+      # EC2 배포
+      - name: Deploy to EC2 via SSH
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
+          chmod 600 private_key.pem
+          
+          # 원격 배포
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
+            cd /home/ubuntu/recipot-backend
+            docker compose pull
+            infisical run --env production -- docker compose up -d --force-recreate
+          EOF
