@@ -88,7 +88,6 @@ jobs:
             cd /home/ubuntu/recipot-backend
             docker compose --env-file .env.production pull
             docker compose --env-file .env.production up -d --force-recreate
-#            rm -f .env.production
           EOF
 
       # Summary에 이미지 태그 출력
