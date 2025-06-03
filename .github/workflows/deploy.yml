@@ -56,6 +56,8 @@ jobs:
             fi
           done
 
+          echo "IMAGE_TAG=$IMAGE_TAG" >> .env.production
+
       # Amazon ECR 로그인
       - name: Login to Amazon ECR
         run: |
@@ -68,8 +70,8 @@ jobs:
           docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
           docker tag ${{ secrets.ECR_REPOSITORY }}:latest \
             488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-          docker push \
-            488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
       # EC2에 배포 및 env 삭제
       - name: Deploy to EC2 via SSH

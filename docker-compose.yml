@@ -44,7 +44,7 @@ services:
   
   recipot-api:
     container_name: recipot-api
-    image: recipot-api:1.03
+    image: 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com/recipot-api:${IMAGE_TAG}
     command: yarn run start:prod
     ports:
       - "8080:8080"
