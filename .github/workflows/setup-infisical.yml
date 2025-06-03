@@ -22,4 +22,4 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.infisical-bin/infisical
-          key: infisical-cli-cache-v3
+          key: infisical-cli-cache-v1
