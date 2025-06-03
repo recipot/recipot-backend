@@ -9,13 +9,13 @@ jobs:
     steps:
       - name: Download & Install Infisical CLI
         run: |
-          curl -L https://github.com/infisical/infisical/releases/latest/download/infisical-linux-amd64 \
-            -o infisical
-          chmod +x infisical
+          curl -L https://github.com/infisical/infisical/releases/download/v0.41.6/infisical_0.41.6_linux_amd64.tar.gz -o infisical.tar.gz
+          tar -xzf infisical.tar.gz
+          chmod +x infisical_0.41.6_linux_amd64/infisical
           mkdir -p ~/.infisical-bin
-          mv infisical ~/.infisical-bin/infisical
+          mv infisical_0.41.6_linux_amd64/infisical ~/.infisical-bin/infisical
 
-      - name: Cache Infisical CLI
+      - name: Cache CLI Binary
         uses: actions/cache@v4
         with:
           path: ~/.infisical-bin/infisical
