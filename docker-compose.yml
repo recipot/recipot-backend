@@ -45,7 +45,7 @@ services:
   recipot-api:
     container_name: recipot-api
     image: recipot-api:1.03
-    command: npm run start:prod
+    command: yarn run start:prod
     ports:
       - "8080:8080"
     volumes:
