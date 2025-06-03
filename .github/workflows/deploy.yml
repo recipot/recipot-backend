@@ -34,9 +34,9 @@ jobs:
       - name: Add Infisical CLI to PATH
         run: echo "$HOME/.infisical-bin" >> $GITHUB_PATH
 
-      # Infisical 로그인
-      - name: Infisical login
-        run: infisical login --token ${{ secrets.INFISICAL_SERVICE_TOKEN }}
+      # Infisical 환경변수에 추가
+      - name: Set INFISICAL_TOKEN
+        run: echo "INFISICAL_TOKEN=${{ secrets.INFISICAL_SERVICE_TOKEN }}" >> $GITHUB_ENV
 
       # ECR 로그인
       - name: Login to Amazon ECR
