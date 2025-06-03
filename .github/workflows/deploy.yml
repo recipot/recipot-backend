@@ -28,84 +28,81 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Infisical CLI 캐시 복원
-      - name: Restore Infisical CLI from cache
-        id: cache-infisical
+      # Infisical CLI 설정
+      - name: Set up Infisical CLI
         uses: actions/cache@v4
+        id: cache-infisical
         with:
           path: ~/.infisical-bin/infisical
           key: infisical-cli-cache-v1
 
-      # CLI를 PATH에 추가
       - name: Add Infisical CLI to PATH
         run: echo "$HOME/.infisical-bin" >> $GITHUB_PATH
 
-      # Infisical 서비스 토큰 설정
       - name: Set Infisical Token
         run: echo "INFISICAL_TOKEN=${{ secrets.INFISICAL_SERVICE_TOKEN }}" >> $GITHUB_ENV
 
-      # .env.production 병합 생성 (Infisical 값만 덮어쓰기/추가)
-      - name: Merge Infisical secrets into env
-        run: |
-          if [ -f .env.production ]; then
-            if [ -s .env.production ] && [ "$(tail -c1 .env.production)" != "" ]; then
-              echo "" >> .env.production
-            fi
-          fi
-          
-          infisical export --env production --format dotenv | while read line; do
-            key=$(echo "$line" | cut -d= -f1)
-            if grep -q "^$key=" .env.production; then
-              sed -i "s|^$key=.*|$line|" .env.production
-            else
-              echo "$line" >> .env.production
-            fi
-          done
-          
-          echo "" >> .env.production
-          echo "IMAGE_TAG=$IMAGE_TAG" >> .env.production
-
-      # Amazon ECR 로그인
+      # Docker 이미지 빌드 및 푸시
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
           docker login --username AWS --password-stdin 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-      # Docker 이미지 빌드, 태그, 푸시
-      - name: Build, Tag, and Push Docker image
+      - name: Build and Push Docker image
         run: |
           FULL_REPOSITORY="488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}"
-
           docker build -t $FULL_REPOSITORY:$IMAGE_TAG -t $FULL_REPOSITORY:latest .
           docker push $FULL_REPOSITORY:$IMAGE_TAG
           docker push $FULL_REPOSITORY:latest
 
-      # EC2에 배포 및 env 삭제
-      - name: Deploy to EC2 via SSH
+      # EC2 배포
+      - name: Deploy to EC2
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
           chmod 600 private_key.pem
 
-          # .env.production 파일 전송
-          scp -o StrictHostKeyChecking=no -i private_key.pem .env.production \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/recipot-backend/.env.production
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/recipot-backend
+            
+            # Git 저장소 업데이트
             git fetch origin
             git reset --hard origin/feature/add-infisical-to-deploy
             
+            # 환경 변수 병합 함수 정의
+            merge_env_file() {
+              local env_file=".env.production"
+              if [ -f "$env_file" ]; then
+                if [ -s "$env_file" ] && [ "$(tail -c1 "$env_file")" != "" ]; then
+                  echo "" >> "$env_file"
+                fi
+              fi
+              infisical export --env production --format dotenv | while read line; do
+                local key=$(echo "$line" | cut -d= -f1)
+                if grep -q "^$key=" "$env_file"; then
+                  sed -i "s|^$key=.*|$line|" "$env_file"
+                else
+                  echo "$line" >> "$env_file"
+                fi
+              done
+              echo "" >> "$env_file"
+              echo "IMAGE_TAG=$IMAGE_TAG" >> "$env_file"
+            }
+            
+            # 환경 변수 병합 실행
+            merge_env_file
+            
+            # Docker 이미지 업데이트
             aws ecr get-login-password --region ap-northeast-2 | \
             docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
-            
-            export IMAGE_TAG=\$(grep IMAGE_TAG .env.production | cut -d= -f2)
             
             docker compose --env-file .env.production pull
             docker compose --env-file .env.production up -d --force-recreate
           EOF
 
-      # Summary에 이미지 태그 출력
-      - name: Write image tag to job summary
+      # 배포 결과 요약
+      - name: Write deployment summary
         run: |
-          echo "## 📦 Image Tag" >> $GITHUB_STEP_SUMMARY
-          echo "$IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
