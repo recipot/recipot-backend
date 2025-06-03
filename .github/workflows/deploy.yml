@@ -86,9 +86,9 @@ jobs:
             aws ecr get-login-password --region ap-northeast-2 | \
             docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
             cd /home/ubuntu/recipot-backend
-            docker compose pull
-            docker compose up -d --force-recreate
-            rm -f .env.production
+            docker compose --env-file .env.production pull
+            docker compose --env-file .env.production up -d --force-recreate
+#            rm -f .env.production
           EOF
 
       # Summary에 이미지 태그 출력

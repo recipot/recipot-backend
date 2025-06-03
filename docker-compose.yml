@@ -50,7 +50,7 @@ services:
       - "8080:8080"
     volumes:
       - ./docker/log:/app/dist/log
-#      - ./docker/.env:/app/.env
+      - ./docker/.env:/app/.env
     depends_on:
       - recipot-mariadb
       - recipot-redis
