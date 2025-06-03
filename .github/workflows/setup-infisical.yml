@@ -15,8 +15,13 @@ jobs:
           mkdir -p ~/.infisical-bin
           mv infisical_0.41.6_linux_amd64/infisical ~/.infisical-bin/infisical
 
+      # CLI 실행 확인
+      - name: Verify Infisical Installation
+        run: ~/.infisical-bin/infisical --version
+
+      # 캐시 저장
       - name: Cache CLI Binary
         uses: actions/cache@v4
         with:
           path: ~/.infisical-bin/infisical
-          key: infisical-cli-cache-v1
+          key: infisical-cli-cache-v2
