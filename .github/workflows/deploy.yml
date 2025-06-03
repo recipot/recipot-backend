@@ -87,12 +87,12 @@ jobs:
             docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
             cd /home/ubuntu/recipot-backend
             docker compose pull
-            docker compose --env-file .env.production up -d --force-recreate
+            docker compose up -d --force-recreate
             rm -f .env.production
           EOF
 
       # Summary에 이미지 태그 출력
       - name: Write image tag to job summary
         run: |
-          echo "## Docker Image Tag" >> $GITHUB_STEP_SUMMARY
-          echo "📦 IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Image Tag" >> $GITHUB_STEP_SUMMARY
+          echo "$IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
