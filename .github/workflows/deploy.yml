@@ -45,16 +45,14 @@ jobs:
         run: echo "INFISICAL_TOKEN=${{ secrets.INFISICAL_SERVICE_TOKEN }}" >> $GITHUB_ENV
 
       # .env.production 병합 생성 (Infisical 값만 덮어쓰기/추가)
-      - name: Merge Infisical secrets with .env.template
+      - name: Merge Infisical secrets into env
         run: |
-          mkdir -p env
-          cp env/.env.template env/.env.production
           infisical export --env production --format dotenv | while read line; do
             key=$(echo "$line" | cut -d= -f1)
-            if grep -q "^$key=" env/.env.production; then
-              sed -i "s|^$key=.*|$line|" env/.env.production
+            if grep -q "^$key=" .env.production; then
+              sed -i "s|^$key=.*|$line|" .env.production
             else
-              echo "$line" >> env/.env.production
+              echo "$line" >> .env.production
             fi
           done
 
