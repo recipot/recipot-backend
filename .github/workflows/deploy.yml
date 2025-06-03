@@ -67,11 +67,11 @@ jobs:
       # Docker 이미지 빌드, 태그, 푸시
       - name: Build, Tag, and Push Docker image
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
-          docker tag 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
-          docker tag 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-          docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
-          docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+          FULL_TAG=488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
+
+          docker build -t $FULL_REPOSITORY:$IMAGE_TAG -t $FULL_REPOSITORY:latest .
+          docker push $FULL_REPOSITORY:$IMAGE_TAG
+          docker push $FULL_REPOSITORY:latest
 
       # EC2에 배포 및 env 삭제
       - name: Deploy to EC2 via SSH
