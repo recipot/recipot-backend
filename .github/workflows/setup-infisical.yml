@@ -9,19 +9,17 @@ jobs:
     steps:
       - name: Download & Install Infisical CLI
         run: |
-          curl -L https://github.com/Infisical/infisical/releases/download/infisical-cli%2Fv0.41.6/infisical_0.41.6_linux_amd64.tar.gz
+          curl -L https://github.com/Infisical/infisical/releases/download/infisical-cli%2Fv0.41.6/infisical_0.41.6_linux_amd64.tar.gz -o infisical.tar.gz
           tar -xzf infisical.tar.gz
-          chmod +x infisical_0.41.6_linux_amd64/infisical
+          chmod +x infisical
           mkdir -p ~/.infisical-bin
-          mv infisical_0.41.6_linux_amd64/infisical ~/.infisical-bin/infisical
+          mv infisical ~/.infisical-bin/infisical
 
-      # CLI 실행 확인
-      - name: Verify Infisical Installation
+      - name: Verify Infisical CLI
         run: ~/.infisical-bin/infisical --version
 
-      # 캐시 저장
       - name: Cache CLI Binary
         uses: actions/cache@v4
         with:
           path: ~/.infisical-bin/infisical
-          key: infisical-cli-cache-v2
+          key: infisical-cli-cache-v3
