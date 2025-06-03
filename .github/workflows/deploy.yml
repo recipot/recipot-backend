@@ -2,7 +2,7 @@ name: recipot CI/CD
 
 on:
   push:
-    branches: [feat/deploy]
+    branches: [feature/add-infisical-to-deploy]
 
 jobs:
   deploy:
