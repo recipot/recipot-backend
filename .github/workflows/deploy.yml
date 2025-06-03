@@ -47,6 +47,12 @@ jobs:
       # .env.production 병합 생성 (Infisical 값만 덮어쓰기/추가)
       - name: Merge Infisical secrets into env
         run: |
+          if [ -f .env.production ]; then
+            if [ -s .env.production ] && [ "$(tail -c1 .env.production)" != "" ]; then
+              echo "" >> .env.production
+            fi
+          fi
+          
           infisical export --env production --format dotenv | while read line; do
             key=$(echo "$line" | cut -d= -f1)
             if grep -q "^$key=" .env.production; then
@@ -55,7 +61,8 @@ jobs:
               echo "$line" >> .env.production
             fi
           done
-
+          
+          echo "" >> .env.production
           echo "IMAGE_TAG=$IMAGE_TAG" >> .env.production
 
       # Amazon ECR 로그인
