@@ -67,7 +67,7 @@ jobs:
       # Docker 이미지 빌드, 태그, 푸시
       - name: Build, Tag, and Push Docker image
         run: |
-          $FULL_REPOSITORY=488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
+          FULL_REPOSITORY=488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
 
           docker build -t $FULL_REPOSITORY:$IMAGE_TAG -t $FULL_REPOSITORY:latest .
           docker push $FULL_REPOSITORY:$IMAGE_TAG
