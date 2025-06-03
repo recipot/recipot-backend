@@ -50,7 +50,7 @@ jobs:
           # Infisical 토큰을 환경 변수로 전달
           export INFISICAL_TOKEN=${{ secrets.INFISICAL_SERVICE_TOKEN }}
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/recipot-backend
           
             # Git 저장소 업데이트
