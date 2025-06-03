@@ -40,4 +40,4 @@ infisical init
 ```
 
 ### 5. 도커 이미지
-docker build --platform=linux/amd64 -t recipot-api:1.01 .
+docker build --platform=linux/amd64 -t recipot-api:1.03 .
