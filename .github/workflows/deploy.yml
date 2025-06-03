@@ -47,7 +47,6 @@ jobs:
         chmod 600 private_key.pem
         ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
           cd /home/ubuntu/recipot-backend
-          docker-compose pull recipot-api
-          docker-compose up -d
+          docker-compose -p recipot-api pull recipot-api
+          docker-compose -p recipot-api up -d recipot-api
         EOF
-  
