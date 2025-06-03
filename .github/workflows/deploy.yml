@@ -49,6 +49,7 @@ jobs:
           infisical run --env production -- sh -c "
             docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
             docker tag ${{ secrets.ECR_REPOSITORY }}:latest 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            docker tag ${{ secrets.ECR_REPOSITORY }}:latest 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
             docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             docker push 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
           "
