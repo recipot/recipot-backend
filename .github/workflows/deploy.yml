@@ -1,0 +1,71 @@
+name: recipot CI/CD
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Git 리포지토리 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 브랜치명-SHA7 형식 이미지 태그 설정
+      - name: Set IMAGE_TAG
+        run: |
+          BRANCH_NAME="${GITHUB_REF_NAME//\//-}"
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          echo "IMAGE_TAG=${BRANCH_NAME}-${SHORT_SHA}" >> $GITHUB_ENV
+
+      # AWS 인증 구성
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Docker 이미지 빌드 및 푸시
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Build and Push Docker image
+        run: |
+          FULL_REPOSITORY="488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}"
+          docker build -t $FULL_REPOSITORY:$IMAGE_TAG -t $FULL_REPOSITORY:latest .
+          docker push $FULL_REPOSITORY:$IMAGE_TAG
+          docker push $FULL_REPOSITORY:latest
+
+      # EC2 배포
+      - name: Deploy to EC2
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            cd /home/ubuntu/recipot-backend
+            
+            # Git 저장소 업데이트
+            git fetch origin
+            git reset --hard origin/feature/add-infisical-to-deploy
+            
+            # Docker 이미지 업데이트
+            aws ecr get-login-password --region ap-northeast-2 | \
+            docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
+            
+            # Infisical run으로 환경 변수 주입하면서 Docker Compose 실행
+            IMAGE_TAG=$IMAGE_TAG infisical run --env=Production --path=/env --token=${{ secrets.INFISICAL_SERVICE_TOKEN }} -- docker compose up -d --force-recreate
+          EOF
+
+      # 배포 결과 요약
+      - name: Write deployment summary
+        run: |
+          echo "## 📦 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY

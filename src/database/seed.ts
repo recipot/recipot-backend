@@ -1,5 +1,5 @@
 import { UserEntity } from './entity/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import dataSource from './data-source';
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { winstonConfig } from '@/common/logger/winston.config';
