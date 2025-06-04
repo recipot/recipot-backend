@@ -1,7 +1,7 @@
 ---
 name: Issue Template
 about: 공통 이슈 등록 템플릿입니다. (Feat, Test 등 사용)
-title: "[Label] Write a title"
+title: "Write a title"
 labels: ''
 assignees: ''
 
