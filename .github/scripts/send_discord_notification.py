@@ -2,6 +2,7 @@ import os
 import json
 import requests
 from datetime import datetime
+import pytz
 
 # 환경 변수 로딩
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -89,7 +90,10 @@ def main():
         return
 
 def format_datetime(dt):
-    return dt.strftime("%Y.%m.%d %p %I:%M").replace("AM", "오전").replace("PM", "오후")
+    # UTC를 한국 시간(KST)으로 변환
+    kst = pytz.timezone('Asia/Seoul')
+    dt_kst = dt.replace(tzinfo=pytz.UTC).astimezone(kst)
+    return dt_kst.strftime("%Y.%m.%d %p %I:%M").replace("AM", "오전").replace("PM", "오후")
 
 def get_discord_id(github_id):
     url = f"https://api.notion.com/v1/databases/{NOTION_DB_ID}/query"
