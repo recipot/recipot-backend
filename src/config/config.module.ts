@@ -3,6 +3,8 @@ import { loadConfig } from '@/config/config.loader';
 import { ConfigService } from '@/config/config.service';
 import { ConfigModuleOptions } from '@nestjs/config';
 
+const ENV = process.env.NODE_ENV || 'development';
+
 @Module({})
 export class ConfigModule {
   public static forRootAsync(options: ConfigModuleOptions = {}) {
@@ -19,6 +21,10 @@ export class ConfigModule {
       module: ConfigModule,
       providers: [provider],
       exports: [provider],
+      envFilePath: [
+        `.env.${ENV}`, // ex) .env.dev 또는 .env.production
+        '.env',
+      ],
     };
   }
 }

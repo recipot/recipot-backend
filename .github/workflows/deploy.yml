@@ -47,45 +47,20 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
           chmod 600 private_key.pem
 
-          # Infisical 토큰을 환경 변수로 전달
-          export INFISICAL_TOKEN=${{ secrets.INFISICAL_SERVICE_TOKEN }}
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             cd /home/ubuntu/recipot-backend
-          
+            
             # Git 저장소 업데이트
             git fetch origin
             git reset --hard origin/feature/add-infisical-to-deploy
-          
-            # 환경 변수 병합 함수 정의
-            merge_env_file() {
-              local env_file=".env.production"
-              if [ -f "$env_file" ]; then
-                if [ -s "$env_file" ] && [ "$(tail -c1 "$env_file")" != "" ]; then
-                  echo "" >> "$env_file"
-                fi
-              fi
-              INFISICAL_TOKEN=$INFISICAL_TOKEN infisical export --env production --format dotenv | while read line; do
-                local key=$(echo "$line" | cut -d= -f1)
-                if grep -q "^$key=" "$env_file"; then
-                  sed -i "s|^$key=.*|$line|" "$env_file"
-                else
-                  echo "$line" >> "$env_file"
-                fi
-              done
-              echo "" >> "$env_file"
-              echo "IMAGE_TAG=$IMAGE_TAG" >> "$env_file"
-            }
-          
-            # 환경 변수 병합 실행
-            merge_env_file
-          
+            
             # Docker 이미지 업데이트
             aws ecr get-login-password --region ap-northeast-2 | \
             docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
-          
-            docker compose --env-file .env.production pull
-            docker compose --env-file .env.production up -d --force-recreate
+            
+            # Infisical run으로 환경 변수 주입하면서 Docker Compose 실행
+            IMAGE_TAG=$IMAGE_TAG infisical run --env production -- docker compose pull
+            IMAGE_TAG=$IMAGE_TAG infisical run --env production -- docker compose up -d --force-recreate
           EOF
 
       # 배포 결과 요약

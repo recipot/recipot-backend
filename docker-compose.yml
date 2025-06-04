@@ -46,11 +46,23 @@ services:
     container_name: recipot-api
     image: 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com/my-project-api:${IMAGE_TAG}
     command: yarn run start:prod
+    env_file:
+      - .env
+      - .env.production
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - REDIS_CONNECTION_HOST=${REDIS_CONNECTION_HOST}
+      - REDIS_CONNECTION_PWD=${REDIS_CONNECTION_PWD}
+      - IMAGE_TAG=${IMAGE_TAG}
     ports:
       - "8080:8080"
     volumes:
       - ./docker/log:/app/dist/log
-      - ./docker/.env:/app/.env
     depends_on:
       - recipot-mariadb
       - recipot-redis
