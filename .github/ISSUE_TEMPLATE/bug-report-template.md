@@ -1,7 +1,7 @@
 ---
 name: Bug Report Template
 about: 버그 관련 이슈 등록 템플릿입니다.
-title: "[Bug] Write a title"
+title: "Write a title"
 labels: "\U0001F41E BugFix"
 assignees: ''
 
