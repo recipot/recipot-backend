@@ -54,7 +54,7 @@ def main():
         msg_title = f"🚀 {assignees}님이 새로운 PR을 생성했습니다!"
         msg_body = (f"👀 **리뷰어:** {formatted_reviewer}"
                     f"\n🕒 **등록 시간:** {format_datetime(dt)}"
-                    f"\n🔀 **브랜치:** `{base}` ← `{head}"
+                    f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
                     f"\n💡 [PR 보러 가기]({url})")
 
         send_discord_embed(msg_title, msg_body)
@@ -70,16 +70,16 @@ def main():
 
         pr_author_id = get_discord_id(pr["user"]["login"]) or pr["user"]["login"]
         assignees = f"<@{pr_author_id}>" if str(pr_author_id).startswith("1") else pr_author_id
-        
+
         reviewers = [get_discord_id(r["login"]) or r["login"] for r in pr.get("requested_reviewers", [])]
         formatted_reviewer = ", ".join([f"<@{r}>" if r.startswith("1") else r for r in reviewers]) or "없음"
 
         msg_title = "✅ PR 리뷰가 완료되었습니다!"
         msg_body = (
             f"👤 **담당자:** {assignees}"
-            f"\n👀 **리뷰어:** {formatted_reviewers}"
+            f"\n👀 **리뷰어:** {formatted_reviewer}"
             f"\n🕒 **등록 시간:** {format_datetime(dt)}"
-            f"\n🔀 **브랜치:** `{base}` ← `{head}"
+            f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
             f"\n🎉 [PR 보러 가기]({url}) 이제 머지 타임입니다 🕺"
         )
         send_discord_embed(msg_title, msg_body)
