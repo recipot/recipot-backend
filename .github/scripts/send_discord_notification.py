@@ -77,7 +77,7 @@ def main():
         msg_title = "✅ PR 리뷰가 완료되었습니다!"
         msg_body = (
             f"👤 **담당자:** {assignees}"
-            f"\n👀 **리뷰어:** {formatted_reviewers}"
+            f"\n👀 **리뷰어:** {formatted_reviewer}"
             f"\n🕒 **등록 시간:** {format_datetime(dt)}"
             f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
             f"\n🎉 [PR 보러 가기]({url}) 이제 머지 타임입니다 🕺"
