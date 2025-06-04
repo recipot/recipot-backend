@@ -19,3 +19,7 @@ docker/
 
 # macOS
 .DS_Store
+
+CLAUDE.md
+.claude
+*.pem

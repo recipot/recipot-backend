@@ -2,7 +2,7 @@ import { Seeder } from 'typeorm-extension';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@/database/entity/user.entity';
 import { LoginEntity } from '@/database/entity/login.entity';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 export default class AdminSeeder implements Seeder {
   async run(dataSource: DataSource): Promise<void> {
