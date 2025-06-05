@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpStatus,
   Post,
   Put,
   Delete,
@@ -16,7 +15,6 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
-  ApiResponse,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';

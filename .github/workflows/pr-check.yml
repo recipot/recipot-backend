@@ -1,0 +1,144 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # 커밋 메시지 형식 검증
+  commit-message-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message format
+        run: |
+          # 허용된 커밋 타입 패턴 정의
+          PATTERN="^(test|feat|refactor|fix|docs|init)(\(.+\))?: .{1,50}"
+          
+          # PR의 모든 커밋 메시지 검사
+          INVALID_COMMITS=""
+          
+          for commit in $(git rev-list origin/${{ github.base_ref }}..${{ github.head_ref }}); do
+            COMMIT_MSG=$(git log --format=%s -n 1 $commit)
+            echo "Checking commit: $COMMIT_MSG"
+            
+            if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+              INVALID_COMMITS="$INVALID_COMMITS\n- $COMMIT_MSG"
+            fi
+          done
+          
+          if [ -n "$INVALID_COMMITS" ]; then
+            echo "❌ Invalid commit message format detected:"
+            echo -e "$INVALID_COMMITS"
+            echo ""
+            echo "✅ Valid format examples:"
+            echo "- feat: 새로운 사용자 인증 기능 추가"
+            echo "- fix: 로그인 버그 수정"
+            echo "- docs: README 업데이트"
+            echo "- test: 사용자 API 테스트 추가"
+            echo "- refactor: 코드 구조 개선"
+            echo "- init: 프로젝트 초기 설정"
+            exit 1
+          else
+            echo "✅ All commit messages follow conventional format"
+          fi
+
+  # 코드 품질 검사
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: |
+          echo "🔍 Running ESLint..."
+          npm run lint
+
+      - name: Run Prettier check
+        run: |
+          echo "🎨 Checking code formatting..."
+          npx prettier --check "src/**/*.ts" "test/**/*.ts" --ignore-path .prettierignore
+
+      - name: Build project
+        run: |
+          echo "🏗️ Building project..."
+          npm run build
+
+  # 테스트 실행 (DB, middleware 연결 제외)
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests (without DB)
+        run: |
+          echo "🧪 Running unit tests..."
+          npm test
+
+      - name: Generate test coverage
+        run: |
+          echo "📊 Generating test coverage..."
+          npm run test:cov
+
+  # PR 요약 생성
+  pr-summary:
+    runs-on: ubuntu-latest
+    needs: [commit-message-check, quality-check, test]
+    if: always()
+    steps:
+      - name: PR 요약 생성
+        run: |
+          echo "## 🔍 PR 품질 검사 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.commit-message-check.result }}" == "success" ]; then
+            echo "✅ **커밋 메시지**: 모든 커밋이 규칙을 준수합니다" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **커밋 메시지**: 일부 커밋이 규칙을 위반했습니다" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.quality-check.result }}" == "success" ]; then
+            echo "✅ **코드 품질**: ESLint, Prettier, 빌드가 성공했습니다" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **코드 품질**: 린트 또는 빌드에서 문제가 발견되었습니다" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ **테스트**: 모든 테스트가 통과했습니다" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **테스트**: 일부 테스트가 실패했습니다" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 다음 단계" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.commit-message-check.result }}" == "success" ] && [ "${{ needs.quality-check.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ]; then
+            echo "🎉 **병합 준비 완료!** 모든 검사가 성공적으로 통과했습니다." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🔧 **조치 필요** - 병합하기 전에 실패한 검사를 수정해주세요." >> $GITHUB_STEP_SUMMARY
+          fi
