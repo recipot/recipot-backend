@@ -59,7 +59,8 @@ jobs:
             docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
             
             # Infisical run으로 환경 변수 주입하면서 Docker Compose 실행
-            IMAGE_TAG=$IMAGE_TAG infisical run --env=prod --path=/env --token=${{ secrets.INFISICAL_SERVICE_TOKEN }} -- docker compose up -d --force-recreate
+            IMAGE_TAG=$IMAGE_TAG infisical run --env=prod --path=/env --token=${{ secrets.INFISICAL_SERVICE_TOKEN }} docker-compose pull recipot-api
+            IMAGE_TAG=$IMAGE_TAG infisical run --env=prod --path=/env --token=${{ secrets.INFISICAL_SERVICE_TOKEN }} docker-compose up -d --no-deps recipot-api
           EOF
 
       # 배포 결과 요약

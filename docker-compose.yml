@@ -12,6 +12,12 @@ services:
       TZ: Asia/Seoul
     volumes:
       - ./docker/mariadb/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - docker-network
     restart: always
@@ -26,6 +32,12 @@ services:
       - ./docker/redis/data:/data
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
       - ./docker/redis/user.acl:/usr/local/etc/redis/user.acl
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       - docker-network
     restart: always
@@ -38,6 +50,12 @@ services:
       - "443:443"
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     networks:
       - docker-network
     restart: always
@@ -63,6 +81,12 @@ services:
       - "8080:8080"
     volumes:
       - ./docker/log:/app/dist/log
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
       - recipot-mariadb
       - recipot-redis
