@@ -49,11 +49,20 @@ def main():
         base = pr["base"]["ref"]    # 목적지 브랜치 (ex: main)
         head = pr["head"]["ref"]    # 원본 브랜치 (ex: feature/new-api)
 
-        reviewers = [get_discord_id(r["login"]) or r["login"] for r in pr.get("requested_reviewers", [])]
-        formatted_reviewer = ", ".join([f"<@{r}>" if r.startswith("1") else r for r in reviewers]) or "없음"
+        # 리뷰어들의 Discord ID 매핑 및 멘션 포맷팅
+        reviewers_info = []
+        for reviewer in pr.get("requested_reviewers", []):
+            reviewer_discord_id = get_discord_id(reviewer["login"])
+            if reviewer_discord_id and reviewer_discord_id.isdigit():
+                reviewers_info.append(f"<@{reviewer_discord_id}>")
+            else:
+                reviewers_info.append(reviewer["login"])
+        
+        formatted_reviewer = ", ".join(reviewers_info) if reviewers_info else "없음"
 
-        msg_title = f"🚀 {assignees}님이 새로운 PR을 생성했습니다!"
-        msg_body = (f"👀 **리뷰어:** {formatted_reviewer}"
+        msg_title = "🚀 새로운 PR을 생성했습니다!"
+        msg_body = (f"👤 **작성자:** {assignees}"
+                    f"\n👀 **리뷰어:** {formatted_reviewer}"
                     f"\n🕒 **등록 시간:** {format_datetime(dt)}"
                     f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
                     f"\n💡 [PR 보러 가기]({url})")
@@ -70,10 +79,15 @@ def main():
         head = pr["head"]["ref"]
 
         pr_author_id = get_discord_id(pr["user"]["login"]) or pr["user"]["login"]
-        assignees = f"<@{pr_author_id}>" if str(pr_author_id).startswith("1") else pr_author_id
+        assignees = f"<@{pr_author_id}>" if str(pr_author_id).isdigit() else pr_author_id
 
-        reviewers = [get_discord_id(r["login"]) or r["login"] for r in pr.get("requested_reviewers", [])]
-        formatted_reviewer = ", ".join([f"<@{r}>" if r.startswith("1") else r for r in reviewers]) or "없음"
+        # 실제 리뷰를 작성한 사람 정보
+        reviewer_github_id = event["review"]["user"]["login"]
+        reviewer_discord_id = get_discord_id(reviewer_github_id)
+        if reviewer_discord_id and reviewer_discord_id.isdigit():
+            formatted_reviewer = f"<@{reviewer_discord_id}>"
+        else:
+            formatted_reviewer = reviewer_github_id
 
         msg_title = "✅ PR 리뷰가 완료되었습니다!"
         msg_body = (
