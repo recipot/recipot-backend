@@ -1,0 +1,43 @@
+name: EC2 Disk Cleanup
+
+on:
+  schedule:
+    - cron: '0 */12 * * *' # 12시간마다 실행 (UTC 기준)
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Cleanup disk on EC2
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            echo "=== Docker system prune ==="
+            docker system prune -af
+
+            echo "=== Docker volume prune ==="
+            docker volume prune -f
+
+            echo "=== Remove dangling images ==="
+            docker image prune -af
+
+            echo "=== Remove exited containers ==="
+            docker container prune -f
+
+            echo "=== Clean apt cache ==="
+            sudo apt-get clean
+
+            echo "=== Show disk usage ==="
+            df -h
+          EOF
