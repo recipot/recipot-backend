@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# Logs
+*.log
+
+# Error codes
+src/common/constants/error-codes.ts
+
+# Generated files
+*.generated.ts
+*.d.ts
+
+# Package lock files
+package-lock.json
+yarn.lock
