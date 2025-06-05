@@ -72,7 +72,7 @@ jobs:
       - name: Run Prettier check
         run: |
           echo "🎨 Checking code formatting..."
-          npx prettier --check "src/**/*.ts" "test/**/*.ts"
+          npx prettier --check "src/**/*.ts" "test/**/*.ts" --ignore-path .prettierignore
 
       - name: Build project
         run: |
