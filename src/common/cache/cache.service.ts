@@ -17,4 +17,15 @@ export class CacheService {
   public async del(key: string): Promise<void> {
     await this.cache.del(key);
   }
+
+  public async ping(): Promise<void> {
+    const testKey = 'health-check';
+    const testValue = 'ping';
+    await this.cache.set(testKey, testValue, 1000);
+    const result = await this.cache.get(testKey);
+    if (result !== testValue) {
+      throw new Error('Redis ping failed');
+    }
+    await this.cache.del(testKey);
+  }
 }

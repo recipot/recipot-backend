@@ -19,7 +19,7 @@
 npm install
 
 # 2. Docker 컨테이너 실행 (DB, Redis)
-docker-compose -f docker-compose.yml -p recipot up -d
+docker-compose -f docker-compose.dev.yml up -d
 docker network create docker-network
 
 # 3. 개발 서버 실행
@@ -115,8 +115,8 @@ npm run migration:create  # 새 마이그레이션 생성
 
 | 서비스 | URL | 설명 |
 |--------|-----|------|
-| 📖 **Swagger UI** | http://localhost:8080/api-docs | API 문서 |
-| 💚 **Health Check** | http://localhost:8080/health | 상태 확인 |
+| 📖 **Swagger UI** | http://3.34.40.123/api-docs | API 문서 |
+| 💚 **Health Check** | http://3.34.40.123/health | 상태 확인 |
 
 </div>
 

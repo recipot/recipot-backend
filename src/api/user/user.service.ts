@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as brcypt from 'bcryptjs';
-import { CacheService } from '@/cache/cache.service';
+import { CacheService } from '@/common/cache/cache.service';
 import { JwtToken } from '@/api/jwt/jwt.dto';
 import {
   AccessTokenPayload,
