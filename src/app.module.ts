@@ -6,12 +6,13 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 import { UserModule } from '@/api/user/user.module';
 import { BoardModule } from '@/api/board/board.module';
-import { CacheModule } from '@/cache/cache.module';
+import { CacheModule } from '@/common/cache/cache.module';
 import { DatabaseModule } from '@/database/database.module';
 import { GlobalExceptionFilter } from '@/common/filters/global-exception.filter';
 import { LoggerModule } from '@/common/logger/logger.module';
 import { SocialLoginModule } from './api/social-login/social-login.module';
 import { LoginModule } from './api/login/login.module';
+import { HealthModule } from '@/api/health/health.module';
 
 export const FeatureModules = [
   UserModule,
@@ -21,6 +22,7 @@ export const FeatureModules = [
   CacheModule,
   DatabaseModule,
   LoggerModule,
+  HealthModule,
 ];
 
 @Module({
