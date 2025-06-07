@@ -8,7 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # docs 커밋일 때 배포 건너뛰기
-    if: '!contains(github.event.head_commit.message, "docs:")'
+    if: "!contains(github.event.head_commit.message, 'docs:')"
 
     steps:
       # Git 리포지토리 체크아웃
