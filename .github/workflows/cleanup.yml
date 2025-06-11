@@ -2,7 +2,7 @@ name: EC2 Disk Cleanup
 
 on:
   schedule:
-    - cron: '0 */12 * * *' # 12시간마다 실행 (UTC 기준)
+    - cron: '0 1 * * *' # 매일 01:00 (UTC, 한국시간 10:00)
   workflow_dispatch:
 
 jobs:
@@ -18,11 +18,24 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Cleanup disk on EC2
+        id: disk_cleanup
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > private_key.pem
           chmod 600 private_key.pem
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          # EC2에서 청소 및 정보 수집, 결과를 로컬로 복사
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'bash -s' << 'ENDSSH'
+            KST_TIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M:%S")
+            BEFORE=$(df -h / | tail -1)
+            BEFORE_USAGE=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+            echo "KST_TIME=$KST_TIME" > /tmp/cleanup_status.txt
+            echo "BEFORE=$BEFORE" >> /tmp/cleanup_status.txt
+            if [ "$BEFORE_USAGE" -le 30 ]; then
+              echo "CLEANED=0" >> /tmp/cleanup_status.txt
+              echo "AFTER=$BEFORE" >> /tmp/cleanup_status.txt
+              exit 0
+            fi
+
             echo "=== Docker system prune ==="
             docker system prune -af
 
@@ -38,6 +51,37 @@ jobs:
             echo "=== Clean apt cache ==="
             sudo apt-get clean
 
-            echo "=== Show disk usage ==="
-            df -h
-          EOF
+            AFTER=$(df -h / | tail -1)
+            echo "CLEANED=1" >> /tmp/cleanup_status.txt
+            echo "AFTER=$AFTER" >> /tmp/cleanup_status.txt
+          ENDSSH
+
+          scp -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/cleanup_status.txt cleanup_status.txt
+
+          KST_TIME=$(grep KST_TIME cleanup_status.txt | cut -d= -f2-)
+          BEFORE=$(grep BEFORE cleanup_status.txt | cut -d= -f2-)
+          AFTER=$(grep AFTER cleanup_status.txt | cut -d= -f2- | tail -1)
+          CLEANED=$(grep CLEANED cleanup_status.txt | cut -d= -f2)
+
+          {
+            echo "## EC2 Disk Cleanup Summary"
+            echo ""
+            echo "**작업 실행 시간 (KST):** $KST_TIME"
+            echo ""
+            echo "**청소 전 디스크 상태:**"
+            echo "\`\`\`"
+            echo "$BEFORE"
+            echo "\`\`\`"
+            if [ "$CLEANED" = "1" ]; then
+              echo ""
+              echo "**청소 후 디스크 상태:**"
+              echo "\`\`\`"
+              echo "$AFTER"
+              echo "\`\`\`"
+              echo ""
+              echo ":white_check_mark: 디스크 청소가 실행되었습니다."
+            else
+              echo ""
+              echo ":information_source: 디스크 사용량이 30% 이하라서 청소를 수행하지 않았습니다."
+            fi
+          } >> $GITHUB_STEP_SUMMARY
