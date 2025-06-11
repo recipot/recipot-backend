@@ -115,7 +115,7 @@ npm run migration:create  # 새 마이그레이션 생성
 
 | 서비스 | URL | 설명 |
 |--------|-----|------|
-| 📖 **Swagger UI** | http://3.34.40.123/api-docs | API 문서 |
+| 📖 **Swagger UI** | http://3.34.40.123/api/document | API 문서 |
 | 💚 **Health Check** | http://3.34.40.123/health | 상태 확인 |
 
 </div>
