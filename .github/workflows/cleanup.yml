@@ -1,5 +1,5 @@
 name: EC2 Disk Cleanup
-
+ 
 on:
   schedule:
     - cron: '0 1 * * *' # 매일 01:00 (UTC, 한국시간 10:00)
