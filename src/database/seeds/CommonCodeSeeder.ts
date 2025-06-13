@@ -1,17 +1,12 @@
-import { Seeder } from 'typeorm-extension';
-import { DataSource } from 'typeorm';
 import { CommonCodeGroupEntity } from '@/database/entity/common-code-group.entity';
 import { CommonCodeEntity } from '@/database/entity/common-code.entity';
+import { DataSource } from 'typeorm';
+import { Seeder } from 'typeorm-extension';
 
 export default class CommonCodeSeeder implements Seeder {
+  private static readonly SYSTEM_USER = 'SYSTEM';
+
   async run(dataSource: DataSource): Promise<void> {
-    const groupRepo = dataSource.getRepository(CommonCodeGroupEntity);
-    dataSource.getRepository(CommonCodeEntity);
-    const created_by = 'SYSTEM';
-
-    const exists = await groupRepo.findOneBy({ group_code: 'C01' });
-    if (exists) return;
-
     // 그룹 데이터 정의
     const groupRows = [
       ['C01', 'COOKING_LEVEL', '요리 실력 구분'],
@@ -39,28 +34,42 @@ export default class CommonCodeSeeder implements Seeder {
       ['J01006', 'J01', '기타', '직업'],
     ];
 
-    const groupData = groupRows.map(([code, name, remark]) => ({
-      group_code: code,
-      group_name: name,
-      remark,
-      use_yn: 'Y',
-      created_by,
-    }));
-
-    const codeData = codeRows.map(([code, group, name, remark], idx) => ({
-      code,
-      group_code: group,
-      name,
-      remark,
-      sort_order: idx + 1,
-      use_yn: 'Y',
-      depth: 1,
-      created_by,
-    }));
-
     await dataSource.transaction(async (manager) => {
-      await manager.getRepository(CommonCodeGroupEntity).save(groupData);
-      await manager.getRepository(CommonCodeEntity).save(codeData);
+      // 각 그룹별로 존재 여부 확인 후 삽입
+      for (const [code, name, remark] of groupRows) {
+        const existingGroup = await manager
+          .getRepository(CommonCodeGroupEntity)
+          .findOneBy({ group_code: code });
+        if (!existingGroup) {
+          await manager.getRepository(CommonCodeGroupEntity).save({
+            group_code: code,
+            group_name: name,
+            remark,
+            use_yn: 'Y',
+            created_by: CommonCodeSeeder.SYSTEM_USER,
+          });
+        }
+      }
+
+      // 각 코드별로 존재 여부 확인 후 삽입
+      for (const [code, group, name, remark] of codeRows) {
+        const existingCode = await manager
+          .getRepository(CommonCodeEntity)
+          .findOneBy({ code });
+        if (!existingCode) {
+          const sortOrder = codeRows.findIndex(([c]) => c === code) + 1;
+          await manager.getRepository(CommonCodeEntity).save({
+            code,
+            group_code: group,
+            name,
+            remark,
+            sort_order: sortOrder,
+            use_yn: 'Y',
+            depth: 1,
+            created_by: CommonCodeSeeder.SYSTEM_USER,
+          });
+        }
+      }
     });
   }
 }
