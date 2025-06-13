@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { SocialLoginEntity } from '@/database/entity/social-login.entity';
 import { SocialLoginCustomRepository } from './social-login.repository';
 
 @Module({
-  imports: [],
+  imports: [TypeOrmModule.forFeature([SocialLoginEntity])],
   controllers: [],
   providers: [SocialLoginCustomRepository],
   exports: [SocialLoginCustomRepository],
