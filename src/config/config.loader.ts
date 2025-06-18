@@ -38,5 +38,14 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
           : undefined,
       },
     },
+
+    db: {
+      type: env.DB_TYPE ?? 'mysql',
+      host: env.DB_HOST,
+      port: env.DB_PORT ? Number(env.DB_PORT) : 3306,
+      username: env.DB_USERNAME,
+      password: env.DB_PASSWORD,
+      database: env.DB_DATABASE,
+    },
   };
 };
