@@ -64,7 +64,7 @@ def main():
         msg_body = (f"👤 **작성자:** {assignees}"
                     f"\n👀 **리뷰어:** {formatted_reviewer}"
                     f"\n🕒 **등록 시간:** {format_datetime(dt)}"
-                    f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
+                    f"\n🔀 **브랜치:** {base} ← {head}"
                     f"\n💡 [PR 보러 가기]({url})")
 
         send_discord_embed(msg_title, msg_body)
@@ -94,7 +94,7 @@ def main():
             f"👤 **담당자:** {assignees}"
             f"\n👀 **리뷰어:** {formatted_reviewer}"
             f"\n🕒 **등록 시간:** {format_datetime(dt)}"
-            f"\n🔀 **브랜치:** ’{base}’ ← ’{head}’"
+            f"\n🔀 **브랜치:** {base} ← {head}"
             f"\n🎉 [PR 보러 가기]({url}) 이제 머지 타임입니다 🕺"
         )
         send_discord_embed(msg_title, msg_body)
