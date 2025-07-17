@@ -52,12 +52,13 @@ export default class CommonCodeSeeder implements Seeder {
       }
 
       // 각 코드별로 존재 여부 확인 후 삽입
-      for (const [code, group, name, remark] of codeRows) {
+      for (let i = 0; i < codeRows.length; i++) {
+        const [code, group, name, remark] = codeRows[i];
         const existingCode = await manager
           .getRepository(CommonCodeEntity)
           .findOneBy({ code });
         if (!existingCode) {
-          const sortOrder = codeRows.findIndex(([c]) => c === code) + 1;
+          const sortOrder = i + 1;
           await manager.getRepository(CommonCodeEntity).save({
             code,
             group_code: group,
