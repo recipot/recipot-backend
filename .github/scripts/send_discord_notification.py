@@ -83,6 +83,12 @@ def main():
 
         # 실제 리뷰를 작성한 사람 정보
         reviewer_github_id = event["review"]["user"]["login"]
+
+        # coderabbitai[bot]의 리뷰는 알림을 보내지 않음
+        if reviewer_github_id == "coderabbitai[bot]":
+            print("Coderabbit bot review, skipping Discord notification.")
+            return
+
         reviewer_discord_id = get_discord_id(reviewer_github_id)
         if reviewer_discord_id and reviewer_discord_id.isdigit():
             formatted_reviewer = f"<@{reviewer_discord_id}>"
