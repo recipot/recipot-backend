@@ -120,7 +120,7 @@ npm run migration:create  # 새 마이그레이션 생성
 
 </div>
 
-## 👥 기여자
+## 👥 기여자 
 
 <div align="center">
 
