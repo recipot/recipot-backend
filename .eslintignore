@@ -4,3 +4,4 @@ dist
 .eslintrc.js
 src/common/constants/error-codes.ts
 *.sql
+src/database/migrations

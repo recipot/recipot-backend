@@ -13,6 +13,7 @@ import { LoggerModule } from '@/common/logger/logger.module';
 import { SocialLoginModule } from './api/social-login/social-login.module';
 import { LoginModule } from './api/login/login.module';
 import { HealthModule } from '@/api/health/health.module';
+import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 
 export const FeatureModules = [
   UserModule,
@@ -34,6 +35,11 @@ export const FeatureModules = [
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseTimeInterceptor,
+    },
+
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
