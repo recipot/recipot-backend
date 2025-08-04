@@ -5,6 +5,8 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
+import { CustomLoggerService } from '../logger/custom-logger.service';
+import { LoggerFactoryService } from '../logger/logger-factory.service';
 
 /**
  * @author 김진태 <reabig4199@gmail.com>
@@ -12,6 +14,10 @@ import { Observable, tap } from 'rxjs';
  */
 @Injectable()
 export class ResponseTimeInterceptor implements NestInterceptor {
+  private readonly logger: CustomLoggerService;
+  constructor(private readonly loggerFactory: LoggerFactoryService) {
+    this.logger = this.loggerFactory.create(ResponseTimeInterceptor.name);
+  }
   intercept(
     context: ExecutionContext,
     next: CallHandler<any>,
@@ -25,7 +31,7 @@ export class ResponseTimeInterceptor implements NestInterceptor {
         const respTime = Date.now();
         const diff = respTime - reqTime;
 
-        console.log(`[${req.method} ${req.path}] ${diff}ms`);
+        this.logger.log(`[${req.method} ${req.path}] ${diff}ms`);
       }),
     );
   }
