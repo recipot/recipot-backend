@@ -39,7 +39,6 @@ export const FeatureModules = [
       provide: APP_INTERCEPTOR,
       useClass: ResponseTimeInterceptor,
     },
-
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
