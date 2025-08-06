@@ -31,6 +31,7 @@ export const ERROR_CODES = {
   // 파일 업로드 오류
   FILE_TOO_LARGE: { code: 'E7001', message: '파일 크기가 너무 큽니다.' },
   UNSUPPORTED_FILE_TYPE: { code: 'E7002', message: '지원되지 않는 파일 형식입니다.' },
+  FILE_UPLOAD_FAILED: { code: 'E7003', message: '파일 업로드 중 오류가 발생했습니다.' },
 
   // API 요청 오류
   RATE_LIMIT_EXCEEDED: { code: 'E8001', message: '요청 제한을 초과했습니다.' },
