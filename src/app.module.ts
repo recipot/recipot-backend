@@ -14,6 +14,7 @@ import { SocialLoginModule } from './api/social-login/social-login.module';
 import { LoginModule } from './api/login/login.module';
 import { HealthModule } from '@/api/health/health.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { UploadModule } from './api/upload/upload.module';
 
 export const FeatureModules = [
   UserModule,
@@ -24,6 +25,7 @@ export const FeatureModules = [
   DatabaseModule,
   LoggerModule,
   HealthModule,
+  UploadModule,
 ];
 
 @Module({
