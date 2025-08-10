@@ -26,4 +26,4 @@ CLAUDE.md
 .vscode
 
 # Environment variables
-.env*
+.env.development
