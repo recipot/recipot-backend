@@ -54,7 +54,8 @@ jobs:
             
             # Git 저장소 업데이트
             git fetch origin
-            git reset --hard origin/feature/add-infisical-to-deploy
+            # git reset --hard origin/feature/add-infisical-to-deploy
+            git reset --hard origin/develop
             
             # Docker 이미지 업데이트
             aws ecr get-login-password --region ap-northeast-2 | \
