@@ -1,24 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
 
 export class UserDto {
-  @ApiProperty()
-  @IsNumber()
+  @ApiProperty({ description: '사용자 ID', example: 1 })
   id: number;
 
-  @ApiProperty()
-  @IsString()
-  nickName: string;
+  @ApiProperty({ description: '사용자 이메일', example: 'test@example.com' })
+  email: string;
 
-  @ApiProperty()
-  @IsString()
-  cookingLevel: string;
+  @ApiProperty({ description: '사용자 닉네임', example: '닉네임' })
+  nickname: string;
 
-  @ApiProperty()
-  @IsString()
-  householdType: string;
+  @ApiProperty({ description: '프로필 이미지 URL', example: '' })
+  profile_image_url: string;
 
-  @ApiProperty()
-  @IsString()
-  job: string;
+  @ApiProperty({ description: '레시피 완료 횟수', example: 0 })
+  recipe_complete_count: number;
+
+  @ApiProperty({ description: '최초 진입 여부', example: true })
+  is_first_entry: boolean;
 }

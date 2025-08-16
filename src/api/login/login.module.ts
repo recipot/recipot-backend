@@ -1,12 +1,14 @@
+import { JwtModule } from '@/api/jwt/jwt.module';
+import { SocialLoginModule } from '@/api/social-login/social-login.module';
+import { UserModule } from '@/api/user/user.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { LoginEntity } from '@/database/entity/login.entity';
-import { LoginCustomRepository } from './login.repository';
+import { LoginController } from './login.controller';
+import { LoginService } from './login.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LoginEntity])],
-  controllers: [],
-  providers: [LoginCustomRepository],
-  exports: [LoginCustomRepository],
+  imports: [JwtModule, SocialLoginModule, UserModule],
+  controllers: [LoginController],
+  providers: [LoginService],
+  exports: [LoginService],
 })
 export class LoginModule {}
