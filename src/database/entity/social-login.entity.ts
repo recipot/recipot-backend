@@ -1,18 +1,29 @@
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { CommonEntity } from '@/database/entity/common.entity';
-import { UserEntity } from './user.entity';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { CommonEntity } from './common.entity';
+import { User } from './user.entity';
 
-@Entity({ name: 'social_logins' })
-export class SocialLoginEntity extends CommonEntity {
-  @PrimaryGeneratedColumn()
-  public id: number;
+@Entity('social_logins')
+export class SocialLogin extends CommonEntity {
+  @Column({
+    type: 'int',
+    comment: '유저 PK',
+  })
+  user_id: number;
 
-  @Column()
-  public type: string;
+  @Column({
+    type: 'varchar',
+    comment: '소셜 플랫폼 식별자',
+  })
+  sid: string;
 
-  @Column({ unique: true })
-  public sid: string;
+  @Column({
+    type: 'varchar',
+    length: 6,
+    comment: '플랫폼 구분 (kakao, google 등)',
+  })
+  platform: string;
 
-  @OneToOne(() => UserEntity, (user) => user.socialLogin)
-  public user: UserEntity;
+  @ManyToOne(() => User, (user) => user.social_logins)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 }

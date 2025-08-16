@@ -1,77 +1,57 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { v4 as uuidv4 } from 'uuid';
 
-import { AccessTokenPayload, RefreshTokenPayload } from './jwt.type';
-
-import { ConfigService } from '@/config/config.service';
-import { JwtToken } from './jwt.dto';
+import { CacheService } from '@/common/cache/cache.service';
+import { parseExpireTime } from '@/common/utils/time.util';
 
 @Injectable()
 export class JwtAuthService {
   constructor(
-    private readonly config: ConfigService,
     private readonly jwt: JwtService,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**
-   * @author 김진태 <realbig419@keyclops.com>
-   * @description Bearer 토큰에서 토큰값을 추출한다.
+   * 소셜 로그인 사용자를 위한 간단한 JWT 토큰 생성
    */
-  public extractBearer(bearerToken: string): string {
-    const [, token] = bearerToken.split(' ');
-    return token;
-  }
+  public async generateSocialLoginToken(
+    userId: number,
+    email: string,
+    nickname: string,
+  ): Promise<string> {
+    const accessSecret = process.env.JWT_ACCESS_SECRET;
+    const accessExpire = process.env.JWT_ACCESS_EXPIRE;
+    const algorithm = process.env.JWT_ALGORITHM as any;
 
-  /**
-   * @author 김진태 <realbig419@keyclops.com>
-   * @description 토큰을 생성한다.
-   */
-  public async generateToken(
-    accessPayload: AccessTokenPayload,
-    refreshPayload: RefreshTokenPayload,
-  ): Promise<JwtToken> {
-    const accessSecret = this.config.get('jwt.accessSecret');
-    const accessExpire = this.config.get('jwt.accessExpire');
-    const refreshSecret = this.config.get('jwt.refreshSecret');
-    const refreshExpire = this.config.get('jwt.refreshExpire');
-    const algorithm = this.config.get('jwt.algorithm');
+    const payload = {
+      sub: userId.toString(),
+      email,
+      nickname,
+    };
 
-    const accessToken = await this.jwt.signAsync(accessPayload, {
+    const token = this.jwt.sign(payload, {
       algorithm,
       secret: accessSecret,
       expiresIn: accessExpire,
     });
 
-    const refreshToken = await this.jwt.signAsync(refreshPayload, {
-      algorithm,
-      secret: refreshSecret,
-      expiresIn: refreshExpire,
-    });
+    // Redis에 토큰 저장
+    await this.saveTokenToRedis(userId, token, accessExpire);
 
-    return {
-      accessToken,
-      refreshToken,
-      accessExpire,
-      refreshExpire,
-    };
+    return token;
   }
 
   /**
-   * @author 김진태 <realbig419@keyclops.com>
-   * @description 페이로드를 구성한다.
+   * 토큰을 Redis에 저장
    */
-  public async generatePayload(
+  private async saveTokenToRedis(
     userId: number,
-    typ: string,
-  ): Promise<AccessTokenPayload | RefreshTokenPayload> {
-    return {
-      sub: userId.toString(),
-      aud: this.config.get('jwt.audience'),
-      iss: this.config.get('jwt.issuer'),
-      jti: uuidv4(),
-      userId,
-      typ,
-    };
+    token: string,
+    expireTime: string,
+  ): Promise<void> {
+    const key = `token:${userId}`;
+    const expireSeconds = parseExpireTime(expireTime);
+
+    await this.cacheService.set(key, token, expireSeconds);
   }
 }

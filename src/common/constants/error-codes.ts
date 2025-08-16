@@ -36,4 +36,15 @@ export const ERROR_CODES = {
   // API 요청 오류
   RATE_LIMIT_EXCEEDED: { code: 'E8001', message: '요청 제한을 초과했습니다.' },
   INVALID_API_KEY: { code: 'E8002', message: '유효하지 않은 API 키입니다.' },
+
+  // 소셜 로그인 오류
+  KAKAO_AUTH_FAILED: { code: 'E9001', message: '카카오 인증에 실패했습니다.' },
+  KAKAO_TOKEN_EXPIRED: { code: 'E9002', message: '카카오 토큰이 만료되었습니다.' },
+  KAKAO_USER_INFO_FAILED: { code: 'E9003', message: '카카오 사용자 정보 조회에 실패했습니다.' },
+  KAKAO_LOGOUT_FAILED: { code: 'E9004', message: '카카오 로그아웃에 실패했습니다.' },
+  KAKAO_UNLINK_FAILED: { code: 'E9005', message: '카카오 연결 해제에 실패했습니다.' },
+  INVALID_KAKAO_CODE: { code: 'E9006', message: '유효하지 않은 카카오 인가 코드입니다.' },
+  KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
+  KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
+  KAKAO_CONFIG_ERROR: { code: 'E9009', message: '카카오 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
 };

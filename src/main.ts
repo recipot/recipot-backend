@@ -1,18 +1,17 @@
 import * as dotenv from 'dotenv-flow';
 dotenv.config();
 
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { setupSwagger } from '@/common/swagger';
 import { ConfigService } from '@/config/config.service';
-import { initializeTransactionalContext } from 'typeorm-transactional';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { initializeTransactionalContext } from 'typeorm-transactional';
+import { AppModule } from './app.module';
 
-import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from '@/common/logger/winston.config';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
+import { winstonConfig } from '@/common/logger/winston.config';
 import dataSource from '@/database/data-source';
-import { runSeeders } from 'typeorm-extension';
+import { WinstonModule } from 'nest-winston';
 
 async function bootstrap() {
   initializeTransactionalContext();
@@ -46,7 +45,17 @@ async function bootstrap() {
     await (await dataSource).initialize();
   }
   await (await dataSource).runMigrations();
-  await runSeeders(await dataSource);
+
+  // Seeder 실행
+  try {
+    const { DatabaseSeeder } = await import('./database/seeds');
+    const seeder = new DatabaseSeeder(await dataSource);
+    await seeder.run();
+    logger.log(`✅ Seeding Successes.`);
+  } catch (error) {
+    logger.warn(`⚠️ Seeding failed: ${error.message}`);
+  }
+
   logger.log(`✅ Migration Successes.`);
 
   const port = config.get<number>('HTTP_PORT');
