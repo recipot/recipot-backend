@@ -26,7 +26,8 @@ def main():
     discord_id = get_discord_id(github_id)
     assignees = f"<@{discord_id}>" if discord_id else github_id
 
-    if GITHUB_EVENT_NAME == "issues":
+    if GITHUB_EVENT_NAME == "issues" and event.get("action") == "opened":
+        # 새로 생성된 이슈만 알림 (업데이트된 이슈는 제외)
         created_at_str = event["issue"]["created_at"]
         dt = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
 
@@ -41,6 +42,7 @@ def main():
         send_discord_embed(msg_title, msg_body)
 
     elif GITHUB_EVENT_NAME == "pull_request" and event.get("action") == "opened":
+        # 새로 생성된 PR만 알림 (업데이트된 PR은 제외)
         created_at_str = event["pull_request"]["created_at"]
         dt = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
         pr = event["pull_request"]
