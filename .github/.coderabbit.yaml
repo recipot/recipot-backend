@@ -9,10 +9,9 @@ reviews:
   collapse_walkthrough: true
   auto_review:
     enabled: true
-    drafts: false
+    drafts: true
     base_branches:
       - "develop"
-      - "feature/*"
+      - "main"
 chat:
   auto_reply: true
-  
