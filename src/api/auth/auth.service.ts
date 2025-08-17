@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
-import { parseExpireTime, secondsToJwtFormat } from '@/common/utils/time.util';
+import { secondsToJwtFormat } from '@/common/utils/time.util';
 
 @Injectable()
 export class AuthService {
@@ -207,8 +207,9 @@ export class AuthService {
     expireTime: string,
   ): Promise<void> {
     const key = `${CONSTANTS.ACCESS_TOKEN_PREFIX}:${userId}`;
-    const expireSeconds = parseExpireTime(expireTime);
-    await this.cacheService.set(key, token, expireSeconds);
+    // JWT_EXPIRE는 초 단위이므로 밀리초로 변환 (초 * 1000)
+    const expireMilliseconds = parseInt(expireTime) * 1000;
+    await this.cacheService.set(key, token, expireMilliseconds);
   }
 
   /**
@@ -220,8 +221,8 @@ export class AuthService {
     expireTime: string,
   ): Promise<void> {
     const key = `${CONSTANTS.REFRESH_TOKEN_PREFIX}:${userId}`;
-    const expireSeconds = parseExpireTime(expireTime);
-    await this.cacheService.set(key, token, expireSeconds);
+    const expireMilliseconds = parseInt(expireTime) * 1000;
+    await this.cacheService.set(key, token, expireMilliseconds);
   }
 
   /**
