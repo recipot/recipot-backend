@@ -1,8 +1,7 @@
-import { JwtAuthService } from '@/api/jwt/jwt.service';
+import { AuthService } from '@/api/auth/auth.service';
 import { SocialLoginService } from '@/api/social-login/social-login.service';
 import { UserDto } from '@/api/user/dto/user.dto';
 import { UserService } from '@/api/user/user.service';
-import { CONSTANTS } from '@/common/constants/constants';
 import {
   KAKAO_API,
   KAKAO_API_URLS,
@@ -18,7 +17,7 @@ export class LoginService {
   private readonly logger = new Logger(LoginService.name);
 
   constructor(
-    private readonly jwtService: JwtAuthService,
+    private readonly authService: AuthService,
     private readonly socialLoginService: SocialLoginService,
     private readonly userService: UserService,
   ) {}
@@ -53,6 +52,7 @@ export class LoginService {
     const existingSocialLogin =
       await this.socialLoginService.findBySidAndPlatform(
         kakaoUserInfo.id.toString(),
+        // TODO 공통코드 처리
         'kakao',
       );
 
@@ -74,29 +74,21 @@ export class LoginService {
       await this.socialLoginService.createSocialLogin(
         user.id,
         kakaoUserInfo.id.toString(),
+        // TODO 공통코드 처리
         'kakao',
       );
     }
 
-    // 4. JWT 토큰 생성
-    const jwtToken = await this.jwtService.generateSocialLoginToken(
-      user.id,
-      user.email,
-      user.nickname,
-    );
+    // 4. JWT 토큰 생성 (Access Token + Refresh Token)
+    const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
+      await this.authService.generateSocialLoginTokens(user.id);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        profile_image_url: user.profile_image_url,
-        is_first_entry: user.is_first_entry,
-      },
-      token: {
-        accessToken: jwtToken,
-        accessExpire: CONSTANTS.ACCESS_TOKEN_EXPIRE,
-      },
+      userId: user.id,
+      accessToken,
+      accessExpiresAt,
+      refreshToken,
+      refreshExpiresAt,
     };
   }
 
@@ -123,7 +115,7 @@ export class LoginService {
     );
 
     if (!response || !response.data) {
-      throw new CustomException(ERROR_CODES.KAKAO_TOKEN_EXPIRED);
+      throw new CustomException(ERROR_CODES.AUTH_TOKEN_EXPIRED);
     }
 
     return response.data;

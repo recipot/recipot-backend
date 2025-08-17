@@ -1,6 +1,6 @@
+import { ResponseDto } from '@/common/dto/response.dto';
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ResponseDto } from '@/common/dto/response.dto';
 
 export function setupSwagger(app: INestApplication) {
   const swaggerConfig = new DocumentBuilder()
