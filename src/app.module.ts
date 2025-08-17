@@ -10,6 +10,7 @@ import { ConfigModule } from '@/config/config.module';
 import { DatabaseModule } from '@/database/database.module';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuthModule } from './api/auth/auth.module';
 import { LoginModule } from './api/login/login.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
@@ -17,6 +18,7 @@ import { ResponseTimeInterceptor } from './common/interceptors/response-time.int
 export const FeatureModules = [
   UserModule,
   LoginModule,
+  AuthModule,
   CacheModule,
   DatabaseModule,
   LoggerModule,

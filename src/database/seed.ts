@@ -1,9 +1,14 @@
 import { config } from 'dotenv';
+import { WinstonModule } from 'nest-winston';
 import { DataSource } from 'typeorm';
+import { winstonConfig } from '../common/logger/winston.config';
 import { DatabaseSeeder } from './seeds';
 
 // 환경변수 로드
 config();
+
+// Winston 로거 생성
+const logger = WinstonModule.createLogger(winstonConfig);
 
 async function seed() {
   const dataSource = new DataSource({
@@ -20,18 +25,18 @@ async function seed() {
 
   try {
     await dataSource.initialize();
-    console.log('Database connection established');
+    logger.log('Database connection established');
 
-    const seeder = new DatabaseSeeder(dataSource);
+    const seeder = new DatabaseSeeder(dataSource, logger);
     await seeder.run();
 
-    console.log('Seeding completed successfully');
+    logger.log('Seeding completed successfully');
   } catch (error) {
-    console.error('Error during seeding:', error);
+    logger.error('Error during seeding:', error);
     process.exit(1);
   } finally {
     await dataSource.destroy();
-    console.log('Database connection closed');
+    logger.log('Database connection closed');
   }
 }
 

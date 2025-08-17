@@ -5,10 +5,6 @@ export class CommonCodeSeed {
   constructor(private dataSource: DataSource) {}
 
   async run(): Promise<void> {
-    console.log('CommonCodeSeed starting...');
-    console.log('dataSource:', this.dataSource);
-    console.log('dataSource.manager:', this.dataSource?.manager);
-
     if (!this.dataSource || !this.dataSource.manager) {
       throw new Error('DataSource or manager is not available');
     }
@@ -47,12 +43,7 @@ export class CommonCodeSeed {
       if (!existingCode) {
         const commonCode = commonCodeRepository.create(commonCodeData);
         await commonCodeRepository.save(commonCode);
-        console.log(`Created common code: ${commonCodeData.code_name}`);
-      } else {
-        console.log(`Common code already exists: ${commonCodeData.code_name}`);
       }
     }
-
-    console.log('Common code seeding completed');
   }
 }

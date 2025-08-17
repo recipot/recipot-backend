@@ -21,6 +21,26 @@ export function parseExpireTime(expireTime: string): number {
 }
 
 /**
+ * 초 단위를 JWT 형식으로 변환
+ * @param seconds - 초 단위 시간
+ * @returns JWT 형식 문자열 (예: '1h', '30d', '3600s')
+ */
+export function secondsToJwtFormat(seconds: number): string {
+  if (seconds >= 86400) {
+    const days = Math.floor(seconds / 86400);
+    return `${days}d`;
+  } else if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours}h`;
+  } else if (seconds >= 60) {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
+/**
  * 초 단위를 읽기 쉬운 형식으로 변환
  * @param seconds - 초 단위 시간
  * @returns 읽기 쉬운 형식 (예: '1시간 30분')

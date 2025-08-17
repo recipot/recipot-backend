@@ -2,47 +2,32 @@
 export const ERROR_CODES = {
   // 유저 관련 오류
   USER_NOT_FOUND: { code: 'E1001', message: '사용자를 찾을 수 없습니다.' },
-  USER_ALREADY_EXISTS: { code: 'E1002', message: '이미 존재하는 사용자입니다.' },
-  INVALID_USER_CREDENTIALS: { code: 'E1003', message: '잘못된 사용자 정보입니다.' },
 
   // 인증 및 로그인 오류
   AUTH_TOKEN_EXPIRED: { code: 'E2001', message: '인증 토큰이 만료되었습니다.' },
   AUTH_INVALID_TOKEN: { code: 'E2002', message: '유효하지 않은 토큰입니다.' },
-  AUTH_ACCESS_DENIED: { code: 'E2003', message: '접근 권한이 없습니다.' },
-  AUTH_INVALID_PASSWORD: { code: 'E2004', message: '잘못된 비밀번호입니다.' },
-
-  // 데이터베이스 오류
-  DATA_NOT_FOUND: { code: 'E3002', message: '요청한 데이터를 찾을 수 없습니다.' },
-
-  // 권한 및 접근 오류
-  PERMISSION_DENIED: { code: 'E4001', message: '이 작업을 수행할 권한이 없습니다.' },
-  ROLE_NOT_ALLOWED: { code: 'E4002', message: '해당 역할에서는 이 작업을 수행할 수 없습니다.' },
+  AUTH_REQUIRED: { code: 'E2005', message: '인증이 필요합니다.' },
+  AUTH_INVALID_REFRESH_TOKEN: { code: 'E2006', message: '유효하지 않은 Refresh Token입니다.' },
+  AUTH_REFRESH_TOKEN_EXPIRED: { code: 'E2007', message: 'Refresh Token이 만료되었습니다.' },
+  AUTH_REFRESH_TOKEN_NOT_IN_REDIS: { code: 'E2008', message: 'Refresh Token이 Redis에 존재하지 않습니다.' },
+  AUTH_ACCESS_TOKEN_NOT_IN_REDIS: { code: 'E2009', message: '토큰이 Redis에 존재하지 않습니다.' },
+  AUTH_INVALID_ACCESS_TOKEN: { code: 'E2010', message: '유효하지 않은 Access Token입니다.' },
+  AUTH_TOKEN_DECODE_FAILED: { code: 'E2011', message: '토큰을 디코드할 수 없습니다.' },
+  AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
+  AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
   // 서버 오류
   INTERNAL_SERVER_ERROR: { code: 'E5000', message: '서버 내부 오류가 발생했습니다.' },
-  SERVICE_UNAVAILABLE: { code: 'E5001', message: '현재 서비스를 이용할 수 없습니다.' },
-  TIMEOUT_ERROR: { code: 'E5002', message: '요청 시간이 초과되었습니다.' },
 
   // 유효성 검사 오류
   VALIDATION_ERROR: { code: 'E6001', message: '입력값이 유효하지 않습니다.' },
-  MISSING_REQUIRED_FIELDS: { code: 'E6002', message: '필수 입력값이 누락되었습니다.' },
   INVALID_FORMAT: { code: 'E6003', message: '입력값 형식이 올바르지 않습니다.' },
 
   // 파일 업로드 오류
-  FILE_TOO_LARGE: { code: 'E7001', message: '파일 크기가 너무 큽니다.' },
-  UNSUPPORTED_FILE_TYPE: { code: 'E7002', message: '지원되지 않는 파일 형식입니다.' },
   FILE_UPLOAD_FAILED: { code: 'E7003', message: '파일 업로드 중 오류가 발생했습니다.' },
 
-  // API 요청 오류
-  RATE_LIMIT_EXCEEDED: { code: 'E8001', message: '요청 제한을 초과했습니다.' },
-  INVALID_API_KEY: { code: 'E8002', message: '유효하지 않은 API 키입니다.' },
-
   // 소셜 로그인 오류
-  KAKAO_AUTH_FAILED: { code: 'E9001', message: '카카오 인증에 실패했습니다.' },
-  KAKAO_TOKEN_EXPIRED: { code: 'E9002', message: '카카오 토큰이 만료되었습니다.' },
   KAKAO_USER_INFO_FAILED: { code: 'E9003', message: '카카오 사용자 정보 조회에 실패했습니다.' },
-  KAKAO_LOGOUT_FAILED: { code: 'E9004', message: '카카오 로그아웃에 실패했습니다.' },
-  KAKAO_UNLINK_FAILED: { code: 'E9005', message: '카카오 연결 해제에 실패했습니다.' },
   INVALID_KAKAO_CODE: { code: 'E9006', message: '유효하지 않은 카카오 인가 코드입니다.' },
   KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
   KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
