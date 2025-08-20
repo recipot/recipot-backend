@@ -24,6 +24,3 @@ CLAUDE.md
 .claude
 *.pem
 .vscode
-
-# Environment variables
-.env.development

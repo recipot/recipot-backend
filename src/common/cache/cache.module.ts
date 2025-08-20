@@ -16,8 +16,6 @@ import { ConfigService } from '@/config/config.service';
         return {
           store: await redisStore({
             url: redisConfig.url,
-            username: redisConfig.options.username,
-            password: redisConfig.options.password,
             ttl: redisConfig.options.ttl,
           }),
         };

@@ -1,14 +1,15 @@
+import { Public } from '@/api/auth/auth.decorators';
 import { Controller, Get } from '@nestjs/common';
 import {
-  HealthCheckService,
-  HealthCheck,
-  TypeOrmHealthIndicator,
-  MemoryHealthIndicator,
   DiskHealthIndicator,
+  HealthCheck,
+  HealthCheckService,
+  MemoryHealthIndicator,
+  TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { CacheHealthIndicator } from './indicators/cache-health.indicator';
 
-@Controller('health')
+@Controller({ path: 'health', version: '1' })
 export class HealthController {
   constructor(
     private health: HealthCheckService,
@@ -19,6 +20,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
   @HealthCheck()
   async check() {
     const result = await this.health.check([

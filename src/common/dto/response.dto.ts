@@ -2,9 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
 
 export class ResponseDto<T> {
-  constructor(status: number, result?: T, code?: string, message?: string) {
+  constructor(status: number, data?: T, code?: string, message?: string) {
     this.status = status;
-    if (result !== undefined) this.result = result;
+    if (data !== undefined) this.data = data;
     if (code !== undefined) this.code = code;
     if (message !== undefined) this.message = message;
   }
@@ -22,7 +22,7 @@ export class ResponseDto<T> {
   @Transform(({ value }) => (value === undefined ? undefined : value), {
     toPlainOnly: true, // JSON 응답 직렬화 시에만 적용
   })
-  result?: T;
+  data?: T;
 
   @ApiProperty({
     description: '실패 시 서비스 에러 코드 반환',
@@ -48,8 +48,8 @@ export class ResponseDto<T> {
   })
   message?: string;
 
-  static success<T>(result: T): ResponseDto<T> {
-    return new ResponseDto(200, result);
+  static success<T>(data: T): ResponseDto<T> {
+    return new ResponseDto(200, data);
   }
 
   static error(
@@ -57,6 +57,6 @@ export class ResponseDto<T> {
     code: string,
     message: string,
   ): ResponseDto<null> {
-    return new ResponseDto(status, undefined, code, message);
+    return new ResponseDto(status, null, code, message);
   }
 }

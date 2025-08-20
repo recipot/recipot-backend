@@ -1,21 +1,22 @@
 import {
   CreateDateColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
-  DeleteDateColumn,
-  BaseEntity,
 } from 'typeorm';
 
-export abstract class CommonEntity extends BaseEntity {
-  @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  public createdAt: Date;
+export abstract class CommonEntity {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
+  @CreateDateColumn({
+    type: 'datetime',
+    comment: '생성일시',
+  })
+  created_at: Date;
 
   @UpdateDateColumn({
     type: 'datetime',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
+    comment: '수정일시',
   })
-  public updatedAt: Date;
-
-  @DeleteDateColumn({ nullable: true })
-  public deletedAt?: Date;
+  updated_at: Date;
 }

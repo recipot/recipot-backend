@@ -1,16 +1,10 @@
 import {
-  Body,
   Controller,
   Get,
   HttpStatus,
-  Post,
-  UseGuards,
-  Request,
-  Query,
   Param,
-  Put,
-  Delete,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,108 +12,75 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtToken } from '@/api/jwt/jwt.dto';
 
-import { PaginationOptionsDto } from '@/common/dto/pagination-option.dto';
-import { JwtGuard } from '@/api/jwt/jwt.guard';
-import { GetUsersDtoRx } from './dto/get-users.dto';
-import { UpdateUserDtoTx } from './dto/update-user.dto';
-import { SignupDtoTx } from './dto/signup.dto';
-import { SigninDtoTx } from './dto/signin.dto';
+import { Public } from '@/api/auth/auth.decorators';
+import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { UserService } from './user.service';
-import { GetUserDtoRx } from './dto/get-user.dto';
 
 @Controller({ path: 'user', version: '1' })
 @ApiTags('User')
+@ApiBearerAuth('Authorization')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * @author 김진태 <reabig4199@gmail.com>
-   * @description 유저를 조회한다.
-   */
-  @UseGuards(JwtGuard)
-  @ApiBearerAuth('Authorization')
-  @Get('/')
-  @ApiOperation({ summary: '유저를 조회한다.' })
-  @ApiResponse({ status: HttpStatus.OK, type: GetUsersDtoRx })
-  async getUsers(
-    @Query() paginationOptionsDto: PaginationOptionsDto,
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-  ) {
-    return await this.userService.getUsers(
-      paginationOptionsDto,
-      startDate,
-      endDate,
-    );
-  }
-
-  /**
-   * @author 김진태 <realbig4199@gmail.com>
    * @description 유저를 상세조회한다.
    */
-  @UseGuards(JwtGuard)
-  @ApiBearerAuth('Authorization')
   @Get('/:id')
+  @Public()
   @ApiOperation({ summary: '유저를 상세조회한다.' })
-  @ApiResponse({ status: HttpStatus.OK, type: GetUserDtoRx })
+  @ApiResponse({ status: HttpStatus.OK })
   async getUser(@Param('id', ParseIntPipe) id: number) {
-    return await this.userService.getUser(id);
+    return await this.userService.findById(id);
   }
 
   /**
-   * @author 김진태 <realbig4199@gmail.com>
-   * @description 유저를 수정한다.
+   * @description 인증된 사용자의 프로필을 조회한다.
    */
-  @UseGuards(JwtGuard)
-  @ApiBearerAuth('Authorization')
-  @Put('/:id')
-  @ApiOperation({ summary: '유저를 수정한다.' })
-  @ApiResponse({ status: HttpStatus.OK })
-  async updateUser(
-    @Request() request: any,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateUserDtoTx,
-  ) {
-    return await this.userService.updateUser(request.user, id, dto);
+  @Get('/profile/me')
+  @ApiOperation({
+    summary: '인증된 사용자의 프로필 조회',
+    description: 'JWT 토큰을 통해 인증된 현재 사용자의 프로필을 조회합니다.',
+  })
+  @ApiSuccessResponse('프로필 조회 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      email: { type: 'string', example: 'user@example.com' },
+      name: { type: 'string', example: '홍길동' },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: '인증 실패',
+  })
+  async getMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
+    const userId = req.user.userId;
+    return await this.userService.findById(userId);
   }
 
   /**
-   * @author 김진태 <realbig4199@gmail.com>
-   * @description 유저를 삭제한다.
+   * @description 인증된 사용자의 프로필을 업데이트한다.
    */
-  @UseGuards(JwtGuard)
-  @ApiBearerAuth('Authorization')
-  @Delete('/:id')
-  @ApiOperation({ summary: '유저를 삭제한다.' })
-  @ApiResponse({ status: HttpStatus.OK })
-  async deleteUser(
-    @Request() request: any,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    return await this.userService.deleteUser(request.user, id);
-  }
-
-  /**
-   * @author 김진태 <realbig4199@gmail.com>
-   * @description 유저를 생성한다. (회원가입)
-   */
-  @Post('/signup')
-  @ApiOperation({ summary: '유저를 생성한다. (회원가입)' })
-  @ApiResponse({ status: HttpStatus.CREATED, type: JwtToken })
-  async signup(@Body() dto: SignupDtoTx): Promise<JwtToken> {
-    return await this.userService.signup(dto);
-  }
-
-  /**
-   * @author 김진태 <realbig4199@gmail.com>
-   * @description 로그인한다.
-   */
-  @Post('/signin')
-  @ApiOperation({ summary: '로그인한다.' })
-  @ApiResponse({ status: HttpStatus.OK, type: JwtToken })
-  async signin(@Body() dto: SigninDtoTx) {
-    return await this.userService.signin(dto);
+  @Get('/profile/update')
+  @ApiOperation({
+    summary: '인증된 사용자의 프로필 업데이트',
+    description:
+      'JWT 토큰을 통해 인증된 현재 사용자의 프로필을 업데이트합니다.',
+  })
+  @ApiSuccessResponse('프로필 업데이트 성공')
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: '인증 실패',
+  })
+  async updateMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
+    const userId = req.user.userId;
+    return {
+      message: '프로필 업데이트 기능은 추후 구현 예정',
+      userId: userId,
+      user: req.user,
+    };
   }
 }

@@ -1,33 +1,35 @@
 import * as dotenv from 'dotenv-flow';
 dotenv.config();
 
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { setupSwagger } from '@/common/swagger';
 import { ConfigService } from '@/config/config.service';
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { initializeTransactionalContext } from 'typeorm-transactional';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { JwtGuard } from './api/auth/auth.guard';
+import { AppModule } from './app.module';
 
-import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from '@/common/logger/winston.config';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
+import { winstonConfig } from '@/common/logger/winston.config';
 import dataSource from '@/database/data-source';
-import { runSeeders } from 'typeorm-extension';
+import { WinstonModule } from 'nest-winston';
 
 async function bootstrap() {
   initializeTransactionalContext();
 
   const app = await NestFactory.create(AppModule);
 
+  // 전역 가드 설정 - Reflector를 app.get()으로 가져옴
+  const reflector = app.get('Reflector');
+  app.useGlobalGuards(new JwtGuard(reflector));
+
   const loggerFactory = app.get(LoggerFactoryService);
   const logger = loggerFactory.create(bootstrap.name);
 
   const config = app.get(ConfigService);
 
-  // API path version 명시
-  app.enableVersioning({
-    type: VersioningType.URI,
-  });
+  // 버전 관리 활성화 - 컨트롤러의 version 옵션 사용
+  app.enableVersioning();
 
   // DTO validation check 활성화
   app.useGlobalPipes(
@@ -46,7 +48,17 @@ async function bootstrap() {
     await (await dataSource).initialize();
   }
   await (await dataSource).runMigrations();
-  await runSeeders(await dataSource);
+
+  // Seeder 실행
+  try {
+    const { DatabaseSeeder } = await import('./database/seeds');
+    const seeder = new DatabaseSeeder(await dataSource, logger);
+    await seeder.run();
+    logger.log(`✅ Seeding Successes.`);
+  } catch (error) {
+    logger.warn(`⚠️ Seeding failed: ${error.message}`);
+  }
+
   logger.log(`✅ Migration Successes.`);
 
   const port = config.get<number>('HTTP_PORT');
