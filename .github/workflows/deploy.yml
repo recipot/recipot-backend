@@ -43,7 +43,7 @@ jobs:
           docker push $FULL_REPOSITORY:$IMAGE_TAG
           docker push $FULL_REPOSITORY:latest
 
-      # EC2 배포 (docker-compose.yml만 갱신)
+      # EC2 배포 (docker-compose.yml 갱신)
       - name: Deploy to EC2
         env:
           GITHUB_READ_TOKEN: ${{ secrets.GIT_READ_TOKEN }}   # ← 레포 읽기 토큰
