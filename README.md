@@ -10,23 +10,6 @@
 
 </div>
 
----
-
-## 🚀 빠른 시작
-
-```bash
-# 1. 의존성 설치
-npm install
-
-# 2. Docker 컨테이너 실행 (DB, Redis)
-docker-compose -f docker-compose.dev.yml up -d
-docker network create docker-network
-
-# 3. 개발 서버 실행
-npm run start:dev
-```
-
-<div align="left">
 
 ## 💻 기술 스택
 
@@ -58,6 +41,58 @@ npm run start:dev
 
 </details>
 
+## 🚀 빠른 시작
+
+### 📋 사전 요구사항
+- Node.js 18.0.0 이상
+- Docker & Docker Compose
+- Infisical CLI (환경변수 관리용)
+
+### 🔧 로컬 사전 작업
+
+#### 1. Infisical 설치
+```bash
+# macOS (Homebrew)
+brew install infisical/infisical/infisical
+
+# 또는 다른 설치 방법은 https://infisical.com/docs 참조
+```
+
+#### 2. Infisical 로그인
+```bash
+# 웹 브라우저를 통한 로그인
+infisical login
+
+# 또는 서비스 토큰 사용 (CI/CD 환경)
+export INFISICAL_TOKEN=your-service-token
+```
+
+### 🎯 개발 환경 실행
+
+```bash
+# 1. 의존성 설치
+npm install
+
+# 2. Docker 컨테이너 실행 (DB, Redis)
+docker-compose -f docker-compose.dev.yml up -d
+docker network create docker-network
+
+# 3. 개발 서버 실행 (자동으로 infisical에서 환경변수 동기화)
+npm run start:dev
+
+# 수동으로 환경변수 동기화만 하고 싶은 경우
+npm run env:sync
+```
+
+### ⚠️ 중요 안내
+- `.env.development` 파일은 Git에 포함되지 않습니다
+- `npm run env:sync` 명령어로 개별적으로 환경변수를 동기화해야 합니다
+- infisical 로그인이 필요합니다: `infisical login`
+
+### 🔄 동작 방식
+- `npm run start:dev` 실행 시 자동으로 infisical dev 환경의 환경변수를 `.env.development` 파일로 동기화
+- 그 후 `.env.development` 파일을 사용하여 애플리케이션 실행
+
 ## 📁 프로젝트 구조
 
 ```
@@ -79,9 +114,12 @@ npm run start:dev
 
 ### 🔨 개발
 ```bash
-npm run start:dev     # 개발 서버
-npm run lint          # 코드 검사
+npm run start:dev     # 개발 서버 (환경변수 자동 동기화 + watch)
+npm run start:debug   # 디버그 모드 (infisical 직접 사용)
+npm run start         # 일반 실행 (infisical 직접 사용)
 npm run build         # 빌드
+npm run env:sync      # 환경변수 수동 동기화 (dev 환경)
+npm run lint          # 코드 검사
 ```
 
 </td>
@@ -92,17 +130,21 @@ npm run build         # 빌드
 npm test              # 단위 테스트
 npm run test:e2e      # E2E 테스트
 npm run test:cov      # 커버리지
+npm run test:watch    # 테스트 watch
 ```
 
 </td>
 </tr>
 <tr>
-<td colspan="2">
+<td width="50%">
 
 ### 🗄️ 데이터베이스
 ```bash
-npm run migration:run     # 마이그레이션 실행
-npm run migration:create  # 새 마이그레이션 생성
+npm run migration:run       # 마이그레이션 실행 (infisical 직접 사용)
+npm run migration:revert    # 마이그레이션 되돌리기 (infisical 직접 사용)
+npm run migration:generate  # 마이그레이션 생성 (infisical 직접 사용)
+npm run migration:create    # 새 마이그레이션 생성
+npm run migration:show      # 마이그레이션 상태 확인 (infisical 직접 사용)
 ```
 
 </td>

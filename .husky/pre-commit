@@ -1,1 +1,11 @@
+# Node.js 환경 설정
+if [ -f ~/.nvm/nvm.sh ]; then
+  . ~/.nvm/nvm.sh
+  nvm use
+elif [ -f ~/.bashrc ]; then
+  . ~/.bashrc
+elif [ -f ~/.zshrc ]; then
+  . ~/.zshrc
+fi
+
 npx lint-staged
