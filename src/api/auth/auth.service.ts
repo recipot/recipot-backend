@@ -9,6 +9,7 @@ import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { secondsToJwtFormat } from '@/common/utils/time.util';
+import { CustomException } from '@/common/exceptions/custom-exception';
 
 @Injectable()
 export class AuthService {
@@ -365,5 +366,47 @@ export class AuthService {
       accessExpiresAt: accessTokenInfo.expiresAt.toISOString(),
       refreshExpiresAt: refreshTokenInfo.expiresAt.toISOString(),
     };
+  }
+
+  public async logout(accessToken: string): Promise<{ ok: true }> {
+    try {
+      const accessSecret = process.env.JWT_ACCESS_SECRET;
+
+      let payload: any;
+      try {
+        payload = this.jwt.verify(accessToken, { secret: accessSecret });
+      } catch (err: any) {
+        if (err?.name === 'TokenExpiredError') {
+          const decoded = this.jwt.decode(accessToken) as any;
+          if (!decoded?.sub) {
+            throw new CustomException(ERROR_CODES.AUTH_INVALID_TOKEN);
+          }
+          payload = decoded;
+        } else {
+          throw new CustomException(ERROR_CODES.AUTH_INVALID_TOKEN);
+        }
+      }
+
+      const userId = parseInt(payload.sub);
+
+      try {
+        await this.removeAccessTokenFromRedis(userId);
+      } catch {
+        throw new CustomException(ERROR_CODES.ACCESS_BLACKLIST_FAILED);
+      }
+
+      try {
+        await this.removeRefreshTokenFromRedis(userId);
+      } catch {
+        throw new CustomException(ERROR_CODES.REFRESH_REVOKE_FAILED);
+      }
+
+      return { ok: true };
+    } catch (e) {
+      if (e instanceof CustomException) {
+        throw e;
+      }
+      throw new CustomException(ERROR_CODES.LOGOUT_FAILED);
+    }
   }
 }

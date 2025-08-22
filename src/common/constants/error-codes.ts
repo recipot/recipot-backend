@@ -16,6 +16,11 @@ export const ERROR_CODES = {
   AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
   AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
+  // 로그아웃 관련
+  LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
+  REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
+  ACCESS_BLACKLIST_FAILED: { code: 'E2103', message: '액세스 토큰 블랙리스트 처리에 실패했습니다.' },
+
   // 서버 오류
   INTERNAL_SERVER_ERROR: { code: 'E5000', message: '서버 내부 오류가 발생했습니다.' },
 

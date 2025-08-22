@@ -8,6 +8,8 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -212,5 +214,35 @@ export class AuthController {
   @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
   async generateDebugToken(@Body() body: { userId: number }) {
     return await this.authService.generateDebugToken(body.userId);
+  }
+
+  @Post('logout')
+  @ApiOperation({
+    summary: '로그아웃',
+    description: 'Access/Refresh 토큰을 무효화합니다.',
+  })
+  @ApiSuccessResponse('로그아웃 성공', {
+    type: 'object',
+    properties: {
+      status: { type: 'number', example: 200 },
+      data: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean', example: true },
+        },
+      },
+    },
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  async logout(@Req() req: any) {
+    const bearer = req.headers?.authorization ?? '';
+    const token = bearer.startsWith('Bearer ') ? bearer.slice(7) : '';
+
+    if (!token) {
+      throw new UnauthorizedException(ERROR_CODES.AUTH_REQUIRED.message);
+    }
+
+    const result = await this.authService.logout(token);
+    return { status: 200, data: result };
   }
 }
