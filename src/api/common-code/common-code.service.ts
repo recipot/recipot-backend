@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateCommonCodeDto } from './dto/creeate-comon-code.dto';
 import { ERROR_CODES } from '@/common/constants/error-codes';
+import { PageQueryDto } from '@/common/dto/pagination.dto';
 
 @Injectable()
 export class CommonCodeService {
@@ -13,6 +14,25 @@ export class CommonCodeService {
     @InjectRepository(CommonCode)
     private readonly commonCodeRepository: Repository<CommonCode>,
   ) {}
+
+  /**
+   * 콩통 코드 페이지네이션 조회
+   */
+  async findCommonCodes(query: PageQueryDto): Promise<CommonCode[]> {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const data = await this.commonCodeRepository.find({
+      order: {
+        group_code: 'ASC',
+        order_num: 'ASC',
+      },
+      take: limit,
+      skip: skip,
+    });
+
+    return data;
+  }
 
   /**
    * 공통 코드 생성
