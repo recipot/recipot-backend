@@ -1,16 +1,27 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { CommonCodeService } from './common-code.service';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { CommonCode } from '@/database/entity/common-code.entity';
-import { CreateCommonCodeDto } from './dto/creeate-comon-code.dto';
+import { CreateCommonCodeDto } from './dto/create-common-code.dto';
 import { PageQueryDto } from '@/common/dto/pagination.dto';
+import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
 
 @ApiTags('공통 코드')
 @Controller({ path: 'common-codes', version: '1' })
@@ -68,6 +79,47 @@ export class CommonCodeController {
     type: [CreateCommonCodeDto],
   })
   @ApiSuccessResponse('공통 코드 생성 성공', {
+    type: 'array', // 'object'에서 'array'로 수정
+    items: {
+      // 배열의 각 항목에 대한 정의
+      type: 'object',
+      properties: {
+        id: { type: 'number', example: 1 },
+        group_code: { type: 'string', example: 'C01' },
+        group_code_name: { type: 'string', example: '소셜 로그인' },
+        code: { type: 'string', example: 'C01001' },
+        code_name: { type: 'string', example: '카카오' },
+        group_name: { type: 'string', example: '소셜 로그인' },
+        order_num: { type: 'number', example: 1 },
+        is_active: { type: 'boolean', example: true },
+        depth: { type: 'number', example: 2 },
+        created_at: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-08-22T12:15:00.000Z',
+        },
+        updated_at: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-08-22T12:15:00.000Z',
+        },
+      },
+    },
+  })
+  async createCommonCode(
+    @Body() dto: CreateCommonCodeDto[],
+  ): Promise<CommonCode[]> {
+    return this.commonCodeService.createCommonCode(dto);
+  }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: '공통 코드 수정',
+    description: 'ID로 특정 공통 코드를 찾아 내용을 수정합니다.',
+  })
+  @ApiParam({ name: 'id', description: '수정할 공통 코드의 ID', type: Number })
+  @ApiBody({ type: UpdateCommonCodeDto })
+  @ApiSuccessResponse('공통 코드 수정 성공', {
     type: 'object',
     properties: {
       id: { type: 'number', example: 1 },
@@ -91,9 +143,10 @@ export class CommonCodeController {
       },
     },
   })
-  async createCommonCode(
-    @Body() dto: CreateCommonCodeDto[],
-  ): Promise<CommonCode[]> {
-    return this.commonCodeService.createCommonCode(dto);
+  async updateCommonCode(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCommonCodeDto,
+  ): Promise<CommonCode> {
+    return this.commonCodeService.updateCommonCode(id, dto);
   }
 }

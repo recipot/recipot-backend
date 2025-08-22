@@ -18,6 +18,7 @@ export const ERROR_CODES = {
 
   // 공통 오류
   COMMON_CODE_ALREADY_EXISTS: { code: 'E3001', message: '이미 존재하는 공통 코드입니다.' },
+  COMMON_CODE_NOT_FOUND: { code: 'E3002', message: '공통 코드를 찾을 수 없습니다.' },
 
   // 서버 오류
   INTERNAL_SERVER_ERROR: { code: 'E5000', message: '서버 내부 오류가 발생했습니다.' },

@@ -2,9 +2,10 @@ import { CommonCode } from '@/database/entity/common-code.entity';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { CreateCommonCodeDto } from './dto/creeate-comon-code.dto';
+import { CreateCommonCodeDto } from './dto/create-common-code.dto';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { PageQueryDto } from '@/common/dto/pagination.dto';
+import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
 
 @Injectable()
 export class CommonCodeService {
@@ -57,5 +58,24 @@ export class CommonCodeService {
 
     const newCommonCodes = this.commonCodeRepository.create(dto);
     return await this.commonCodeRepository.save(newCommonCodes);
+  }
+
+  /**
+   * 공통 코드 수정
+   */
+  async updateCommonCode(
+    id: number,
+    dto: UpdateCommonCodeDto,
+  ): Promise<CommonCode> {
+    const codeToUpdate = await this.commonCodeRepository.preload({
+      id: id,
+      ...dto,
+    });
+
+    if (!codeToUpdate) {
+      throw new BadRequestException(ERROR_CODES.COMMON_CODE_NOT_FOUND.message);
+    }
+
+    return await this.commonCodeRepository.save(codeToUpdate);
   }
 }
