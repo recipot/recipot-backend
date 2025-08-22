@@ -935,7 +935,6 @@ module.exports = class Migration20250803144638 {
   async down(queryRunner) {
     await queryRunner.dropTable('common_codes');
     await queryRunner.dropTable('users');
-    await queryRunner.dropTable('common_codes');
     await queryRunner.dropTable('user_unavailable_ingredients');
     await queryRunner.dropTable('ingredient_health_infos');
     await queryRunner.dropTable('ingredients');

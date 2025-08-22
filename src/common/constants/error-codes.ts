@@ -16,6 +16,9 @@ export const ERROR_CODES = {
   AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
   AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
+  // 공통 오류
+  COMMON_CODE_ALREADY_EXISTS: { code: 'E3001', message: '이미 존재하는 공통 코드입니다.' },
+
   // 서버 오류
   INTERNAL_SERVER_ERROR: { code: 'E5000', message: '서버 내부 오류가 발생했습니다.' },
 
