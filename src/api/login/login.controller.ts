@@ -1,8 +1,10 @@
 import { Public } from '@/api/auth/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoginService } from './login.service';
+import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
+import { GoogleLoginResponseDto } from './dto/google-login.response.dto';
 
 @ApiTags('로그인')
 @Controller({ path: 'login', version: '1' })
@@ -52,5 +54,37 @@ export class LoginController {
   })
   async kakaoLoginCallback(@Query('code') code: string) {
     return await this.loginService.processKakaoLogin(code);
+  }
+
+  @Public()
+  @Get('google')
+  @ApiOperation({ summary: '구글 로그인 URL 생성' })
+  @ApiResponse({ status: 200, type: GoogleLoginResponseDto })
+  generateGoogleLoginUrl(): GoogleLoginResponseDto {
+    const loginUrl = this.loginService.generateGoogleLoginUrl();
+    return { loginUrl };
+  }
+
+  // @Public()
+  // @Get('google')
+  // @Redirect() // default 302
+  // generateGoogleLoginUrl() {
+  //   return {
+  //     url: this.loginService.generateGoogleLoginUrl(),
+  //     statusCode: 302,
+  //   };
+  // }
+
+  @Public()
+  @Get('google/callback')
+  @ApiOperation({ summary: '구글 로그인 콜백 처리' })
+  @ApiQuery({
+    name: 'code',
+    required: true,
+    description: '구글에서 받은 인가 코드',
+  })
+  @ApiResponse({ status: 200, type: LoginCallbackResponseDto })
+  async googleLoginCallback(@Query('code') code: string) {
+    return await this.loginService.handleGoogleCallback(code);
   }
 }

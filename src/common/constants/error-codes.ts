@@ -32,4 +32,11 @@ export const ERROR_CODES = {
   KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
   KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
   KAKAO_CONFIG_ERROR: { code: 'E9009', message: '카카오 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+  GOOGLE_USER_INFO_FAILED: { code: 'E9101', message: '구글 사용자 정보 조회에 실패했습니다.' },
+  INVALID_GOOGLE_CODE: { code: 'E9102', message: '유효하지 않은 구글 인가 코드입니다.' },
+  GOOGLE_TOKEN_FAILED: { code: 'E9103', message: '구글 액세스 토큰을 가져오지 못했습니다.' },
+  GOOGLE_SERVICE_UNAVAILABLE: { code: 'E9104', message: '구글 서비스를 이용할 수 없습니다.' },
+  GOOGLE_LOGIN_PROCESS_ERROR: { code: 'E9105', message: '구글 로그인 처리 중 오류가 발생했습니다.' },
+  GOOGLE_CONFIG_ERROR: { code: 'E9106', message: '구글 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+  GOOGLE_AUTH_FAILED: { code: 'E9107', message: '구글 인증에 실패했습니다.' },
 };

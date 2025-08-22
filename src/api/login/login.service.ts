@@ -11,6 +11,10 @@ import axios from 'axios';
 import * as qs from 'qs';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
+import {
+  GOOGLE_API,
+  GOOGLE_API_URLS,
+} from '@/common/constants/google-api.constants';
 
 @Injectable()
 export class LoginService {
@@ -40,46 +44,36 @@ export class LoginService {
    * 카카오 로그인을 처리합니다.
    */
   async processKakaoLogin(code: string) {
-    // 1. 인가 코드로 액세스 토큰 요청
     const tokenResponse = await this.getKakaoAccessToken(code);
-
-    // 2. 액세스 토큰으로 사용자 정보 조회
     const kakaoUserInfo = await this.getKakaoUserInfo(
       tokenResponse.access_token,
     );
 
-    // 3. 기존 소셜 로그인 정보 확인
     const existingSocialLogin =
       await this.socialLoginService.findBySidAndPlatform(
         kakaoUserInfo.id.toString(),
-        // TODO 공통코드 처리
         'kakao',
       );
 
     let user: UserDto;
 
     if (existingSocialLogin) {
-      // 기존 사용자: 기존 유저 정보 조회
       user = await this.userService.findById(existingSocialLogin.user_id);
       if (!user) {
         throw new Error('User not found');
       }
     } else {
-      // 신규 사용자: 유저 생성
       user = await this.userService.createUser(
         kakaoUserInfo.kakao_account?.email,
       );
 
-      // 소셜 로그인 정보 생성
       await this.socialLoginService.createSocialLogin(
         user.id,
         kakaoUserInfo.id.toString(),
-        // TODO 공통코드 처리
         'kakao',
       );
     }
 
-    // 4. JWT 토큰 생성 (Access Token + Refresh Token)
     const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
       await this.authService.generateSocialLoginTokens(user.id);
 
@@ -92,9 +86,6 @@ export class LoginService {
     };
   }
 
-  /**
-   * 카카오 인가 코드로 액세스 토큰을 요청합니다.
-   */
   async getKakaoAccessToken(code: string): Promise<any> {
     const tokenParams = qs.stringify({
       grant_type: 'authorization_code',
@@ -121,9 +112,6 @@ export class LoginService {
     return response.data;
   }
 
-  /**
-   * 카카오 액세스 토큰으로 사용자 정보를 조회합니다.
-   */
   async getKakaoUserInfo(accessToken: string): Promise<any> {
     const response = await axios.get<any>(KAKAO_API_URLS.USER_ME_URL, {
       headers: {
@@ -137,5 +125,116 @@ export class LoginService {
     }
 
     return response.data;
+  }
+
+  generateGoogleLoginUrl(): string {
+    const query = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID ?? '',
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI ?? '',
+      response_type: GOOGLE_API.RESPONSE_TYPE,
+      scope: process.env.GOOGLE_SCOPE || GOOGLE_API.DEFAULTS.SCOPE,
+      access_type: GOOGLE_API.DEFAULTS.ACCESS_TYPE,
+      include_granted_scopes: GOOGLE_API.DEFAULTS.INCLUDE_GRANTED_SCOPES,
+      prompt: GOOGLE_API.DEFAULTS.PROMPT,
+    });
+    return `${GOOGLE_API_URLS.AUTH_URL}?${query.toString()}`;
+  }
+
+  async handleGoogleCallback(code: string) {
+    // 1) exchange code → tokens
+    const tokens = await this.exchangeGoogleCodeForTokens(code);
+    const accessToken = tokens?.access_token;
+    if (!accessToken) {
+      throw new CustomException(ERROR_CODES.GOOGLE_TOKEN_FAILED);
+    }
+
+    // 2) fetch profile
+    const profile = await this.fetchGoogleProfile(accessToken);
+    const sid = profile?.sub;
+    if (!sid) {
+      throw new CustomException(ERROR_CODES.GOOGLE_USER_INFO_FAILED);
+    }
+
+    // 3) locate or create user
+    const user = await this.findOrCreateGoogleUser(sid, profile);
+
+    // 4) issue tokens
+    const jwt = await this.authService.generateSocialLoginTokens(user.id);
+
+    return {
+      userId: user.id,
+      accessToken: jwt.accessToken,
+      accessExpiresAt: jwt.accessExpiresAt,
+      refreshToken: jwt.refreshToken,
+      refreshExpiresAt: jwt.refreshExpiresAt,
+    };
+  }
+
+  private async exchangeGoogleCodeForTokens(code: string) {
+    try {
+      const payload = qs.stringify({
+        code,
+        grant_type: 'authorization_code',
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      });
+
+      const { data } = await axios.post(GOOGLE_API_URLS.TOKEN_URL, payload, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      return data;
+    } catch (e) {
+      this.logger.error(
+        `Google token fetch failed`,
+        e?.response?.data || e.message,
+      );
+      throw new CustomException(ERROR_CODES.GOOGLE_TOKEN_FAILED);
+    }
+  }
+
+  private async fetchGoogleProfile(accessToken: string) {
+    try {
+      const { data } = await axios.get(GOOGLE_API_URLS.USERINFO_URL, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!data?.sub) {
+        this.logger.error(
+          `Google profile missing sub: ${JSON.stringify(data)}`,
+        );
+        throw new CustomException(ERROR_CODES.GOOGLE_USER_INFO_FAILED);
+      }
+
+      return data;
+    } catch (e) {
+      this.logger.error(
+        `Google profile fetch failed`,
+        e?.response?.data || e.message,
+      );
+      throw new CustomException(ERROR_CODES.GOOGLE_USER_INFO_FAILED);
+    }
+  }
+
+  private async findOrCreateGoogleUser(sid: string, profile: any) {
+    const linked = await this.socialLoginService.findBySidAndPlatform(
+      sid,
+      'google',
+    );
+
+    if (linked) {
+      const user = await this.userService.findById(linked.user_id);
+      if (!user) {
+        throw new CustomException(ERROR_CODES.GOOGLE_AUTH_FAILED);
+      }
+      return user;
+    }
+
+    const email = profile?.email ?? `google_${sid}@placeholder.local`;
+    const user = await this.userService.createUser(email);
+
+    await this.socialLoginService.createSocialLogin(user.id, sid, 'google');
+    return user;
   }
 }
