@@ -109,10 +109,10 @@ jobs:
               cp -f "\$FILE" "\$FILE.bak.$(date +%Y%m%d%H%M%S)"
             fi
 
-            # git 소스 전체 가져오기
-            git clone --depth 1 --branch $BRANCH https://x-access-token:$GIT_ACCESS_TOKEN@github.com/$REPO_FULL.git temp-repo
-            cp temp-repo/docker-compose.yml .
-            rm -rf temp-repo
+            # Git 저장소 업데이트
+            git remote set-url origin https://x-access-token:$GIT_ACCESS_TOKEN@github.com/$REPO_FULL.git
+            git fetch origin
+            git reset --hard origin/$BRANCH
 
             # ECR 로그인(EC2 리전 기준)
             aws ecr get-login-password --region ap-northeast-2 | \
