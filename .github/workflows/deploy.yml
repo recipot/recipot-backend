@@ -87,7 +87,7 @@ jobs:
 
       - name: Deploy to EC2
         env:
-          GITHUB_READ_TOKEN: ${{ secrets.GIT_READ_TOKEN }}
+          GIT_ACCESS_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
           REPO_FULL: ${{ github.repository }}
           BRANCH: feature/fix-workflow
           IMAGE_TAG: ${{ needs.setup.outputs.image-tag }}
