@@ -110,7 +110,7 @@ jobs:
             fi
 
             # git 소스 전체 가져오기
-            git clone --depth 1 --branch $BRANCH https://x-access-token:$GITHUB_ACCESS_TOKEN@github.com/$REPO_FULL.git temp-repo
+            git clone --depth 1 --branch $BRANCH https://x-access-token:$GIT_ACCESS_TOKEN@github.com/$REPO_FULL.git temp-repo
             cp temp-repo/docker-compose.yml .
             rm -rf temp-repo
 
