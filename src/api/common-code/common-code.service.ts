@@ -78,4 +78,16 @@ export class CommonCodeService {
 
     return await this.commonCodeRepository.save(codeToUpdate);
   }
+
+  /**
+   * 공통 코드 삭제
+   */
+  async deleteCommonCode(id: number): Promise<CommonCode> {
+    const codeToRemove = await this.commonCodeRepository.findOneBy({ id });
+
+    if (!codeToRemove) {
+      throw new BadRequestException(ERROR_CODES.COMMON_CODE_NOT_FOUND.message);
+    }
+    return await this.commonCodeRepository.softRemove(codeToRemove);
+  }
 }

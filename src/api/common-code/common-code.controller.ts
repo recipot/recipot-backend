@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -148,5 +149,35 @@ export class CommonCodeController {
     @Body() dto: UpdateCommonCodeDto,
   ): Promise<CommonCode> {
     return this.commonCodeService.updateCommonCode(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: '공통 코드 삭제',
+    description:
+      'ID로 특정 공통 코드를 찾아 삭제하고, 삭제된 데이터를 반환합니다 (Soft Delete).',
+  })
+  @ApiParam({ name: 'id', description: '삭제할 공통 코드의 ID', type: Number })
+  @ApiSuccessResponse('공통 코드 삭제 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      group_code: { type: 'string', example: 'C01' },
+      group_code_name: { type: 'string', example: '소셜 로그인' },
+      code: { type: 'string', example: 'C01001' },
+      code_name: { type: 'string', example: '카카오' },
+      group_name: { type: 'string', example: '소셜 로그인' },
+      order_num: { type: 'number', example: 1 },
+      is_active: { type: 'boolean', example: true },
+      depth: { type: 'number', example: 2 },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' },
+      deleted_at: { type: 'string', format: 'date-time' },
+    },
+  })
+  async deleteCommonCode(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<CommonCode> {
+    return this.commonCodeService.deleteCommonCode(id);
   }
 }
