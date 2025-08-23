@@ -22,11 +22,8 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
         'bookmark.user_id as bookmark_user_id',
         'bookmark.recipe_id as bookmark_recipe_id',
         'bookmark.created_at as bookmark_created_at',
+        'recipe.title as recipe_title',
         'recipe.description as recipe_description',
-        'recipe.duration as recipe_duration',
-        'recipe.level as recipe_level',
-        'recipe.method as recipe_method',
-        'recipe.washing_level as recipe_washing_level',
         'image.image_url as recipe_image',
       ])
       .from('user_recipe_bookmarks', 'bookmark')
@@ -46,11 +43,8 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
           id: result.bookmark_id,
           user_id: result.bookmark_user_id,
           recipe_id: result.bookmark_recipe_id,
+          recipe_title: result.recipe_title,
           recipe_description: result.recipe_description,
-          recipe_duration: result.recipe_duration,
-          recipe_level: result.recipe_level,
-          recipe_method: result.recipe_method,
-          recipe_washing_level: result.recipe_washing_level,
           recipe_images: result.recipe_image ? [result.recipe_image] : [],
           created_at: result.bookmark_created_at,
         });

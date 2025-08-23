@@ -10,20 +10,11 @@ export class BookmarkWithRecipeDto {
   @ApiProperty({ description: '레시피 ID', example: 1 })
   recipe_id: number;
 
+  @ApiProperty({ description: '레시피 제목', example: '크림 파스타' })
+  recipe_title: string;
+
   @ApiProperty({ description: '레시피 설명', example: '맛있는 파스타 만들기' })
   recipe_description: string;
-
-  @ApiProperty({ description: '소요 시간', example: '30분' })
-  recipe_duration: string;
-
-  @ApiProperty({ description: '조리 난이도', example: '중급' })
-  recipe_level: string;
-
-  @ApiProperty({ description: '조리 방식', example: '볶기' })
-  recipe_method: string;
-
-  @ApiProperty({ description: '설거지 난이도', example: '쉬움' })
-  recipe_washing_level: string;
 
   @ApiProperty({
     description: '레시피 이미지 URL 목록',

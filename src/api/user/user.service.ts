@@ -151,11 +151,8 @@ export class UserService {
         id: bookmark.id,
         user_id: bookmark.user_id,
         recipe_id: bookmark.recipe_id,
+        recipe_title: bookmark.recipe_title,
         recipe_description: bookmark.recipe_description,
-        recipe_duration: bookmark.recipe_duration,
-        recipe_level: bookmark.recipe_level,
-        recipe_method: bookmark.recipe_method,
-        recipe_washing_level: bookmark.recipe_washing_level,
         recipe_images: bookmark.recipe_images || [],
         created_at: bookmark.created_at,
       };
