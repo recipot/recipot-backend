@@ -1,10 +1,25 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { CommonEntity } from './common.entity';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Recipe } from './recipe.entity';
 import { User } from './user.entity';
 
 @Entity('user_recipe_bookmarks')
-export class UserRecipeBookmark extends CommonEntity {
+export class UserRecipeBookmark {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
+  @CreateDateColumn({
+    type: 'datetime',
+    comment: '생성일시',
+  })
+  created_at: Date;
+
   @Column({
     type: 'int',
     comment: '유저 PK',

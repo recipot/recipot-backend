@@ -1,5 +1,6 @@
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
+import { Recipe } from '@/database/entity/recipe.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
@@ -23,6 +24,8 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRecipeBookmark)
     private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
+    @InjectRepository(Recipe)
+    private readonly recipeRepository: Repository<Recipe>,
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
     private readonly dataSource: DataSource,
   ) {
@@ -80,6 +83,15 @@ export class UserService {
 
     if (!user) {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipe_id },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
 
     // 이미 북마크한 레시피인지 확인
