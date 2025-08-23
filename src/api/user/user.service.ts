@@ -105,21 +105,15 @@ export class UserService {
       throw new CustomException(ERROR_CODES.BOOKMARK_ALREADY_EXISTS);
     }
 
-    try {
-      // 북마크 생성
-      await this.userRecipeBookmarkCustomRepository.save({
-        user_id: userId,
-        recipe_id: recipe_id,
-      });
+    // 북마크 생성
+    await this.userRecipeBookmarkCustomRepository.save({
+      user_id: userId,
+      recipe_id: recipe_id,
+    });
 
-      this.logger.log(
-        `사용자 ${userId}가 레시피 ${recipe_id}를 북마크했습니다.`,
-      );
-      return true;
-    } catch (error) {
-      this.logger.error(`북마크 생성 실패: ${error.message}`);
-      return false;
-    }
+    this.logger.log(`사용자 ${userId}가 레시피 ${recipe_id}를 북마크했습니다.`);
+
+    return true;
   }
 
   /**
