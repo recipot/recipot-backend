@@ -20,7 +20,7 @@ import {
 import { CommonCodeService } from './common-code.service';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { CommonCode } from '@/database/entity/common-code.entity';
-import { CreateCommonCodeDto } from './dto/create-common-code.dto';
+import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
 import { PageQueryDto } from '@/common/dto/pagination.dto';
 import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
 
@@ -77,12 +77,11 @@ export class CommonCodeController {
   })
   @ApiBody({
     description: '생성할 공통 코드의 데이터',
-    type: [CreateCommonCodeDto],
+    type: CreateCommonCodeDtoTx,
   })
   @ApiSuccessResponse('공통 코드 생성 성공', {
-    type: 'array', // 'object'에서 'array'로 수정
+    type: 'array',
     items: {
-      // 배열의 각 항목에 대한 정의
       type: 'object',
       properties: {
         id: { type: 'number', example: 1 },
@@ -108,7 +107,7 @@ export class CommonCodeController {
     },
   })
   async createCommonCode(
-    @Body() dto: CreateCommonCodeDto[],
+    @Body() dto: CreateCommonCodeDtoTx,
   ): Promise<CommonCode[]> {
     return this.commonCodeService.createCommonCode(dto);
   }

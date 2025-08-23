@@ -1,11 +1,12 @@
 import { CommonCode } from '@/database/entity/common-code.entity';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { CreateCommonCodeDto } from './dto/create-common-code.dto';
+import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { PageQueryDto } from '@/common/dto/pagination.dto';
 import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
+import { CustomException } from '@/common/exceptions/custom-exception';
 
 @Injectable()
 export class CommonCodeService {
@@ -17,7 +18,7 @@ export class CommonCodeService {
   ) {}
 
   /**
-   * 콩통 코드 페이지네이션 조회
+   * 공통 코드 페이지네이션 조회
    */
   async findCommonCodes(query: PageQueryDto): Promise<CommonCode[]> {
     const { page, limit } = query;
@@ -36,27 +37,35 @@ export class CommonCodeService {
   }
 
   /**
+   * 공통 코드 조회 (내부 서비스용)
+   */
+  async findCommonCode(code: string): Promise<CommonCode> {
+    const commonCode = await this.commonCodeRepository.findOneBy({ code });
+
+    if (!commonCode) {
+      throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
+    }
+
+    return commonCode;
+  }
+
+  /**
    * 공통 코드 생성
    */
-  async createCommonCode(dto: CreateCommonCodeDto[]): Promise<CommonCode[]> {
-    const codesToCheck = dto.map((dto) => dto.code);
-    if (codesToCheck.length === 0) {
-      return [];
-    }
+  async createCommonCode(dto: CreateCommonCodeDtoTx): Promise<CommonCode[]> {
+    const incomingCodes = dto.data.map((element) => element.code);
 
     const existingCodes = await this.commonCodeRepository.find({
       where: {
-        code: In(codesToCheck),
+        code: In(incomingCodes),
       },
     });
 
     if (existingCodes.length > 0) {
-      throw new BadRequestException(
-        ERROR_CODES.COMMON_CODE_ALREADY_EXISTS.message,
-      );
+      throw new CustomException(ERROR_CODES.COMMON_CODE_ALREADY_EXISTS);
     }
 
-    const newCommonCodes = this.commonCodeRepository.create(dto);
+    const newCommonCodes = this.commonCodeRepository.create(dto.data);
     return await this.commonCodeRepository.save(newCommonCodes);
   }
 
@@ -73,7 +82,7 @@ export class CommonCodeService {
     });
 
     if (!codeToUpdate) {
-      throw new BadRequestException(ERROR_CODES.COMMON_CODE_NOT_FOUND.message);
+      throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
     }
 
     return await this.commonCodeRepository.save(codeToUpdate);
@@ -86,8 +95,11 @@ export class CommonCodeService {
     const codeToRemove = await this.commonCodeRepository.findOneBy({ id });
 
     if (!codeToRemove) {
-      throw new BadRequestException(ERROR_CODES.COMMON_CODE_NOT_FOUND.message);
+      throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
     }
+
+    codeToRemove.is_active = false;
+
     return await this.commonCodeRepository.softRemove(codeToRemove);
   }
 }

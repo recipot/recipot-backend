@@ -1,10 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateCommonCodeDto {
@@ -51,4 +55,16 @@ export class CreateCommonCodeDto {
   @IsBoolean()
   @IsOptional()
   is_active?: boolean;
+}
+
+export class CreateCommonCodeDtoTx {
+  @ApiProperty({
+    description: '생성할 공통 코드 객체들의 배열',
+    type: [CreateCommonCodeDto],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCommonCodeDto)
+  data: CreateCommonCodeDto[];
 }
