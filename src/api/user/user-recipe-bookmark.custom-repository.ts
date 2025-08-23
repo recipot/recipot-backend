@@ -34,7 +34,6 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
 
     const rawResults = await queryBuilder.getRawMany();
 
-    // 결과를 북마크별로 그룹핑하고 이미지는 랜덤으로 하나만 선택
     const bookmarkMap = new Map<number, BookmarkWithRecipeDto>();
 
     for (const result of rawResults) {
