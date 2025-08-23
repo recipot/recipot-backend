@@ -89,6 +89,11 @@ def main():
             print("Coderabbit bot review, skipping Discord notification.")
             return
 
+        # PR 작성자가 본인이면서 동시에 리뷰어인 경우 알림을 보내지 않음
+        if reviewer_github_id == pr["user"]["login"]:
+            print("PR author is reviewing their own PR, skipping Discord notification.")
+            return
+
         reviewer_discord_id = get_discord_id(reviewer_github_id)
         if reviewer_discord_id and reviewer_discord_id.isdigit():
             formatted_reviewer = f"<@{reviewer_discord_id}>"
