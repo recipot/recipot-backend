@@ -5,9 +5,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { CommonCode } from '@/database/entity/common-code.entity';
 
 @Module({
-  imports: [DatabaseModule, TypeOrmModule.forFeature([User]), AuthModule],
+  imports: [
+    DatabaseModule,
+    TypeOrmModule.forFeature([User, CommonCode]),
+    AuthModule,
+  ],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

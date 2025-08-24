@@ -18,4 +18,7 @@ export class UserDto {
 
   @ApiProperty({ description: '최초 진입 여부', example: true })
   is_first_entry: boolean;
+
+  @ApiProperty({ description: '유저 권한', example: 'general' })
+  role: string;
 }

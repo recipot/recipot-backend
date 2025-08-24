@@ -81,7 +81,7 @@ export class LoginService {
 
     // 4. JWT 토큰 생성 (Access Token + Refresh Token)
     const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
-      await this.authService.generateSocialLoginTokens(user.id);
+      await this.authService.generateSocialLoginTokens(user.id, user.role);
 
     return {
       userId: user.id,
