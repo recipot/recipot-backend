@@ -1,3 +1,5 @@
+import { Role } from '@/common/enums/role.type';
+
 const { Table } = require('typeorm');
 
 module.exports = class Migration20250803144638 {
@@ -129,6 +131,14 @@ module.exports = class Migration20250803144638 {
             isNullable: false,
             default: false,
             comment: '최초 진입 여부',
+          },
+          {
+            name: 'role',
+            type: 'varchar',
+            length: '20',
+            isNullable: false,
+            default: Role.General,
+            comment: '유저 권한 (ADMIN, PAID, GENERAL)',
           },
           {
             name: 'created_at',
