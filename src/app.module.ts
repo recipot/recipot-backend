@@ -14,6 +14,7 @@ import { AuthModule } from './api/auth/auth.module';
 import { LoginModule } from './api/login/login.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { CommonCodeModule } from './api/common-code/common-code.module';
 
 export const FeatureModules = [
   UserModule,
@@ -24,6 +25,7 @@ export const FeatureModules = [
   LoggerModule,
   HealthModule,
   UploadModule,
+  CommonCodeModule,
 ];
 
 @Module({
