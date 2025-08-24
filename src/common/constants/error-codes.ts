@@ -16,6 +16,9 @@ export const ERROR_CODES = {
   AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
   AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
+  // 인가 오류
+  AUTH_PERMISSION_DENIED: { code: 'E2014', message: '이 작업을 수행할 권한이 없습니다.' }, // <-- 추가
+
   // 공통 오류
   COMMON_CODE_ALREADY_EXISTS: { code: 'E3001', message: '이미 존재하는 공통 코드입니다.' },
   COMMON_CODE_NOT_FOUND: { code: 'E3002', message: '공통 코드를 찾을 수 없습니다.' },
