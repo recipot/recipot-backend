@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,8 +24,13 @@ import { CommonCode } from '@/database/entity/common-code.entity';
 import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
 import { PageQueryDto } from '@/common/dto/pagination.dto';
 import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../user/enums/role.enum';
 
 @ApiTags('공통 코드')
+@UseGuards(RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller({ path: 'common-codes', version: '1' })
 @ApiBearerAuth('Authorization')
 export class CommonCodeController {

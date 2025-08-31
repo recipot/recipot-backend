@@ -6,7 +6,7 @@ import { ConfigService } from '@/config/config.service';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { initializeTransactionalContext } from 'typeorm-transactional';
-import { JwtGuard } from './api/auth/auth.guard';
+import { JwtGuard } from './api/auth/guards/auth.guard';
 import { AppModule } from './app.module';
 
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
