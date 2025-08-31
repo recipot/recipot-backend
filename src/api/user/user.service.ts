@@ -5,6 +5,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDto } from './dto/user.dto';
+import { UserRole } from './enums/role.enum';
+import { CommonCode } from '@/database/entity/common-code.entity';
 
 @Injectable()
 export class UserService {
@@ -14,6 +16,8 @@ export class UserService {
     private readonly loggerFactory: LoggerFactoryService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(CommonCode)
+    private readonly commonRepository: Repository<CommonCode>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -28,6 +32,7 @@ export class UserService {
       profile_image_url: '',
       recipe_complete_count: 0,
       is_first_entry: true,
+      role: UserRole.GENERAL,
     });
   }
 
@@ -43,6 +48,10 @@ export class UserService {
       return null;
     }
 
+    const role = await this.commonRepository.findOne({
+      where: { code: user.role },
+    });
+
     return {
       id: user.id,
       email: user.email,
@@ -50,6 +59,7 @@ export class UserService {
       profile_image_url: user.profile_image_url,
       recipe_complete_count: user.recipe_complete_count,
       is_first_entry: user.is_first_entry,
+      role: role.code_name,
     };
   }
 }

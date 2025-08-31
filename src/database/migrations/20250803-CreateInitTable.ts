@@ -131,6 +131,13 @@ module.exports = class Migration20250803144638 {
             comment: '최초 진입 여부',
           },
           {
+            name: 'role',
+            type: 'varchar',
+            length: '6',
+            isNullable: false,
+            comment: '유저 권한 (ADMIN, PAID, GENERAL)',
+          },
+          {
             name: 'created_at',
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',

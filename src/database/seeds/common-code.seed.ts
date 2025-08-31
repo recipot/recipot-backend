@@ -33,6 +33,36 @@ export class CommonCodeSeed {
         order_num: 2,
         is_active: true,
       },
+      {
+        group_code: 'U01',
+        group_code_name: 'USER_ROLE',
+        code: 'U01001',
+        code_name: 'admin',
+        group_name: '유저 역할',
+        depth: 1,
+        order_num: 1,
+        is_active: true,
+      },
+      {
+        group_code: 'U01',
+        group_code_name: 'USER_ROLE',
+        code: 'U01002',
+        code_name: 'paid',
+        group_name: '유저 역할',
+        depth: 1,
+        order_num: 2,
+        is_active: true,
+      },
+      {
+        group_code: 'U01',
+        group_code_name: 'USER_ROLE',
+        code: 'U01003',
+        code_name: 'general',
+        group_name: '유저 역할',
+        depth: 1,
+        order_num: 3,
+        is_active: true,
+      },
     ];
 
     for (const commonCodeData of commonCodes) {

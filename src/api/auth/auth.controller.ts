@@ -16,7 +16,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { Public } from './auth.decorators';
+import { Public } from './decorators/auth.decorators';
 import { AuthService } from './auth.service';
 import { JwtToken } from './dto/jwt-token.dto';
 import { RefreshTokenRequestDto } from './dto/refresh-token-request.dto';
@@ -182,6 +182,11 @@ export class AuthController {
           example: 1,
           description: '테스트할 사용자 ID',
         },
+        role: {
+          type: 'string',
+          example: 'U01001',
+          description: '테스트할 사용자 ROLE',
+        },
       },
       required: ['userId'],
     },
@@ -210,7 +215,7 @@ export class AuthController {
     },
   })
   @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
-  async generateDebugToken(@Body() body: { userId: number }) {
-    return await this.authService.generateDebugToken(body.userId);
+  async generateDebugToken(@Body() body: { userId: number; role: string }) {
+    return await this.authService.generateDebugToken(body.userId, body.role);
   }
 }
