@@ -22,8 +22,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:create": "ts-node -r tsconfig-paths/register src/database/migration.ts",
-    "migration:run": "infisical run --env=dev --path=/env -- NODE_ENV=development ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
-    "migration:revert": "infisical run --env=dev --path=/env -- NODE_ENV=development ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
+    "migration:run": "NODE_ENV=development infisical run --env=dev --path=/env -- ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "migration:revert": "NODE_ENV=development infisical run --env=dev --path=/env -- ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
     "migration:generate": "infisical run --env=dev --path=/env -- NODE_ENV=development ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:generate src/database/migrations/MigrationName -d src/database/data-source.ts",
     "migration:show": "infisical run --env=dev --path=/env -- NODE_ENV=development ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:show -d src/database/data-source.ts",
     "prepare": "husky"
