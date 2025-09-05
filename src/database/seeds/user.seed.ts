@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { SocialLogin } from '../entity/social-login.entity';
 import { User } from '../entity/user.entity';
+import { UserRole } from '@/api/user/enums/role.enum';
 
 export class UserSeed {
   constructor(private dataSource: DataSource) {}
@@ -21,6 +22,7 @@ export class UserSeed {
       nickname: '카카오유저',
       recipe_complete_count: 0,
       is_first_entry: false,
+      role: UserRole.GENERAL,
     };
 
     const user2Data = {
@@ -29,6 +31,7 @@ export class UserSeed {
       nickname: '구글유저',
       recipe_complete_count: 0,
       is_first_entry: false,
+      role: UserRole.GENERAL,
     };
 
     // 기존 사용자 확인 및 생성
