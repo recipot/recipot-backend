@@ -386,6 +386,12 @@ module.exports = class Migration20250803144638 {
             comment: '레시피 PK',
           },
           {
+            name: 'title',
+            type: 'varchar',
+            isNullable: false,
+            comment: '제목',
+          },
+          {
             name: 'description',
             type: 'text',
             isNullable: false,
@@ -588,6 +594,12 @@ module.exports = class Migration20250803144638 {
             comment: '조리 도구 PK',
           },
           {
+            name: 'image_url',
+            type: 'varchar',
+            isNullable: false,
+            comment: '조리 도구 이미지 주소',
+          },
+          {
             name: 'name',
             type: 'varchar',
             isNullable: false,
@@ -634,10 +646,16 @@ module.exports = class Migration20250803144638 {
             comment: '레시피 PK',
           },
           {
-            name: 'tool_id',
+            name: 'seasoning_id',
             type: 'int',
             isNullable: false,
             comment: '양념 PK',
+          },
+          {
+            name: 'amount',
+            type: 'varchar',
+            isNullable: false,
+            comment: '필요량',
           },
         ],
         comment: '레시피 양념 테이블',
@@ -696,6 +714,18 @@ module.exports = class Migration20250803144638 {
             type: 'int',
             isNullable: false,
             comment: '순서',
+          },
+          {
+            name: 'image_url',
+            type: 'varchar',
+            isNullable: false,
+            comment: '레시피 이미지 주소',
+          },
+          {
+            name: 'summary',
+            type: 'text',
+            isNullable: false,
+            comment: '요약',
           },
           {
             name: 'content',
@@ -1021,6 +1051,92 @@ module.exports = class Migration20250803144638 {
         comment: '유저별 추천 레시피 결과 테이블',
       }),
     );
+
+    await queryRunner.createTable(
+      new Table({
+        name: 'recipe_health_points',
+        columns: [
+          {
+            name: 'id',
+            type: 'int',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'increment',
+            comment: 'PK',
+          },
+          {
+            name: 'recipe_id',
+            type: 'int',
+            isNullable: false,
+            comment: '레시피 PK',
+          },
+          {
+            name: 'content',
+            type: 'varchar',
+            length: '255',
+            isNullable: false,
+            comment: '한줄 건강 포인트',
+          },
+          {
+            name: 'created_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updated_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+            onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
+        ],
+        comment: '레시피별 한줄 건강 포인트 테이블',
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'user_recent_view_recipes',
+        columns: [
+          {
+            name: 'id',
+            type: 'int',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'increment',
+            comment: 'PK',
+          },
+          {
+            name: 'user_id',
+            type: 'int',
+            isNullable: false,
+            comment: '유저 PK',
+          },
+          {
+            name: 'recipe_id',
+            type: 'int',
+            isNullable: false,
+            comment: '레시피 PK',
+          },
+          {
+            name: 'created_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updated_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+            onUpdate: 'CURRENT_TIMESTAMP',
+          },
+        ],
+        comment: '유저 최근 조회 레시피 테이블',
+      }),
+    );
   }
 
   async down(queryRunner) {
@@ -1045,5 +1161,8 @@ module.exports = class Migration20250803144638 {
     await queryRunner.dropTable('user_recipe_recommendation');
     await queryRunner.dropTable('recipe_recommendation_condition');
     await queryRunner.dropTable('conditions');
+    await queryRunner.dropTable('social_logins');
+    await queryRunner.dropTable('recipe_health_points');
+    await queryRunner.dropTable('user_recent_view_recipes');
   }
 };
