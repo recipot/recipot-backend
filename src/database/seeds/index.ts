@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { CommonCodeSeed } from './common-code.seed';
 import { UserSeed } from './user.seed';
+import { IngredientCategorySeed } from './ingredientcategory.seed';
 
 export class DatabaseSeeder {
   constructor(
@@ -19,9 +20,13 @@ export class DatabaseSeeder {
     const userSeed = new UserSeed(this.dataSource);
     await userSeed.run();
 
+    // IngredientCategorySeed 실행
+    const ingredientCategorySeed = new IngredientCategorySeed(this.dataSource);
+    await ingredientCategorySeed.run();
+
     this.logger.log('All seeding completed successfully');
   }
 }
 
 // 개별 seeder들도 export
-export { CommonCodeSeed, UserSeed };
+export { CommonCodeSeed, UserSeed, IngredientCategorySeed };
