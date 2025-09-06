@@ -9,11 +9,4 @@ export class Seasoning extends CommonEntity {
     comment: '양념 이름',
   })
   name: string;
-
-  @Column({
-    type: 'varchar',
-    nullable: false,
-    comment: '양념 이미지 주소',
-  })
-  image_url: string;
 }

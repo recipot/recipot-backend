@@ -16,6 +16,7 @@ import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { CommonCodeModule } from './api/common-code/common-code.module';
 import { IngredientModule } from './api/ingredient/ingredient.module';
+import { SeasoningModule } from './api/seasoning/seasoning.module';
 
 export const FeatureModules = [
   UserModule,
@@ -28,6 +29,7 @@ export const FeatureModules = [
   UploadModule,
   CommonCodeModule,
   IngredientModule,
+  SeasoningModule,
 ];
 
 @Module({
