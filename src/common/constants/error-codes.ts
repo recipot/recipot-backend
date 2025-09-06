@@ -42,4 +42,6 @@ export const ERROR_CODES = {
 
   // 재료 관련 오류
   INGREDIENT_CATEGORY_ALREADY_EXISTS: { code: 'E10001', message: '이미 존재하는 재료 카테고리입니다.' },
+  INGREDIENT_CATEGORY_NOT_FOUND: { code: 'E10002', message: '재료 카테고리를 찾을 수 없습니다.' },
+  INGREDIENT_ALREADY_EXISTS: { code: 'E10003', message: '이미 존재하는 재료입니다.' },
 };

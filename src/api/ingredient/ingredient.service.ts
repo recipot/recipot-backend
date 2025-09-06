@@ -9,6 +9,12 @@ import {
   GetIngredientCategoriesDto,
   GetIngredientCategoriesResponseDto,
 } from './dto/get-ingredient-category.dto';
+import { Ingredient } from '@/database/entity/ingredient.entity';
+import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
+import {
+  CreateIngredientDtoTx,
+  IngredientResponseDto,
+} from './dto/create-ingredient.dto';
 
 @Injectable()
 export class IngredientService {
@@ -17,6 +23,10 @@ export class IngredientService {
   constructor(
     @InjectRepository(IngredientCategory)
     private readonly ingredientCategoryRepository: Repository<IngredientCategory>,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
+    @InjectRepository(IngredientHealthInfo)
+    private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
   ) {}
 
   /**
@@ -64,5 +74,62 @@ export class IngredientService {
         name: category.name,
       })),
     };
+  }
+
+  /**
+   * 재료 생성 (건강 정보 포함)
+   */
+  async createIngredient(
+    dto: CreateIngredientDtoTx,
+  ): Promise<IngredientResponseDto[]> {
+    const results: IngredientResponseDto[] = [];
+
+    for (const ingredientData of dto.data) {
+      const category = await this.ingredientCategoryRepository.findOneBy({
+        id: ingredientData.ingredient_category_id,
+      });
+
+      if (!category) {
+        throw new CustomException(ERROR_CODES.INGREDIENT_CATEGORY_NOT_FOUND);
+      }
+
+      const existingIngredient = await this.ingredientRepository.findOneBy({
+        name: ingredientData.name,
+      });
+
+      if (existingIngredient) {
+        throw new CustomException(ERROR_CODES.INGREDIENT_ALREADY_EXISTS);
+      }
+
+      const newIngredient = this.ingredientRepository.create({
+        ingredient_category_id: ingredientData.ingredient_category_id,
+        name: ingredientData.name,
+      });
+
+      const savedIngredient =
+        await this.ingredientRepository.save(newIngredient);
+
+      const healthInfos = ingredientData.health_infos.map((healthInfo) =>
+        this.ingredientHealthInfoRepository.create({
+          ingredient_id: savedIngredient.id,
+          content: healthInfo.content,
+        }),
+      );
+
+      const savedHealthInfos =
+        await this.ingredientHealthInfoRepository.save(healthInfos);
+
+      results.push({
+        id: savedIngredient.id,
+        name: savedIngredient.name,
+        ingredient_category_id: savedIngredient.ingredient_category_id,
+        health_infos: savedHealthInfos.map((info) => ({
+          id: info.id,
+          content: info.content,
+        })),
+      });
+    }
+
+    return results;
   }
 }
