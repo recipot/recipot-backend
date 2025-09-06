@@ -412,20 +412,6 @@ module.exports = class Migration20250803144638 {
             comment: '조리 난이도',
           },
           {
-            name: 'method',
-            type: 'varchar',
-            method: '6',
-            isNullable: false,
-            comment: '조리 방식',
-          },
-          {
-            name: 'washing_level',
-            type: 'varchar',
-            method: '6',
-            isNullable: false,
-            comment: '설거지 난이도',
-          },
-          {
             name: 'created_at',
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
@@ -713,7 +699,7 @@ module.exports = class Migration20250803144638 {
             name: 'image_url',
             type: 'varchar',
             isNullable: false,
-            comment: '레시피 이미지 주소',
+            comment: '요리 예시 이미지 주소',
           },
           {
             name: 'summary',

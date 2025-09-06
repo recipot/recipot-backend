@@ -20,7 +20,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  @Public() // 인증 없이 접근 가능
+  @Public()
   @ApiOperation({ summary: '파일 업로드' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
