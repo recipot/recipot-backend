@@ -265,7 +265,7 @@ module.exports = class Migration20250803144638 {
             comment: '재료 PK',
           },
           {
-            name: 'ingredient_categorie_id',
+            name: 'ingredient_category_id',
             type: 'int',
             isNullable: false,
             comment: '재료 카테고리 PK',
