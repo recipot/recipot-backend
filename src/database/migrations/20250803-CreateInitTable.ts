@@ -554,12 +554,6 @@ module.exports = class Migration20250803144638 {
             comment: '양념 이름',
           },
           {
-            name: 'image_url',
-            type: 'varchar',
-            isNullable: false,
-            comment: '양념 이미지 주소',
-          },
-          {
             name: 'created_at',
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
