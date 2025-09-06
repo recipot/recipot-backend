@@ -48,4 +48,7 @@ export const ERROR_CODES = {
   // 양념 관련 오류
   SEASONING_ALREADY_EXISTS: { code: 'E11001', message: '이미 존재하는 양념입니다.' },
   SEASONING_NOT_FOUND: { code: 'E11002', message: '양념을 찾을 수 없습니다.' },
+
+  // 조리 도구 관련 오류'
+  TOOL_ALREADY_EXISTS: { code: 'E12001', message: '이미 존재하는 조리 도구입니다.' },
 };

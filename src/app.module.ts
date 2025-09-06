@@ -17,6 +17,7 @@ import { ResponseTimeInterceptor } from './common/interceptors/response-time.int
 import { CommonCodeModule } from './api/common-code/common-code.module';
 import { IngredientModule } from './api/ingredient/ingredient.module';
 import { SeasoningModule } from './api/seasoning/seasoning.module';
+import { ToolModule } from './api/tool/tool.module';
 
 export const FeatureModules = [
   UserModule,
@@ -30,6 +31,7 @@ export const FeatureModules = [
   CommonCodeModule,
   IngredientModule,
   SeasoningModule,
+  ToolModule,
 ];
 
 @Module({
