@@ -18,6 +18,7 @@ import { CommonCodeModule } from './api/common-code/common-code.module';
 import { IngredientModule } from './api/ingredient/ingredient.module';
 import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
+import { RecipeModule } from './api/recipe/recipe.module';
 
 export const FeatureModules = [
   UserModule,
@@ -32,6 +33,7 @@ export const FeatureModules = [
   IngredientModule,
   SeasoningModule,
   ToolModule,
+  RecipeModule,
 ];
 
 @Module({

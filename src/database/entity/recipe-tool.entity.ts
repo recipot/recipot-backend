@@ -1,10 +1,18 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { CommonEntity } from './common.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Recipe } from './recipe.entity';
 import { Tool } from './tool.entity';
 
 @Entity('recipe_tools')
-export class RecipeTool extends CommonEntity {
+export class RecipeTool {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
   @Column({
     type: 'int',
     nullable: false,

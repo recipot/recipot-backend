@@ -51,4 +51,9 @@ export const ERROR_CODES = {
 
   // 조리 도구 관련 오류'
   TOOL_ALREADY_EXISTS: { code: 'E12001', message: '이미 존재하는 조리 도구입니다.' },
+
+  // 레시피 관련 오류
+  RECIPE_CREATE_FAILED: { code: 'E13001', message: '레시피 생성에 실패했습니다.' },
+  RECIPE_NOT_FOUND: { code: 'E13002', message: '레시피를 찾을 수 없습니다.' },
+
 };

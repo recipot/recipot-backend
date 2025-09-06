@@ -138,7 +138,7 @@ export class CreateRecipeDto {
 
   @ApiProperty({
     description: '소요 시간 (공통코드)',
-    example: 'TIME01',
+    example: 'R01004',
   })
   @IsString()
   @IsNotEmpty()
@@ -146,7 +146,7 @@ export class CreateRecipeDto {
 
   @ApiProperty({
     description: '조리 난이도',
-    example: '쉬움',
+    example: 'R02003',
   })
   @IsString()
   @IsNotEmpty()

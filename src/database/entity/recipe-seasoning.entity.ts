@@ -1,11 +1,19 @@
 // src/database/entity/recipe-seasoning.entity.ts
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { CommonEntity } from './common.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Recipe } from './recipe.entity';
 import { Seasoning } from './seasoning.entity';
 
 @Entity('recipe_seasonings')
-export class RecipeSeasoning extends CommonEntity {
+export class RecipeSeasoning {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
   @Column({
     type: 'int',
     nullable: false,
