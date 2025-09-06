@@ -5,6 +5,10 @@ import { In, Repository } from 'typeorm';
 import { CreateIngredientCategoryDtoTx } from './dto/create-ingredient-category.dto';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
+import {
+  GetIngredientCategoriesDto,
+  GetIngredientCategoriesResponseDto,
+} from './dto/get-ingredient-category.dto';
 
 @Injectable()
 export class IngredientService {
@@ -35,5 +39,30 @@ export class IngredientService {
 
     const newCategories = this.ingredientCategoryRepository.create(dto.data);
     return await this.ingredientCategoryRepository.save(newCategories);
+  }
+
+  /**
+   * 재료 카테고리 조회
+   */
+  async getIngredientCategories(
+    query: GetIngredientCategoriesDto,
+  ): Promise<GetIngredientCategoriesResponseDto> {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const data = await this.ingredientCategoryRepository.find({
+      order: {
+        id: 'ASC',
+      },
+      take: limit,
+      skip: skip,
+    });
+
+    return {
+      data: data.map((category) => ({
+        id: category.id,
+        name: category.name,
+      })),
+    };
   }
 }
