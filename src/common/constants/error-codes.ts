@@ -39,4 +39,7 @@ export const ERROR_CODES = {
   KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
   KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
   KAKAO_CONFIG_ERROR: { code: 'E9009', message: '카카오 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+
+  // 재료 관련 오류
+  INGREDIENT_CATEGORY_ALREADY_EXISTS: { code: 'E10001', message: '이미 존재하는 재료 카테고리입니다.' },
 };
