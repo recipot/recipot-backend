@@ -55,5 +55,5 @@ export const ERROR_CODES = {
   // 레시피 관련 오류
   RECIPE_CREATE_FAILED: { code: 'E13001', message: '레시피 생성에 실패했습니다.' },
   RECIPE_NOT_FOUND: { code: 'E13002', message: '레시피를 찾을 수 없습니다.' },
-
+  RECIPE_GET_FAILED: { code: 'E13003', message: '레시피 조회에 실패했습니다.' },
 };

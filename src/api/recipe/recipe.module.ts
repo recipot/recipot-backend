@@ -9,6 +9,7 @@ import { RecipeSeasoning } from '@/database/entity/recipe-seasoning.entity';
 import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { RecipeStep } from '@/database/entity/recipe-step.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
+import { CacheModule } from '@/common/cache/cache.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity'
       RecipeStep,
       RecipeHealthPoint,
     ]),
+    CacheModule,
   ],
   controllers: [RecipeController],
   providers: [RecipeService],

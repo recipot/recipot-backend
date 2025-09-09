@@ -1,4 +1,3 @@
-// src/database/entity/recipe-step.entity.ts
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { CommonEntity } from './common.entity';
 import { Recipe } from './recipe.entity';

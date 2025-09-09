@@ -1,5 +1,20 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RecipeService } from './recipe.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { Recipe } from '@/database/entity/recipe.entity';
@@ -7,6 +22,9 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/enums/role.enum';
+import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { GetRecipeResponseDto } from './dto/get-recipe.dto';
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
@@ -189,5 +207,128 @@ export class RecipeController {
     @Body() createRecipeDto: CreateRecipeDto,
   ): Promise<Recipe> {
     return await this.recipeService.createRecipe(createRecipeDto);
+  }
+
+  @Get(':id')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '레시피 상세 조회',
+    description:
+      '레시피 ID로 상세 정보를 조회합니다. 사용자의 재료 보유 상태가 포함됩니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '조회할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 상세 조회 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      title: { type: 'string', example: '간장 고등어 구이' },
+      description: {
+        type: 'string',
+        example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
+      },
+      duration: { type: 'string', example: '30분' },
+      level: { type: 'string', example: '초보' },
+      images: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/recipe.jpg',
+            },
+          },
+        },
+      },
+      ingredients: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '고등어' },
+            amount: { type: 'string', example: '1마리' },
+            is_alternative: { type: 'boolean', example: false },
+            ownership_status: {
+              type: 'string',
+              enum: ['owned', 'not_owned', 'alternative_unavailable'],
+              example: 'owned',
+            },
+          },
+        },
+      },
+      seasonings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '간장' },
+            amount: { type: 'string', example: '2큰술' },
+          },
+        },
+      },
+      tools: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '프라이팬(원팬)' },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/pan.jpg',
+            },
+          },
+        },
+      },
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            order_num: { type: 'number', example: 1 },
+            summary: { type: 'string', example: '고등어 손질하기' },
+            content: {
+              type: 'string',
+              example: '고등어를 깨끗이 씻어서 3등분으로 자릅니다.',
+            },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/step1.jpg',
+            },
+          },
+        },
+      },
+      healthPoints: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            content: {
+              type: 'string',
+              example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
+            },
+          },
+        },
+      },
+      is_bookmarked: { type: 'boolean', example: true },
+      is_completed: { type: 'boolean', example: false },
+    },
+  })
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  async getRecipe(
+    @Param('id', ParseIntPipe) recipeId: number,
+    @Request() req: any,
+  ): Promise<GetRecipeResponseDto> {
+    const userId = req.user.userId;
+    return await this.recipeService.getRecipe(userId, recipeId);
   }
 }

@@ -12,6 +12,12 @@ import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity'
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
+import {
+  GetRecipeResponseDto,
+  RecipeIngredientDto,
+} from './dto/get-recipe.dto';
+import { CacheService } from '@/common/cache/cache.service';
+import { CommonCodeService } from '../common-code/common-code.service';
 
 @Injectable()
 export class RecipeService {
@@ -32,6 +38,8 @@ export class RecipeService {
     private readonly recipeStepRepository: Repository<RecipeStep>,
     @InjectRepository(RecipeHealthPoint)
     private readonly recipeHealthPointRepository: Repository<RecipeHealthPoint>,
+    private readonly cacheService: CacheService,
+    private readonly commonCodeService: CommonCodeService,
   ) {}
 
   @Transactional()
@@ -138,14 +146,133 @@ export class RecipeService {
 
       return result;
     } catch (error) {
-      this.logger.error('레시피 생성 중 에러 발생', {
-        error: error.message,
-        stack: error.stack,
-        name: error.name,
-        createRecipeDto,
-      });
-
+      this.logger.error('레시피 생성 중 에러 발생', error);
       throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
     }
+  }
+
+  async getRecipe(
+    userId: number,
+    recipeId: number,
+  ): Promise<GetRecipeResponseDto> {
+    try {
+      const recipe = await this.recipeRepository.findOne({
+        where: { id: recipeId },
+        relations: [
+          'images',
+          'ingredients',
+          'ingredients.ingredient',
+          'seasonings',
+          'seasonings.seasoning',
+          'tools',
+          'tools.tool',
+          'steps',
+          'healthPoints',
+        ],
+      });
+      if (!recipe) {
+        throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+      }
+      const userOwnedIngredients = await this.getUserOwnedIngredients(userId);
+      const durationName = await this.commonCodeService.findCommonCode(
+        recipe.duration,
+      );
+      const levelName = await this.commonCodeService.findCommonCode(
+        recipe.level,
+      );
+      return {
+        id: recipe.id,
+        title: recipe.title,
+        description: recipe.description,
+        duration: durationName.code_name,
+        level: levelName.code_name,
+        images: recipe.images.map((image) => ({
+          id: image.id,
+          image_url: image.image_url,
+        })),
+        ingredients: this.mapIngredientsWithOwnership(
+          recipe.ingredients,
+          userOwnedIngredients,
+        ),
+        seasonings: recipe.seasonings.map((seasoning) => ({
+          id: seasoning.seasoning.id,
+          name: seasoning.seasoning.name,
+          amount: seasoning.amount,
+        })),
+        tools: recipe.tools.map((tool) => ({
+          id: tool.tool.id,
+          name: tool.tool.name,
+          image_url: tool.tool.image_url,
+        })),
+        steps: recipe.steps
+          .sort((a, b) => a.order_num - b.order_num)
+          .map((step) => ({
+            order_num: step.order_num,
+            summary: step.summary,
+          })),
+        healthPoints: recipe.healthPoints.map((healthPoint) => ({
+          content: healthPoint.content,
+        })),
+      };
+    } catch (error) {
+      this.logger.error('레시피 조회 중 에러 발생', error);
+      throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
+    }
+  }
+
+  private async getUserOwnedIngredients(userId: number): Promise<number[]> {
+    try {
+      const cacheKey = `user:${userId}:owned_ingredients`;
+      const cachedIngredients = await this.cacheService.get(cacheKey);
+      if (cachedIngredients) {
+        if (typeof cachedIngredients === 'string') {
+          return JSON.parse(cachedIngredients);
+        }
+      }
+      return [];
+    } catch (error) {
+      this.logger.error('Failed to get cached ingredients', error);
+      throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
+    }
+  }
+
+  private mapIngredientsWithOwnership(
+    recipeIngredients: any[],
+    userOwnedIngredients: number[],
+  ): RecipeIngredientDto {
+    const ownedIngredients = userOwnedIngredients || [];
+
+    const owned = [];
+    const not_owned = [];
+    const alternative_unavailable = [];
+
+    recipeIngredients.forEach((recipeIngredient) => {
+      const ingredientId = recipeIngredient.ingredient.id;
+      const isOwned = ownedIngredients.includes(ingredientId);
+      const isAlternative = recipeIngredient.is_alternative;
+
+      const ingredientItem = {
+        id: ingredientId,
+        name: recipeIngredient.ingredient.name,
+        amount: recipeIngredient.amount,
+        is_alternative: isAlternative,
+      };
+
+      if (isOwned) {
+        owned.push(ingredientItem);
+      } else {
+        not_owned.push(ingredientItem);
+      }
+
+      if (!isAlternative) {
+        alternative_unavailable.push(ingredientItem);
+      }
+    });
+
+    return {
+      owned,
+      not_owned,
+      alternative_unavailable,
+    };
   }
 }
