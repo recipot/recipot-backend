@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Condition } from '@/database/entity/condition.entity';
 import { GetConditionsResponseDto } from './dto/get-conditions.dto';
+import {
+  CreateConditionDtoTx,
+  ConditionResponseDto,
+} from './dto/create-condition.dto';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { ERROR_CODES } from '@/common/constants/error-codes';
 
 @Injectable()
 export class ConditionService {
@@ -37,5 +43,35 @@ export class ConditionService {
       });
       throw error;
     }
+  }
+
+  /**
+   * 컨디션 생성
+   */
+  async createCondition(
+    dto: CreateConditionDtoTx,
+  ): Promise<ConditionResponseDto[]> {
+    const incomingNames = dto.data.map((element) => element.name);
+
+    // 중복 컨디션 이름 체크
+    const existingConditions = await this.conditionRepository.find({
+      where: {
+        name: In(incomingNames),
+      },
+    });
+
+    if (existingConditions.length > 0) {
+      throw new CustomException(ERROR_CODES.CONDITION_ALREADY_EXISTS);
+    }
+
+    const newConditions = this.conditionRepository.create(dto.data);
+    const savedConditions = await this.conditionRepository.save(newConditions);
+
+    return savedConditions.map((condition) => ({
+      id: condition.id,
+      name: condition.name,
+      created_at: condition.created_at,
+      updated_at: condition.updated_at,
+    }));
   }
 }
