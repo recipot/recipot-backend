@@ -18,19 +18,19 @@ export class UserRecipeBookmark {
     type: 'datetime',
     comment: '생성일시',
   })
-  created_at: Date;
+  createdAt: Date;
 
   @Column({
     type: 'int',
     comment: '유저 PK',
   })
-  user_id: number;
+  userId: number;
 
   @Column({
     type: 'int',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })

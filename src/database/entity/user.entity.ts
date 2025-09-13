@@ -1,7 +1,6 @@
-import { Column, Entity, OneToMany } from 'typeorm';
-import { CommonEntity } from './common.entity';
-import { SocialLogin } from './social-login.entity';
 import { UserRole } from '@/api/user/enums/role.enum';
+import { Column, Entity } from 'typeorm';
+import { CommonEntity } from './common.entity';
 
 @Entity('users')
 export class User extends CommonEntity {
@@ -16,7 +15,7 @@ export class User extends CommonEntity {
     nullable: true,
     comment: '프로필 이미지 주소',
   })
-  profile_image_url: string;
+  profileImageUrl: string;
 
   @Column({
     type: 'varchar',
@@ -29,14 +28,14 @@ export class User extends CommonEntity {
     default: 0,
     comment: '레시피 완료 횟수',
   })
-  recipe_complete_count: number;
+  recipeCompleteCount: number;
 
   @Column({
     type: 'boolean',
     default: false,
     comment: '최초 진입 여부',
   })
-  is_first_entry: boolean;
+  isFirstEntry: boolean;
 
   @Column({
     type: 'varchar',
@@ -46,7 +45,4 @@ export class User extends CommonEntity {
     comment: '유저 권한 (공통 코드)',
   })
   role: UserRole;
-
-  @OneToMany(() => SocialLogin, (socialLogin) => socialLogin.user)
-  social_logins: SocialLogin[];
 }

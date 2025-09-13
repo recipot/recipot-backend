@@ -1,3 +1,6 @@
+import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
+import { PageQueryDto } from '@/common/dto/pagination.dto';
+import { CommonCode } from '@/database/entity/common-code.entity';
 import {
   Body,
   Controller,
@@ -18,15 +21,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { CommonCodeService } from './common-code.service';
-import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { CommonCode } from '@/database/entity/common-code.entity';
-import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
-import { PageQueryDto } from '@/common/dto/pagination.dto';
-import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../user/enums/role.enum';
+import { CommonCodeService } from './common-code.service';
+import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
+import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
 
 @ApiTags('공통 코드')
 @UseGuards(RolesGuard)
@@ -59,16 +59,16 @@ export class CommonCodeController {
       type: 'object',
       properties: {
         id: { type: 'number', example: 1 },
-        group_code: { type: 'string', example: 'C01' },
-        group_code_name: { type: 'string', example: '소셜 로그인' },
+        groupCode: { type: 'string', example: 'C01' },
+        groupCodeName: { type: 'string', example: '소셜 로그인' },
         code: { type: 'string', example: 'C01001' },
-        code_name: { type: 'string', example: '카카오' },
-        group_name: { type: 'string', example: '소셜 로그인' },
-        order_num: { type: 'number', example: 1 },
-        is_active: { type: 'boolean', example: true },
+        codeName: { type: 'string', example: '카카오' },
+        groupName: { type: 'string', example: '소셜 로그인' },
+        orderNum: { type: 'number', example: 1 },
+        isActive: { type: 'boolean', example: true },
         depth: { type: 'number', example: 2 },
-        created_at: { type: 'string', format: 'date-time' },
-        updated_at: { type: 'string', format: 'date-time' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
       },
     },
   })
@@ -91,20 +91,20 @@ export class CommonCodeController {
       type: 'object',
       properties: {
         id: { type: 'number', example: 1 },
-        group_code: { type: 'string', example: 'C01' },
-        group_code_name: { type: 'string', example: '소셜 로그인' },
+        groupCode: { type: 'string', example: 'C01' },
+        groupCodeName: { type: 'string', example: '소셜 로그인' },
         code: { type: 'string', example: 'C01001' },
-        code_name: { type: 'string', example: '카카오' },
-        group_name: { type: 'string', example: '소셜 로그인' },
-        order_num: { type: 'number', example: 1 },
-        is_active: { type: 'boolean', example: true },
+        codeName: { type: 'string', example: '카카오' },
+        groupName: { type: 'string', example: '소셜 로그인' },
+        orderNum: { type: 'number', example: 1 },
+        isActive: { type: 'boolean', example: true },
         depth: { type: 'number', example: 2 },
-        created_at: {
+        createdAt: {
           type: 'string',
           format: 'date-time',
           example: '2025-08-22T12:15:00.000Z',
         },
-        updated_at: {
+        updatedAt: {
           type: 'string',
           format: 'date-time',
           example: '2025-08-22T12:15:00.000Z',
@@ -129,20 +129,20 @@ export class CommonCodeController {
     type: 'object',
     properties: {
       id: { type: 'number', example: 1 },
-      group_code: { type: 'string', example: 'C01' },
-      group_code_name: { type: 'string', example: '소셜 로그인' },
+      groupCode: { type: 'string', example: 'C01' },
+      groupCodeName: { type: 'string', example: '소셜 로그인' },
       code: { type: 'string', example: 'C01001' },
-      code_name: { type: 'string', example: '카카오' },
-      group_name: { type: 'string', example: '소셜 로그인' },
-      order_num: { type: 'number', example: 1 },
-      is_active: { type: 'boolean', example: true },
+      codeName: { type: 'string', example: '카카오' },
+      groupName: { type: 'string', example: '소셜 로그인' },
+      orderNum: { type: 'number', example: 1 },
+      isActive: { type: 'boolean', example: true },
       depth: { type: 'number', example: 2 },
-      created_at: {
+      createdAt: {
         type: 'string',
         format: 'date-time',
         example: '2025-08-22T12:15:00.000Z',
       },
-      updated_at: {
+      updatedAt: {
         type: 'string',
         format: 'date-time',
         example: '2025-08-22T12:15:00.000Z',
@@ -167,17 +167,17 @@ export class CommonCodeController {
     type: 'object',
     properties: {
       id: { type: 'number', example: 1 },
-      group_code: { type: 'string', example: 'C01' },
-      group_code_name: { type: 'string', example: '소셜 로그인' },
+      groupCode: { type: 'string', example: 'C01' },
+      groupCodeName: { type: 'string', example: '소셜 로그인' },
       code: { type: 'string', example: 'C01001' },
-      code_name: { type: 'string', example: '카카오' },
-      group_name: { type: 'string', example: '소셜 로그인' },
-      order_num: { type: 'number', example: 1 },
-      is_active: { type: 'boolean', example: true },
+      codeName: { type: 'string', example: '카카오' },
+      groupName: { type: 'string', example: '소셜 로그인' },
+      orderNum: { type: 'number', example: 1 },
+      isActive: { type: 'boolean', example: true },
       depth: { type: 'number', example: 2 },
-      created_at: { type: 'string', format: 'date-time' },
-      updated_at: { type: 'string', format: 'date-time' },
-      deleted_at: { type: 'string', format: 'date-time' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+      deletedAt: { type: 'string', format: 'date-time' },
     },
   })
   async deleteCommonCode(

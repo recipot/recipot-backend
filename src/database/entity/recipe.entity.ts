@@ -42,5 +42,5 @@ export class Recipe extends CommonEntity {
     length: 6,
     comment: '설거지 난이도',
   })
-  washing_level: string;
+  washingLevel: string;
 }

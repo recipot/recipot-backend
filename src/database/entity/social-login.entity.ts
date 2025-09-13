@@ -1,6 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { CommonEntity } from './common.entity';
-import { User } from './user.entity';
 
 @Entity('social_logins')
 export class SocialLogin extends CommonEntity {
@@ -8,7 +7,7 @@ export class SocialLogin extends CommonEntity {
     type: 'int',
     comment: '유저 PK',
   })
-  user_id: number;
+  userId: number;
 
   @Column({
     type: 'varchar',
@@ -22,8 +21,4 @@ export class SocialLogin extends CommonEntity {
     comment: '플랫폼 구분 (kakao, google 등)',
   })
   platform: string;
-
-  @ManyToOne(() => User, (user) => user.social_logins)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
 }

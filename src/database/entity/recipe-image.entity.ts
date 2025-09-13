@@ -7,11 +7,11 @@ export class RecipeImage extends CommonEntity {
     type: 'int',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'varchar',
     comment: '레시피 이미지 주소',
   })
-  image_url: string;
+  imageUrl: string;
 }

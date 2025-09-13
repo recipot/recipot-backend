@@ -40,18 +40,18 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
       if (!bookmarkMap.has(result.bookmark_id)) {
         bookmarkMap.set(result.bookmark_id, {
           id: result.bookmark_id,
-          user_id: result.bookmark_user_id,
-          recipe_id: result.bookmark_recipe_id,
-          recipe_title: result.recipe_title,
-          recipe_description: result.recipe_description,
-          recipe_images: result.recipe_image ? [result.recipe_image] : [],
-          created_at: result.bookmark_created_at,
+          userId: result.bookmark_user_id,
+          recipeId: result.bookmark_recipe_id,
+          recipeTitle: result.recipe_title,
+          recipeDescription: result.recipe_description,
+          recipeImages: result.recipe_image ? [result.recipe_image] : [],
+          createdAt: result.bookmark_created_at,
         });
       } else {
         // 이미 존재하는 북마크에 이미지 추가 (모든 이미지 포함)
         const existingBookmark = bookmarkMap.get(result.bookmark_id)!;
         if (result.recipe_image) {
-          existingBookmark.recipe_images.push(result.recipe_image);
+          existingBookmark.recipeImages.push(result.recipe_image);
         }
       }
     }
