@@ -1,37 +1,92 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Post,
   Request,
+  UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { Public } from '@/api/auth/decorators/auth.decorators';
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
+import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import { UserService } from './user.service';
 
 @Controller({ path: 'user', version: '1' })
 @ApiTags('User')
+@UseGuards(JwtGuard)
 @ApiBearerAuth('Authorization')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * @description 유저를 상세조회한다.
+   * @description 인증된 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.
    */
-  @Get('/:id')
-  @Public()
-  @ApiOperation({ summary: '유저를 상세조회한다.' })
-  @ApiResponse({ status: HttpStatus.OK })
-  async getUser(@Param('id', ParseIntPipe) id: number) {
-    return await this.userService.findById(id);
+  @Get('/bookmarks')
+  @ApiOperation({
+    summary: '북마크 목록 조회 (날짜별 그룹핑)',
+    description: '인증된 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.',
+  })
+  @ApiSuccessResponse('북마크 목록 조회 성공', [GroupedBookmarksDto])
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getBookmarksByDate(
+    @Request() req: any,
+  ): Promise<GroupedBookmarksDto[]> {
+    const userId = req.user.sub;
+    return await this.userService.getBookmarksByDate(userId);
+  }
+
+  /**
+   * @description 레시피를 북마크합니다.
+   */
+  @Post('/bookmarks')
+  @ApiOperation({
+    summary: '레시피 북마크',
+    description: '인증된 사용자가 레시피를 북마크합니다.',
+  })
+  @ApiSuccessResponse('레시피 북마크 성공', { type: 'boolean', example: true })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.CONFLICT, ERROR_CODES.BOOKMARK_ALREADY_EXISTS)
+  async createBookmark(
+    @Request() req: any,
+    @Body() createBookmarkDto: CreateBookmarkDto,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return await this.userService.createBookmark(userId, createBookmarkDto);
+  }
+
+  /**
+   * @description 레시피 북마크를 해제합니다.
+   */
+  @Delete('/bookmarks/:recipeId')
+  @ApiOperation({
+    summary: '레시피 북마크 해제',
+    description: '인증된 사용자가 레시피 북마크를 해제합니다.',
+  })
+  @ApiSuccessResponse('레시피 북마크 해제 성공', {
+    type: 'boolean',
+    example: true,
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.BOOKMARK_NOT_FOUND)
+  async deleteBookmark(
+    @Request() req: any,
+    @Param('recipeId', ParseIntPipe) recipeId: number,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return await this.userService.deleteBookmark(userId, recipeId);
   }
 
   /**
@@ -50,13 +105,11 @@ export class UserController {
       name: { type: 'string', example: '홍길동' },
     },
   })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: '인증 실패',
-  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getMyProfile(@Request() req: any) {
     // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
-    const userId = req.user.userId;
+    const userId = req.user.sub;
     return await this.userService.findById(userId);
   }
 
@@ -70,17 +123,33 @@ export class UserController {
       'JWT 토큰을 통해 인증된 현재 사용자의 프로필을 업데이트합니다.',
   })
   @ApiSuccessResponse('프로필 업데이트 성공')
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: '인증 실패',
-  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   async updateMyProfile(@Request() req: any) {
     // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
-    const userId = req.user.userId;
+    const userId = req.user.sub;
     return {
       message: '프로필 업데이트 기능은 추후 구현 예정',
       userId: userId,
       user: req.user,
     };
+  }
+
+  /**
+   * @description 유저를 상세조회한다.
+   */
+  @Get('/:id')
+  @Public()
+  @ApiOperation({ summary: '유저를 상세조회한다.' })
+  @ApiSuccessResponse('유저 상세조회 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      email: { type: 'string', example: 'user@example.com' },
+      name: { type: 'string', example: '홍길동' },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getUser(@Param('id', ParseIntPipe) id: number) {
+    return await this.userService.findById(id);
   }
 }
