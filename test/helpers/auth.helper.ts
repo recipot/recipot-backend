@@ -1,3 +1,4 @@
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 

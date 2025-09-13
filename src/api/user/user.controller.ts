@@ -12,8 +12,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { Public } from '@/api/auth/auth.decorators';
-import { JwtGuard } from '@/api/auth/auth.guard';
+import { Public } from '@/api/auth/decorators/auth.decorators';
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';

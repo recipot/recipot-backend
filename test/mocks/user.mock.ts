@@ -1,4 +1,4 @@
-import { JwtGuard } from '@/api/auth/auth.guard';
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
 import { UserController } from '@/api/user/user.controller';
 import { UserService } from '@/api/user/user.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';

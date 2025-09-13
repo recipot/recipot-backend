@@ -1,17 +1,19 @@
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
+import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
 import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import { UserDto } from './dto/user.dto';
+import { UserRole } from './enums/role.enum';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 
 @Injectable()
@@ -27,7 +29,8 @@ export class UserService {
     @InjectRepository(Recipe)
     private readonly recipeRepository: Repository<Recipe>,
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
-    private readonly dataSource: DataSource,
+    @InjectRepository(CommonCode)
+    private readonly commonRepository: Repository<CommonCode>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -42,6 +45,7 @@ export class UserService {
       profile_image_url: '',
       recipe_complete_count: 0,
       is_first_entry: true,
+      role: UserRole.GENERAL,
     });
   }
 
@@ -57,6 +61,10 @@ export class UserService {
       return null;
     }
 
+    const role = await this.commonRepository.findOne({
+      where: { code: user.role },
+    });
+
     return {
       id: user.id,
       email: user.email,
@@ -64,6 +72,7 @@ export class UserService {
       profile_image_url: user.profile_image_url,
       recipe_complete_count: user.recipe_complete_count,
       is_first_entry: user.is_first_entry,
+      role: role.code_name,
     };
   }
 

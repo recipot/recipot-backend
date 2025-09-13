@@ -1,4 +1,4 @@
-import { Public } from '@/api/auth/auth.decorators';
+import { Public } from '@/api/auth/decorators/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
