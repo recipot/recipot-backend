@@ -15,6 +15,7 @@ import {
   CreateIngredientDtoTx,
   IngredientResponseDto,
 } from './dto/create-ingredient.dto';
+import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 
 @Injectable()
 export class IngredientService {
@@ -131,5 +132,23 @@ export class IngredientService {
     }
 
     return results;
+  }
+
+  /**
+   * 재료 목록 조회
+   */
+  async getIngredients(): Promise<GetIngredientsResponseDto> {
+    const ingredients = await this.ingredientRepository.find({
+      order: {
+        id: 'ASC',
+      },
+    });
+
+    return {
+      data: ingredients.map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
+      })),
+    };
   }
 }

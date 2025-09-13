@@ -21,16 +21,41 @@ import {
   CreateIngredientDtoTx,
   IngredientResponseDto,
 } from './dto/create-ingredient.dto';
+import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
+@ApiBearerAuth('Authorization')
 export class IngredientController {
   constructor(private readonly ingredientService: IngredientService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: '재료 목록 조회',
+    description: '모든 재료를 조회합니다.',
+  })
+  @ApiSuccessResponse('재료 목록 조회 성공', {
+    type: 'object',
+    properties: {
+      data: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '고등어' },
+          },
+        },
+      },
+    },
+  })
+  async getIngredients(): Promise<GetIngredientsResponseDto> {
+    return await this.ingredientService.getIngredients();
+  }
 
   @Get('admin/categories')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 재료 카테고리 조회',
     description: '재료 카테고리 목록을 페이지네이션하여 조회합니다.',
@@ -71,7 +96,6 @@ export class IngredientController {
   @Post('admin/categories')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 재료 카테고리 생성',
     description: '새로운 재료 카테고리를 데이터베이스에 생성합니다.',
@@ -109,7 +133,6 @@ export class IngredientController {
   @Post('admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 재료 생성',
     description: '새로운 재료를 건강 정보와 함께 데이터베이스에 생성합니다.',
