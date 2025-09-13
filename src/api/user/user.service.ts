@@ -1,12 +1,20 @@
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
+import { CommonCode } from '@/database/entity/common-code.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ERROR_CODES } from '../../common/constants/error-codes';
+import { CustomException } from '../../common/exceptions/custom-exception';
+import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
+import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
-import { CommonCode } from '@/database/entity/common-code.entity';
+import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 
 @Injectable()
 export class UserService {
@@ -16,6 +24,11 @@ export class UserService {
     private readonly loggerFactory: LoggerFactoryService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(UserRecipeBookmark)
+    private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
+    @InjectRepository(Recipe)
+    private readonly recipeRepository: Repository<Recipe>,
+    private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
   ) {
@@ -61,5 +74,139 @@ export class UserService {
       is_first_entry: user.is_first_entry,
       role: role.code_name,
     };
+  }
+
+  /**
+   * 사용자가 레시피를 북마크합니다.
+   */
+  async createBookmark(
+    userId: number,
+    createBookmarkDto: CreateBookmarkDto,
+  ): Promise<boolean> {
+    const { recipe_id } = createBookmarkDto;
+
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipe_id },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // 이미 북마크한 레시피인지 확인
+    const existingBookmark =
+      await this.userRecipeBookmarkCustomRepository.existsByUserIdAndRecipeId(
+        userId,
+        recipe_id,
+      );
+
+    if (existingBookmark) {
+      throw new CustomException(ERROR_CODES.BOOKMARK_ALREADY_EXISTS);
+    }
+
+    // 북마크 생성
+    await this.userRecipeBookmarkCustomRepository.save({
+      user_id: userId,
+      recipe_id: recipe_id,
+    });
+
+    this.logger.log(`사용자 ${userId}가 레시피 ${recipe_id}를 북마크했습니다.`);
+
+    return true;
+  }
+
+  /**
+   * 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.
+   */
+  async getBookmarksByDate(userId: number): Promise<GroupedBookmarksDto[]> {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 북마크와 레시피 정보를 함께 조회
+    const bookmarks =
+      await this.userRecipeBookmarkCustomRepository.findBookmarksWithRecipeByUserId(
+        userId,
+      );
+
+    // 날짜별로 그룹핑
+    const groupedBookmarks = new Map<string, BookmarkWithRecipeDto[]>();
+
+    for (const bookmark of bookmarks) {
+      const date = new Date(bookmark.created_at).toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+      const bookmarkDto: BookmarkWithRecipeDto = {
+        id: bookmark.id,
+        user_id: bookmark.user_id,
+        recipe_id: bookmark.recipe_id,
+        recipe_title: bookmark.recipe_title,
+        recipe_description: bookmark.recipe_description,
+        recipe_images: bookmark.recipe_images || [],
+        created_at: bookmark.created_at,
+      };
+
+      if (!groupedBookmarks.has(date)) {
+        groupedBookmarks.set(date, []);
+      }
+      groupedBookmarks.get(date)!.push(bookmarkDto);
+    }
+
+    // Map을 배열로 변환하고 날짜순으로 정렬
+    const result: GroupedBookmarksDto[] = Array.from(groupedBookmarks.entries())
+      .map(([date, bookmarks]) => ({
+        date,
+        bookmarks,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신 날짜부터
+
+    return result;
+  }
+
+  /**
+   * 사용자가 레시피 북마크를 해제합니다.
+   */
+  async deleteBookmark(userId: number, recipeId: number): Promise<boolean> {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 북마크 존재 여부 확인
+    const existingBookmark =
+      await this.userRecipeBookmarkCustomRepository.existsByUserIdAndRecipeId(
+        userId,
+        recipeId,
+      );
+
+    if (!existingBookmark) {
+      throw new CustomException(ERROR_CODES.BOOKMARK_NOT_FOUND);
+    }
+
+    // 북마크 삭제
+    await this.userRecipeBookmarkRepository.delete({
+      user_id: userId,
+      recipe_id: recipeId,
+    });
+
+    return true;
   }
 }
