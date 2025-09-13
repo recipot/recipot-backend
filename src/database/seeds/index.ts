@@ -4,6 +4,7 @@ import { UserSeed } from './user.seed';
 import { IngredientSeed } from './ingredient.seed';
 import { SeasoningSeed } from './seasoning.seed';
 import { ToolSeed } from './tool.seed';
+import { ConditionSeed } from './condition.seed';
 
 export class DatabaseSeeder {
   constructor(
@@ -34,9 +35,13 @@ export class DatabaseSeeder {
     const toolSeed = new ToolSeed(this.dataSource);
     await toolSeed.run();
 
+    // ConditionSeed 실행
+    const conditionSeed = new ConditionSeed(this.dataSource);
+    await conditionSeed.run();
+
     this.logger.log('All seeding completed successfully');
   }
 }
 
 // 개별 seeder들도 export
-export { CommonCodeSeed, UserSeed, IngredientSeed };
+export { CommonCodeSeed, UserSeed, IngredientSeed, ConditionSeed };
