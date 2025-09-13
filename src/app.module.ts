@@ -19,6 +19,7 @@ import { IngredientModule } from './api/ingredient/ingredient.module';
 import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
 import { RecipeModule } from './api/recipe/recipe.module';
+import { ConditionModule } from './api/condition/condition.module';
 
 export const FeatureModules = [
   UserModule,
@@ -34,6 +35,7 @@ export const FeatureModules = [
   SeasoningModule,
   ToolModule,
   RecipeModule,
+  ConditionModule,
 ];
 
 @Module({
