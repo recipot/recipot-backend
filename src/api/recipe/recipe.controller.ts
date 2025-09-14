@@ -55,7 +55,7 @@ export class RecipeController {
         example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
       },
       duration: { type: 'string', example: 'TIME01' },
-      level: { type: 'string', example: '쉬움' },
+      condition_id: { type: 'number', example: 1 },
       created_at: {
         type: 'string',
         format: 'date-time',
@@ -232,7 +232,7 @@ export class RecipeController {
         example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
       },
       duration: { type: 'string', example: '30분' },
-      level: { type: 'string', example: '초보' },
+      condition: { type: 'string', example: '힘들어' },
       images: {
         type: 'array',
         items: {

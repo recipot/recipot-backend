@@ -405,11 +405,10 @@ module.exports = class Migration20250803144638 {
             comment: '소요 시간',
           },
           {
-            name: 'level',
-            type: 'varchar',
-            length: '6',
+            name: 'condition_id',
+            type: 'int',
             isNullable: false,
-            comment: '조리 난이도',
+            comment: '컨디션 PK',
           },
           {
             name: 'created_at',

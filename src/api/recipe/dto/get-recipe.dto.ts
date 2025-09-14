@@ -131,6 +131,22 @@ export class RecipeStepDto {
   summary: string;
 }
 
+export class RecipeConditionDto {
+  @ApiProperty({
+    description: '컨디션 ID',
+    example: 1,
+    type: 'number',
+  })
+  id: number;
+
+  @ApiProperty({
+    description: '컨디션 이름',
+    example: '힘들어',
+    type: 'string',
+  })
+  name: string;
+}
+
 export class RecipeHealthPointDto {
   @ApiProperty({
     description: '건강 포인트 내용',
@@ -170,11 +186,10 @@ export class GetRecipeResponseDto {
   duration: string;
 
   @ApiProperty({
-    description: '조리 난이도',
-    example: '초보',
-    type: 'string',
+    description: '컨디션 정보',
+    type: RecipeConditionDto,
   })
-  level: string;
+  condition: RecipeConditionDto;
 
   @ApiProperty({
     description: '레시피 이미지 배열',

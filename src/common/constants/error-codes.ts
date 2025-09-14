@@ -59,4 +59,5 @@ export const ERROR_CODES = {
 
   // 컨디션 관련 오류
   CONDITION_ALREADY_EXISTS: { code: 'E14001', message: '이미 존재하는 컨디션입니다.' },
+  CONDITION_NOT_FOUND: { code: 'E14002', message: '컨디션을 찾을 수 없습니다.' },
 };

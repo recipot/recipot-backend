@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { CommonEntity } from './common.entity';
 import { RecipeImage } from './recipe-image.entity';
 import { RecipeIngredient } from './recipe-ingredient.entity';
@@ -6,6 +6,7 @@ import { RecipeSeasoning } from './recipe-seasoning.entity';
 import { RecipeTool } from './recipe-tool.entity';
 import { RecipeStep } from './recipe-step.entity';
 import { RecipeHealthPoint } from './recipe-health-point.entity';
+import { Condition } from './condition.entity';
 
 @Entity('recipes')
 export class Recipe extends CommonEntity {
@@ -32,11 +33,15 @@ export class Recipe extends CommonEntity {
   duration: string;
 
   @Column({
-    type: 'varchar',
+    type: 'int',
     nullable: false,
-    comment: '조리 난이도',
+    comment: '컨디션 PK',
   })
-  level: string;
+  condition_id: number;
+
+  @ManyToOne(() => Condition)
+  @JoinColumn({ name: 'condition_id' })
+  condition: Condition;
 
   @OneToMany(() => RecipeImage, (recipeImage) => recipeImage.recipe)
   images: RecipeImage[];

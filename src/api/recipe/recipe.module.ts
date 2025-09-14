@@ -10,6 +10,7 @@ import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { RecipeStep } from '@/database/entity/recipe-step.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { CacheModule } from '@/common/cache/cache.module';
+import { CommonCodeModule } from '../common-code/common-code.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CacheModule } from '@/common/cache/cache.module';
       RecipeHealthPoint,
     ]),
     CacheModule,
+    CommonCodeModule,
   ],
   controllers: [RecipeController],
   providers: [RecipeService],

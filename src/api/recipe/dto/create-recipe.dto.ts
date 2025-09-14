@@ -145,12 +145,12 @@ export class CreateRecipeDto {
   duration: string;
 
   @ApiProperty({
-    description: '조리 난이도',
-    example: 'R02003',
+    description: '컨디션 ID',
+    example: 1,
   })
-  @IsString()
+  @IsInt()
   @IsNotEmpty()
-  level: string;
+  conditionId: number;
 
   @ApiProperty({
     description: '레시피 이미지들',

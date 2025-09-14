@@ -49,7 +49,7 @@ export class RecipeService {
         title: createRecipeDto.title,
         description: createRecipeDto.description,
         duration: createRecipeDto.duration,
-        level: createRecipeDto.level,
+        condition_id: createRecipeDto.conditionId,
       });
 
       const savedRecipe = await this.recipeRepository.save(recipe);
@@ -141,6 +141,7 @@ export class RecipeService {
           'tools.tool',
           'steps',
           'healthPoints',
+          'condition',
         ],
       });
 
@@ -168,6 +169,7 @@ export class RecipeService {
           'tools.tool',
           'steps',
           'healthPoints',
+          'condition',
         ],
       });
       if (!recipe) {
@@ -177,15 +179,15 @@ export class RecipeService {
       const durationName = await this.commonCodeService.findCommonCode(
         recipe.duration,
       );
-      const levelName = await this.commonCodeService.findCommonCode(
-        recipe.level,
-      );
       return {
         id: recipe.id,
         title: recipe.title,
         description: recipe.description,
         duration: durationName.code_name,
-        level: levelName.code_name,
+        condition: {
+          id: recipe.condition.id,
+          name: recipe.condition.name,
+        },
         images: recipe.images.map((image) => ({
           id: image.id,
           image_url: image.image_url,
