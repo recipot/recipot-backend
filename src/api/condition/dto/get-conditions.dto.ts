@@ -10,7 +10,7 @@ export class ConditionResponseDto {
 
   @ApiProperty({
     description: '컨디션 이름',
-    example: '힘들러',
+    example: '힘들어',
     type: 'string',
   })
   name: string;

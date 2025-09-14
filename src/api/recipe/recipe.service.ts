@@ -226,6 +226,9 @@ export class RecipeService {
     try {
       const cacheKey = `user:${userId}:owned_ingredients`;
       const cachedIngredients = await this.cacheService.get(cacheKey);
+      this.logger.log(
+        `Cached ingredients for user ${userId}: ${cachedIngredients}`,
+      );
       if (cachedIngredients) {
         if (typeof cachedIngredients === 'string') {
           return JSON.parse(cachedIngredients);

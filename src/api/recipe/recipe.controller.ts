@@ -328,7 +328,7 @@ export class RecipeController {
     @Param('id', ParseIntPipe) recipeId: number,
     @Request() req: any,
   ): Promise<GetRecipeResponseDto> {
-    const userId = req.user.userId;
+    const userId = req.user.sub;
     return await this.recipeService.getRecipe(userId, recipeId);
   }
 }

@@ -15,6 +15,11 @@ import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import {
+  SaveUserIngredientsSurveyDto,
+  SaveUserIngredientsSurveyResponseDto,
+} from './dto/save-user-ingredients-survey.dto';
+import { CacheService } from '@/common/cache/cache.service';
 
 @Injectable()
 export class UserService {
@@ -31,6 +36,7 @@ export class UserService {
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
+    private readonly cacheService: CacheService,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -208,5 +214,50 @@ export class UserService {
     });
 
     return true;
+  }
+
+  /**
+   * 유저의 보유 재료 설문을 처리합니다.
+   * 사용자가 선택한 재료 ID들을 캐시에 저장합니다.
+   */
+  async saveUserIngredientsSurvey(
+    userId: number,
+    surveyDto: SaveUserIngredientsSurveyDto,
+  ): Promise<SaveUserIngredientsSurveyResponseDto> {
+    try {
+      // 사용자 존재 여부 확인
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
+
+      // 사용자가 선택한 재료 ID들
+      const ingredientIds = surveyDto.ingredientIds;
+
+      // 캐시에 저장 (TTL: 일주일)
+      const cacheKey = `user:${userId}:owned_ingredients`;
+      const ttl = 7 * 24 * 60 * 60; // 일주일 (초)
+
+      await this.cacheService.set(cacheKey, JSON.stringify(ingredientIds), ttl);
+
+      this.logger.log(
+        `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+      );
+
+      return {
+        ingredientIds: ingredientIds,
+        cacheTtl: ttl,
+        message: '보유 재료 설문이 완료되었습니다.',
+      };
+    } catch (error) {
+      this.logger.error('보유 재료 설문 저장 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
   }
 }
