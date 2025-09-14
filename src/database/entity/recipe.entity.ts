@@ -12,14 +12,13 @@ import { Condition } from './condition.entity';
 export class Recipe extends CommonEntity {
   @Column({
     type: 'varchar',
-    nullable: false,
-    comment: '제목',
+    length: 255,
+    comment: '타이틀',
   })
   title: string;
 
   @Column({
     type: 'text',
-    nullable: false,
     comment: '설명',
   })
   description: string;
@@ -27,7 +26,6 @@ export class Recipe extends CommonEntity {
   @Column({
     type: 'varchar',
     length: 6,
-    nullable: false,
     comment: '소요 시간',
   })
   duration: string;

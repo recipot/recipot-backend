@@ -6,14 +6,12 @@ import { Recipe } from './recipe.entity';
 export class RecipeImage extends CommonEntity {
   @Column({
     type: 'int',
-    nullable: false,
     comment: '레시피 PK',
   })
   recipe_id: number;
 
   @Column({
     type: 'varchar',
-    nullable: false,
     comment: '레시피 이미지 주소',
   })
   image_url: string;

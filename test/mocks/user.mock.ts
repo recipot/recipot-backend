@@ -1,0 +1,99 @@
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
+import { UserController } from '@/api/user/user.controller';
+import { UserService } from '@/api/user/user.service';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { Module } from '@nestjs/common';
+import { MockJwtGuard } from './auth.mock';
+
+const mockUserService = {
+  createBookmark: async (_userId: number, createBookmarkDto: any) => {
+    // 테스트 시나리오에 따라 다른 응답 반환
+    if (createBookmarkDto.recipe_id === 99999) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 레시피 ID
+    }
+    if (createBookmarkDto.recipe_id === 1) {
+      // 이미 북마크한 레시피 - 두 번째 테스트용
+      throw new CustomException(ERROR_CODES.BOOKMARK_ALREADY_EXISTS);
+    }
+    return { result: true }; // 객체 형태로 반환
+  },
+  deleteBookmark: async (_userId: number, recipeId: number) => {
+    // 테스트 시나리오에 따라 다른 응답 반환
+    if (recipeId === 99999) {
+      throw new CustomException(ERROR_CODES.BOOKMARK_NOT_FOUND); // 존재하지 않는 북마크
+    }
+    return { result: true }; // 성공적으로 삭제
+  },
+  getBookmarksByDate: async (_userId: number) => {
+    // Mock 데이터: 실제 API 응답 구조와 동일하게
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    return [
+      {
+        date: today,
+        bookmarks: [
+          {
+            id: 1,
+            user_id: _userId,
+            recipe_id: 101,
+            recipe_description: '맛있는 김치찌개',
+            recipe_duration: '30분',
+            recipe_level: '초급',
+            recipe_method: '찌개',
+            recipe_washing_level: '보통',
+            recipe_images: ['https://example.com/kimchi.jpg'],
+            created_at: new Date(),
+          },
+          {
+            id: 2,
+            user_id: _userId,
+            recipe_id: 102,
+            recipe_description: '간단한 계란볶음밥',
+            recipe_duration: '15분',
+            recipe_level: '초급',
+            recipe_method: '볶음',
+            recipe_washing_level: '적음',
+            recipe_images: ['https://example.com/egg-rice.jpg'],
+            created_at: new Date(),
+          },
+        ],
+      },
+      {
+        date: yesterday,
+        bookmarks: [
+          {
+            id: 3,
+            user_id: _userId,
+            recipe_id: 103,
+            recipe_description: '부드러운 된장찌개',
+            recipe_duration: '25분',
+            recipe_level: '초급',
+            recipe_method: '찌개',
+            recipe_washing_level: '보통',
+            recipe_images: ['https://example.com/doenjang.jpg'],
+            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          },
+        ],
+      },
+    ];
+  },
+};
+
+@Module({
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useValue: mockUserService,
+    },
+    {
+      provide: JwtGuard,
+      useClass: MockJwtGuard,
+    },
+  ],
+})
+export class MockUserModule {}
