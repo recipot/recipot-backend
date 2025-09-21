@@ -4,7 +4,6 @@ export const ERROR_CODES = {
   USER_NOT_FOUND: { code: 'E1001', message: '사용자를 찾을 수 없습니다.' },
   BOOKMARK_ALREADY_EXISTS: { code: 'E1002', message: '이미 북마크한 레시피입니다.' },
   BOOKMARK_NOT_FOUND: { code: 'E1003', message: '북마크를 찾을 수 없습니다.' },
-  RECIPE_NOT_FOUND: { code: 'E1004', message: '레시피를 찾을 수 없습니다.' },
 
   // 인증 및 로그인 오류
   AUTH_TOKEN_EXPIRED: { code: 'E2001', message: '인증 토큰이 만료되었습니다.' },
@@ -42,4 +41,25 @@ export const ERROR_CODES = {
   KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
   KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
   KAKAO_CONFIG_ERROR: { code: 'E9009', message: '카카오 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+
+  // 재료 관련 오류
+  INGREDIENT_CATEGORY_ALREADY_EXISTS: { code: 'E10001', message: '이미 존재하는 재료 카테고리입니다.' },
+  INGREDIENT_CATEGORY_NOT_FOUND: { code: 'E10002', message: '재료 카테고리를 찾을 수 없습니다.' },
+  INGREDIENT_ALREADY_EXISTS: { code: 'E10003', message: '이미 존재하는 재료입니다.' },
+
+  // 양념 관련 오류
+  SEASONING_ALREADY_EXISTS: { code: 'E11001', message: '이미 존재하는 양념입니다.' },
+  SEASONING_NOT_FOUND: { code: 'E11002', message: '양념을 찾을 수 없습니다.' },
+
+  // 조리 도구 관련 오류'
+  TOOL_ALREADY_EXISTS: { code: 'E12001', message: '이미 존재하는 조리 도구입니다.' },
+
+  // 레시피 관련 오류
+  RECIPE_CREATE_FAILED: { code: 'E13001', message: '레시피 생성에 실패했습니다.' },
+  RECIPE_NOT_FOUND: { code: 'E13002', message: '레시피를 찾을 수 없습니다.' },
+  RECIPE_GET_FAILED: { code: 'E13003', message: '레시피 조회에 실패했습니다.' },
+
+  // 컨디션 관련 오류
+  CONDITION_ALREADY_EXISTS: { code: 'E14001', message: '이미 존재하는 컨디션입니다.' },
+  CONDITION_NOT_FOUND: { code: 'E14002', message: '컨디션을 찾을 수 없습니다.' },
 };
