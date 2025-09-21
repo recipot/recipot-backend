@@ -69,7 +69,7 @@ export class IngredientSeed {
         ingredients: ['우유', '버터', '치즈', '요거트'],
       },
       {
-        name: '젓갈 및 발효식품',
+        name: '절임 및 발효식품',
         ingredients: ['새우젓', '오징어젓', '명란젓', '김치'],
       },
       {
@@ -79,13 +79,13 @@ export class IngredientSeed {
           '마요네즈',
           '머스타드',
           '발사믹 식초',
-          '샐러드 드레싱',
+          '젤러드 드레싱',
           '스파게티 소스',
         ],
       },
       {
         name: '가공식품류',
-        ingredients: ['땅콩버터', '과일잼', '어묵', '게맛살'],
+        ingredients: ['닭가슴살', '과일칩', '어묵', '게맛살'],
       },
     ];
 
@@ -95,7 +95,7 @@ export class IngredientSeed {
       });
       const ingredients = categoryData.ingredients.map((ingredientName) => ({
         name: ingredientName,
-        ingredient_category_id: category.id,
+        ingredientCategoryId: category.id,
       }));
       await ingredientRepository.save(ingredients);
     }

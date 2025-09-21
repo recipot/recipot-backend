@@ -103,7 +103,7 @@ export class IngredientService {
       }
 
       const newIngredient = this.ingredientRepository.create({
-        ingredient_category_id: ingredientData.ingredient_category_id,
+        ingredientCategoryId: ingredientData.ingredient_category_id,
         name: ingredientData.name,
       });
 
@@ -112,7 +112,7 @@ export class IngredientService {
 
       const healthInfos = ingredientData.health_infos.map((healthInfo) =>
         this.ingredientHealthInfoRepository.create({
-          ingredient_id: savedIngredient.id,
+          ingredientId: savedIngredient.id,
           content: healthInfo.content,
         }),
       );
@@ -123,8 +123,8 @@ export class IngredientService {
       results.push({
         id: savedIngredient.id,
         name: savedIngredient.name,
-        ingredient_category_id: savedIngredient.ingredient_category_id,
-        health_infos: savedHealthInfos.map((info) => ({
+        ingredientCategoryId: savedIngredient.ingredientCategoryId,
+        healthInfos: savedHealthInfos.map((info) => ({
           id: info.id,
           content: info.content,
         })),

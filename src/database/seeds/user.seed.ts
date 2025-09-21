@@ -18,19 +18,19 @@ export class UserSeed {
     // users 테이블에 데이터 삽입
     const user1Data = {
       email: 'user1@kakao.com',
-      profile_image_url: 'https://example.com/profile1.jpg',
+      profileImageUrl: 'https://example.com/profile1.jpg',
       nickname: '카카오유저',
-      recipe_complete_count: 0,
-      is_first_entry: false,
+      recipeCompleteCount: 0,
+      isFirstEntry: false,
       role: UserRole.GENERAL,
     };
 
     const user2Data = {
       email: 'user2@gmail.com',
-      profile_image_url: 'https://example.com/profile2.jpg',
+      profileImageUrl: 'https://example.com/profile2.jpg',
       nickname: '구글유저',
-      recipe_complete_count: 0,
-      is_first_entry: false,
+      recipeCompleteCount: 0,
+      isFirstEntry: false,
       role: UserRole.GENERAL,
     };
 
@@ -55,20 +55,20 @@ export class UserSeed {
 
     // social_logins 테이블에 데이터 삽입
     const socialLogin1Data = {
-      user_id: savedUser1.id,
+      userId: savedUser1.id,
       sid: 'kakao_user_12345',
       platform: 'C01001', // 카카오 플랫폼 코드
     };
 
     const socialLogin2Data = {
-      user_id: savedUser2.id,
+      userId: savedUser2.id,
       sid: 'google_user_67890',
       platform: 'C01002', // 구글 플랫폼 코드
     };
 
     // 기존 소셜 로그인 확인 및 생성
     const existingSocialLogin1 = await socialLoginRepository.findOne({
-      where: { user_id: savedUser1.id, platform: 'C01001' },
+      where: { userId: savedUser1.id, platform: 'C01001' },
     });
 
     if (!existingSocialLogin1) {
@@ -77,7 +77,7 @@ export class UserSeed {
     }
 
     const existingSocialLogin2 = await socialLoginRepository.findOne({
-      where: { user_id: savedUser2.id, platform: 'C01002' },
+      where: { userId: savedUser2.id, platform: 'C01002' },
     });
 
     if (!existingSocialLogin2) {

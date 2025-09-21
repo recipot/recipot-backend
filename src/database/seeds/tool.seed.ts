@@ -18,15 +18,15 @@ export class ToolSeed {
     }
 
     const tools = [
-      { name: '가위', image_url: '' },
-      { name: '칼/도마', image_url: '' },
-      { name: '전자레인지', image_url: '' },
-      { name: '프라이팬(원팬)', image_url: '' },
-      { name: '프라이팬(멀티팬)', image_url: '' },
-      { name: '냄비(원팟)', image_url: '' },
-      { name: '냄비(멀티팟)', image_url: '' },
-      { name: '밥솥', image_url: '' },
-      { name: '에어프라이어', image_url: '' },
+      { name: '가위', imageUrl: '' },
+      { name: '칼/도마', imageUrl: '' },
+      { name: '전자레인지', imageUrl: '' },
+      { name: '프라이팬(원팬)', imageUrl: '' },
+      { name: '프라이팬(멀티팬)', imageUrl: '' },
+      { name: '냄비(원팟)', imageUrl: '' },
+      { name: '냄비(멀티팟)', imageUrl: '' },
+      { name: '밥솥', imageUrl: '' },
+      { name: '에어프라이어', imageUrl: '' },
     ];
 
     await toolRepository.save(tools);

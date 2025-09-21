@@ -38,9 +38,9 @@ export class ToolService {
     return savedTools.map((tool) => ({
       id: tool.id,
       name: tool.name,
-      image_url: tool.image_url,
-      created_at: tool.created_at,
-      updated_at: tool.updated_at,
+      imageUrl: tool.imageUrl,
+      createdAt: tool.createdAt,
+      updatedAt: tool.updatedAt,
     }));
   }
 }

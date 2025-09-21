@@ -82,11 +82,11 @@ export class IngredientResponseDto {
   name: string;
 
   @ApiProperty({ description: '재료 카테고리 ID', example: 1 })
-  ingredient_category_id: number;
+  ingredientCategoryId: number;
 
   @ApiProperty({
     description: '재료 건강 정보 목록',
     type: [IngredientHealthInfoResponseDto],
   })
-  health_infos: IngredientHealthInfoResponseDto[];
+  healthInfos: IngredientHealthInfoResponseDto[];
 }

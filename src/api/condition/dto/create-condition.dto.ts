@@ -45,7 +45,7 @@ export class ConditionResponseDto {
     format: 'date-time',
     example: '2025-09-13T12:15:00.000Z',
   })
-  created_at: Date;
+  createdAt: Date;
 
   @ApiProperty({
     description: '수정일시',
@@ -53,5 +53,5 @@ export class ConditionResponseDto {
     format: 'date-time',
     example: '2025-09-13T12:15:00.000Z',
   })
-  updated_at: Date;
+  updatedAt: Date;
 }

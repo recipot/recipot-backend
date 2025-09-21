@@ -26,8 +26,8 @@ export class CommonCodeService {
 
     const data = await this.commonCodeRepository.find({
       order: {
-        group_code: 'ASC',
-        order_num: 'ASC',
+        groupCode: 'ASC',
+        orderNum: 'ASC',
       },
       take: limit,
       skip: skip,
@@ -98,7 +98,7 @@ export class CommonCodeService {
       throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
     }
 
-    codeToRemove.is_active = false;
+    codeToRemove.isActive = false;
 
     return await this.commonCodeRepository.softRemove(codeToRemove);
   }

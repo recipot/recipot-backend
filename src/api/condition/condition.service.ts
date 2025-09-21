@@ -70,8 +70,8 @@ export class ConditionService {
     return savedConditions.map((condition) => ({
       id: condition.id,
       name: condition.name,
-      created_at: condition.created_at,
-      updated_at: condition.updated_at,
+      createdAt: condition.createdAt,
+      updatedAt: condition.updatedAt,
     }));
   }
 }

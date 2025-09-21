@@ -49,11 +49,11 @@ export class ToolResponseDto {
     description: '조리 도구 이미지 주소',
     example: 'https://example.com/images/frying-pan.jpg',
   })
-  image_url: string;
+  imageUrl: string;
 
   @ApiProperty({ description: '생성일시', example: '2024-01-01T00:00:00.000Z' })
-  created_at: Date;
+  createdAt: Date;
 
   @ApiProperty({ description: '수정일시', example: '2024-01-01T00:00:00.000Z' })
-  updated_at: Date;
+  updatedAt: Date;
 }
