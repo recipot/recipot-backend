@@ -15,6 +15,11 @@ import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import {
+  SaveUserIngredientsSurveyDto,
+  SaveUserIngredientsSurveyResponseDto,
+} from './dto/save-user-ingredients-survey.dto';
+import { CacheService } from '@/common/cache/cache.service';
 
 @Injectable()
 export class UserService {
@@ -31,6 +36,7 @@ export class UserService {
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
+    private readonly cacheService: CacheService,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -42,9 +48,9 @@ export class UserService {
     return this.userRepository.save({
       email,
       nickname: '닉네임',
-      profile_image_url: '',
-      recipe_complete_count: 0,
-      is_first_entry: true,
+      profileImageUrl: '',
+      recipeCompleteCount: 0,
+      isFirstEntry: true,
       role: UserRole.GENERAL,
     });
   }
@@ -69,10 +75,10 @@ export class UserService {
       id: user.id,
       email: user.email,
       nickname: user.nickname,
-      profile_image_url: user.profile_image_url,
-      recipe_complete_count: user.recipe_complete_count,
-      is_first_entry: user.is_first_entry,
-      role: role.code_name,
+      profileImageUrl: user.profileImageUrl,
+      recipeCompleteCount: user.recipeCompleteCount,
+      isFirstEntry: user.isFirstEntry,
+      role: role.codeName,
     };
   }
 
@@ -83,7 +89,7 @@ export class UserService {
     userId: number,
     createBookmarkDto: CreateBookmarkDto,
   ): Promise<boolean> {
-    const { recipe_id } = createBookmarkDto;
+    const { recipeId } = createBookmarkDto;
 
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
@@ -96,7 +102,7 @@ export class UserService {
 
     // 레시피 존재 여부 확인
     const recipe = await this.recipeRepository.findOne({
-      where: { id: recipe_id },
+      where: { id: recipeId },
     });
 
     if (!recipe) {
@@ -107,7 +113,7 @@ export class UserService {
     const existingBookmark =
       await this.userRecipeBookmarkCustomRepository.existsByUserIdAndRecipeId(
         userId,
-        recipe_id,
+        recipeId,
       );
 
     if (existingBookmark) {
@@ -116,11 +122,11 @@ export class UserService {
 
     // 북마크 생성
     await this.userRecipeBookmarkCustomRepository.save({
-      user_id: userId,
-      recipe_id: recipe_id,
+      userId: userId,
+      recipeId: recipeId,
     });
 
-    this.logger.log(`사용자 ${userId}가 레시피 ${recipe_id}를 북마크했습니다.`);
+    this.logger.log(`사용자 ${userId}가 레시피 ${recipeId}를 북마크했습니다.`);
 
     return true;
   }
@@ -148,16 +154,16 @@ export class UserService {
     const groupedBookmarks = new Map<string, BookmarkWithRecipeDto[]>();
 
     for (const bookmark of bookmarks) {
-      const date = new Date(bookmark.created_at).toISOString().split('T')[0]; // YYYY-MM-DD 형식
+      const date = new Date(bookmark.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
       const bookmarkDto: BookmarkWithRecipeDto = {
         id: bookmark.id,
-        user_id: bookmark.user_id,
-        recipe_id: bookmark.recipe_id,
-        recipe_title: bookmark.recipe_title,
-        recipe_description: bookmark.recipe_description,
-        recipe_images: bookmark.recipe_images || [],
-        created_at: bookmark.created_at,
+        userId: bookmark.userId,
+        recipeId: bookmark.recipeId,
+        recipeTitle: bookmark.recipeTitle,
+        recipeDescription: bookmark.recipeDescription,
+        recipeImages: bookmark.recipeImages || [],
+        createdAt: bookmark.createdAt,
       };
 
       if (!groupedBookmarks.has(date)) {
@@ -203,10 +209,55 @@ export class UserService {
 
     // 북마크 삭제
     await this.userRecipeBookmarkRepository.delete({
-      user_id: userId,
-      recipe_id: recipeId,
+      userId: userId,
+      recipeId: recipeId,
     });
 
     return true;
+  }
+
+  /**
+   * 유저의 보유 재료 설문을 처리합니다.
+   * 사용자가 선택한 재료 ID들을 캐시에 저장합니다.
+   */
+  async saveUserIngredientsSurvey(
+    userId: number,
+    surveyDto: SaveUserIngredientsSurveyDto,
+  ): Promise<SaveUserIngredientsSurveyResponseDto> {
+    try {
+      // 사용자 존재 여부 확인
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
+
+      // 사용자가 선택한 재료 ID들
+      const ingredientIds = surveyDto.ingredientIds;
+
+      // 캐시에 저장 (TTL: 일주일)
+      const cacheKey = `user:${userId}:owned_ingredients`;
+      const ttl = 7 * 24 * 60 * 60; // 일주일 (초)
+
+      await this.cacheService.set(cacheKey, JSON.stringify(ingredientIds), ttl);
+
+      this.logger.log(
+        `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+      );
+
+      return {
+        ingredientIds: ingredientIds,
+        cacheTtl: ttl,
+        message: '보유 재료 설문이 완료되었습니다.',
+      };
+    } catch (error) {
+      this.logger.error('보유 재료 설문 저장 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
   }
 }

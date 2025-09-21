@@ -14,9 +14,10 @@ export class User extends CommonEntity {
   @Column({
     type: 'varchar',
     nullable: true,
+    name: 'profile_image_url',
     comment: '프로필 이미지 주소',
   })
-  profile_image_url: string;
+  profileImageUrl: string;
 
   @Column({
     type: 'varchar',
@@ -27,16 +28,18 @@ export class User extends CommonEntity {
   @Column({
     type: 'int',
     default: 0,
+    name: 'recipe_complete_count',
     comment: '레시피 완료 횟수',
   })
-  recipe_complete_count: number;
+  recipeCompleteCount: number;
 
   @Column({
     type: 'boolean',
     default: false,
+    name: 'is_first_entry',
     comment: '최초 진입 여부',
   })
-  is_first_entry: boolean;
+  isFirstEntry: boolean;
 
   @Column({
     type: 'varchar',
@@ -48,5 +51,5 @@ export class User extends CommonEntity {
   role: UserRole;
 
   @OneToMany(() => SocialLogin, (socialLogin) => socialLogin.user)
-  social_logins: SocialLogin[];
+  socialLogins: SocialLogin[];
 }

@@ -16,21 +16,24 @@ export class UserRecipeBookmark {
 
   @CreateDateColumn({
     type: 'datetime',
+    name: 'created_at',
     comment: '생성일시',
   })
-  created_at: Date;
+  createdAt: Date;
 
   @Column({
     type: 'int',
+    name: 'user_id',
     comment: '유저 PK',
   })
-  user_id: number;
+  userId: number;
 
   @Column({
     type: 'int',
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })

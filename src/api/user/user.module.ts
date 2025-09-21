@@ -1,6 +1,8 @@
 import { AuthModule } from '@/api/auth/auth.module';
 import { DatabaseModule } from '@/database/database.module';
 import { User } from '@/database/entity/user.entity';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
@@ -11,7 +13,7 @@ import { CommonCode } from '@/database/entity/common-code.entity';
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([User, CommonCode]),
+    TypeOrmModule.forFeature([User, CommonCode, UserRecipeBookmark, Recipe]),
     AuthModule,
   ],
   controllers: [UserController],

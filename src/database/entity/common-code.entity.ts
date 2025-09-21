@@ -4,17 +4,19 @@ import { CommonEntity } from './common.entity';
 @Entity('common_codes')
 export class CommonCode extends CommonEntity {
   @Column({
+    name: 'group_code',
     type: 'varchar',
     length: 3,
     comment: '그룹 코드',
   })
-  group_code: string;
+  groupCode: string;
 
   @Column({
+    name: 'group_code_name',
     type: 'varchar',
     comment: '그룹 코드명',
   })
-  group_code_name: string;
+  groupCodeName: string;
 
   @Column({
     type: 'varchar',
@@ -24,29 +26,33 @@ export class CommonCode extends CommonEntity {
   code: string;
 
   @Column({
+    name: 'code_name',
     type: 'varchar',
     comment: '코드명',
   })
-  code_name: string;
+  codeName: string;
 
   @Column({
+    name: 'group_name',
     type: 'varchar',
     comment: '그룹명',
   })
-  group_name: string;
+  groupName: string;
 
   @Column({
+    name: 'order_num',
     type: 'int',
     comment: '정렬 순서',
   })
-  order_num: number;
+  orderNum: number;
 
   @Column({
+    name: 'is_active',
     type: 'boolean',
     default: true,
     comment: '사용 여부',
   })
-  is_active: boolean;
+  isActive: boolean;
 
   @Column({
     type: 'int',
