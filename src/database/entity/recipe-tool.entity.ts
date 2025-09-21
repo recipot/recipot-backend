@@ -16,16 +16,18 @@ export class RecipeTool {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'int',
     nullable: false,
+    name: 'tool_id',
     comment: '도구 PK',
   })
-  tool_id: number;
+  toolId: number;
 
   @ManyToOne(() => Recipe, (recipe) => recipe.tools)
   @JoinColumn({ name: 'recipe_id' })

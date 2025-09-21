@@ -16,24 +16,27 @@ export class RecipeIngredient {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'int',
     nullable: false,
+    name: 'ingredient_id',
     comment: '재료 PK',
   })
-  ingredient_id: number;
+  ingredientId: number;
 
   @Column({
     type: 'boolean',
     nullable: false,
     default: false,
+    name: 'is_alternative',
     comment: '대체 가능 여부',
   })
-  is_alternative: boolean;
+  isAlternative: boolean;
 
   @Column({
     type: 'varchar',

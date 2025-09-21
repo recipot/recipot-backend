@@ -16,16 +16,18 @@ export class UserUnavailableIngredient {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'user_id',
     comment: '유저 PK',
   })
-  user_id: number;
+  userId: number;
 
   @Column({
     type: 'int',
     nullable: false,
+    name: 'ingredient_id',
     comment: '재료 PK',
   })
-  ingredient_id: number;
+  ingredientId: number;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })

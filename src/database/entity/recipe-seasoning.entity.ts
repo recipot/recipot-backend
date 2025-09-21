@@ -17,16 +17,18 @@ export class RecipeSeasoning {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'int',
     nullable: false,
+    name: 'seasoning_id',
     comment: '양념 PK',
   })
-  seasoning_id: number;
+  seasoningId: number;
 
   @Column({
     type: 'varchar',

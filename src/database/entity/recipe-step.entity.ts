@@ -7,23 +7,26 @@ export class RecipeStep extends CommonEntity {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'int',
     nullable: false,
+    name: 'order_num',
     comment: '순서',
   })
-  order_num: number;
+  orderNum: number;
 
   @Column({
     type: 'varchar',
     nullable: false,
+    name: 'image_url',
     comment: '요리 예시 이미지 주소',
   })
-  image_url: string;
+  imageUrl: string;
 
   @Column({
     type: 'text',

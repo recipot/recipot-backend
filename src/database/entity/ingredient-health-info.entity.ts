@@ -9,7 +9,7 @@ export class IngredientHealthInfo extends CommonEntity {
     name: 'ingredient_id',
     comment: '재료 PK',
   })
-  ingredient_id: number;
+  ingredientId: number;
 
   @Column({
     type: 'text',

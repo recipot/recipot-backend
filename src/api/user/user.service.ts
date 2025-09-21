@@ -48,9 +48,9 @@ export class UserService {
     return this.userRepository.save({
       email,
       nickname: '닉네임',
-      profile_image_url: '',
-      recipe_complete_count: 0,
-      is_first_entry: true,
+      profileImageUrl: '',
+      recipeCompleteCount: 0,
+      isFirstEntry: true,
       role: UserRole.GENERAL,
     });
   }
@@ -75,10 +75,10 @@ export class UserService {
       id: user.id,
       email: user.email,
       nickname: user.nickname,
-      profile_image_url: user.profile_image_url,
-      recipe_complete_count: user.recipe_complete_count,
-      is_first_entry: user.is_first_entry,
-      role: role.code_name,
+      profileImageUrl: user.profileImageUrl,
+      recipeCompleteCount: user.recipeCompleteCount,
+      isFirstEntry: user.isFirstEntry,
+      role: role.codeName,
     };
   }
 
@@ -89,7 +89,7 @@ export class UserService {
     userId: number,
     createBookmarkDto: CreateBookmarkDto,
   ): Promise<boolean> {
-    const { recipe_id } = createBookmarkDto;
+    const { recipeId } = createBookmarkDto;
 
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
@@ -102,7 +102,7 @@ export class UserService {
 
     // 레시피 존재 여부 확인
     const recipe = await this.recipeRepository.findOne({
-      where: { id: recipe_id },
+      where: { id: recipeId },
     });
 
     if (!recipe) {
@@ -113,7 +113,7 @@ export class UserService {
     const existingBookmark =
       await this.userRecipeBookmarkCustomRepository.existsByUserIdAndRecipeId(
         userId,
-        recipe_id,
+        recipeId,
       );
 
     if (existingBookmark) {
@@ -122,11 +122,11 @@ export class UserService {
 
     // 북마크 생성
     await this.userRecipeBookmarkCustomRepository.save({
-      user_id: userId,
-      recipe_id: recipe_id,
+      userId: userId,
+      recipeId: recipeId,
     });
 
-    this.logger.log(`사용자 ${userId}가 레시피 ${recipe_id}를 북마크했습니다.`);
+    this.logger.log(`사용자 ${userId}가 레시피 ${recipeId}를 북마크했습니다.`);
 
     return true;
   }
@@ -154,16 +154,16 @@ export class UserService {
     const groupedBookmarks = new Map<string, BookmarkWithRecipeDto[]>();
 
     for (const bookmark of bookmarks) {
-      const date = new Date(bookmark.created_at).toISOString().split('T')[0]; // YYYY-MM-DD 형식
+      const date = new Date(bookmark.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
       const bookmarkDto: BookmarkWithRecipeDto = {
         id: bookmark.id,
-        user_id: bookmark.user_id,
-        recipe_id: bookmark.recipe_id,
-        recipe_title: bookmark.recipe_title,
-        recipe_description: bookmark.recipe_description,
-        recipe_images: bookmark.recipe_images || [],
-        created_at: bookmark.created_at,
+        userId: bookmark.userId,
+        recipeId: bookmark.recipeId,
+        recipeTitle: bookmark.recipeTitle,
+        recipeDescription: bookmark.recipeDescription,
+        recipeImages: bookmark.recipeImages || [],
+        createdAt: bookmark.createdAt,
       };
 
       if (!groupedBookmarks.has(date)) {
@@ -209,8 +209,8 @@ export class UserService {
 
     // 북마크 삭제
     await this.userRecipeBookmarkRepository.delete({
-      user_id: userId,
-      recipe_id: recipeId,
+      userId: userId,
+      recipeId: recipeId,
     });
 
     return true;

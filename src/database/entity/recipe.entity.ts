@@ -33,9 +33,10 @@ export class Recipe extends CommonEntity {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'condition_id',
     comment: '컨디션 PK',
   })
-  condition_id: number;
+  conditionId: number;
 
   @ManyToOne(() => Condition)
   @JoinColumn({ name: 'condition_id' })

@@ -13,7 +13,8 @@ export class Tool extends CommonEntity {
   @Column({
     type: 'varchar',
     nullable: false,
+    name: 'image_url',
     comment: '조리 도구 이미지 주소',
   })
-  image_url: string;
+  imageUrl: string;
 }

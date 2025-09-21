@@ -13,7 +13,7 @@ export class RecipeImageDto {
     example: 'https://example.com/recipe.jpg',
     type: 'string',
   })
-  image_url: string;
+  imageUrl: string;
 }
 
 export class IngredientItemDto {
@@ -43,7 +43,7 @@ export class IngredientItemDto {
     example: false,
     type: 'boolean',
   })
-  is_alternative: boolean;
+  isAlternative: boolean;
 }
 
 export class RecipeIngredientDto {
@@ -59,14 +59,14 @@ export class RecipeIngredientDto {
     type: [IngredientItemDto],
     isArray: true,
   })
-  not_owned: IngredientItemDto[];
+  notOwned: IngredientItemDto[];
 
   @ApiProperty({
     description: '대체불가 재료 목록',
     type: [IngredientItemDto],
     isArray: true,
   })
-  alternative_unavailable: IngredientItemDto[];
+  alternativeUnavailable: IngredientItemDto[];
 }
 
 export class RecipeSeasoningDto {
@@ -112,7 +112,7 @@ export class RecipeToolDto {
     example: 'https://example.com/pan.jpg',
     type: 'string',
   })
-  image_url: string;
+  imageUrl: string;
 }
 
 export class RecipeStepDto {
@@ -121,7 +121,7 @@ export class RecipeStepDto {
     example: 1,
     type: 'number',
   })
-  order_num: number;
+  orderNum: number;
 
   @ApiProperty({
     description: '단계 요약',

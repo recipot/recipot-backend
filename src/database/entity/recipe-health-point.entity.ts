@@ -7,9 +7,10 @@ export class RecipeHealthPoint extends CommonEntity {
   @Column({
     type: 'int',
     nullable: false,
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'varchar',

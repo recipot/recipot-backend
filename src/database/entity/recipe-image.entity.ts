@@ -6,15 +6,17 @@ import { Recipe } from './recipe.entity';
 export class RecipeImage extends CommonEntity {
   @Column({
     type: 'int',
+    name: 'recipe_id',
     comment: '레시피 PK',
   })
-  recipe_id: number;
+  recipeId: number;
 
   @Column({
     type: 'varchar',
+    name: 'image_url',
     comment: '레시피 이미지 주소',
   })
-  image_url: string;
+  imageUrl: string;
 
   @ManyToOne(() => Recipe, (recipe) => recipe.images)
   @JoinColumn({ name: 'recipe_id' })

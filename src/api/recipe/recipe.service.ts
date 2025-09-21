@@ -49,16 +49,15 @@ export class RecipeService {
         title: createRecipeDto.title,
         description: createRecipeDto.description,
         duration: createRecipeDto.duration,
-        condition_id: createRecipeDto.conditionId,
+        conditionId: createRecipeDto.conditionId,
       });
-
       const savedRecipe = await this.recipeRepository.save(recipe);
 
       if (createRecipeDto.images && createRecipeDto.images.length > 0) {
         const recipeImages = createRecipeDto.images.map((imageDto) =>
           this.recipeImageRepository.create({
-            recipe_id: savedRecipe.id,
-            image_url: imageDto.imageUrl,
+            recipeId: savedRecipe.id,
+            imageUrl: imageDto.imageUrl,
           }),
         );
         await this.recipeImageRepository.save(recipeImages);
@@ -71,9 +70,9 @@ export class RecipeService {
         const recipeIngredients = createRecipeDto.ingredients.map(
           (ingredientDto) =>
             this.recipeIngredientRepository.create({
-              recipe_id: savedRecipe.id,
-              ingredient_id: ingredientDto.ingredientId,
-              is_alternative: ingredientDto.isAlternative,
+              recipeId: savedRecipe.id,
+              ingredientId: ingredientDto.ingredientId,
+              isAlternative: ingredientDto.isAlternative,
               amount: ingredientDto.amount,
             }),
         );
@@ -84,8 +83,8 @@ export class RecipeService {
         const recipeSeasonings = createRecipeDto.seasonings.map(
           (seasoningDto) =>
             this.recipeSeasoningRepository.create({
-              recipe_id: savedRecipe.id,
-              seasoning_id: seasoningDto.seasoningId,
+              recipeId: savedRecipe.id,
+              seasoningId: seasoningDto.seasoningId,
               amount: seasoningDto.amount,
             }),
         );
@@ -95,8 +94,8 @@ export class RecipeService {
       if (createRecipeDto.tools && createRecipeDto.tools.length > 0) {
         const recipeTools = createRecipeDto.tools.map((toolDto) =>
           this.recipeToolRepository.create({
-            recipe_id: savedRecipe.id,
-            tool_id: toolDto.toolId,
+            recipeId: savedRecipe.id,
+            toolId: toolDto.toolId,
           }),
         );
         await this.recipeToolRepository.save(recipeTools);
@@ -105,9 +104,9 @@ export class RecipeService {
       if (createRecipeDto.steps && createRecipeDto.steps.length > 0) {
         const recipeSteps = createRecipeDto.steps.map((stepDto) =>
           this.recipeStepRepository.create({
-            recipe_id: savedRecipe.id,
-            order_num: stepDto.orderNum,
-            image_url: stepDto.imageUrl,
+            recipeId: savedRecipe.id,
+            orderNum: stepDto.orderNum,
+            imageUrl: stepDto.imageUrl,
             summary: stepDto.summary,
             content: stepDto.content,
           }),
@@ -122,7 +121,7 @@ export class RecipeService {
         const recipeHealthPoints = createRecipeDto.healthPoints.map(
           (healthPointDto) =>
             this.recipeHealthPointRepository.create({
-              recipe_id: savedRecipe.id,
+              recipeId: savedRecipe.id,
               content: healthPointDto.content,
             }),
         );
@@ -183,14 +182,14 @@ export class RecipeService {
         id: recipe.id,
         title: recipe.title,
         description: recipe.description,
-        duration: durationName.code_name,
+        duration: durationName.codeName,
         condition: {
           id: recipe.condition.id,
           name: recipe.condition.name,
         },
         images: recipe.images.map((image) => ({
           id: image.id,
-          image_url: image.image_url,
+          imageUrl: image.imageUrl,
         })),
         ingredients: this.mapIngredientsWithOwnership(
           recipe.ingredients,
@@ -204,12 +203,12 @@ export class RecipeService {
         tools: recipe.tools.map((tool) => ({
           id: tool.tool.id,
           name: tool.tool.name,
-          image_url: tool.tool.image_url,
+          imageUrl: tool.tool.imageUrl,
         })),
         steps: recipe.steps
-          .sort((a, b) => a.order_num - b.order_num)
+          .sort((a, b) => a.orderNum - b.orderNum)
           .map((step) => ({
-            order_num: step.order_num,
+            orderNum: step.orderNum,
             summary: step.summary,
           })),
         healthPoints: recipe.healthPoints.map((healthPoint) => ({
@@ -248,36 +247,36 @@ export class RecipeService {
     const ownedIngredients = userOwnedIngredients || [];
 
     const owned = [];
-    const not_owned = [];
-    const alternative_unavailable = [];
+    const notOwned = [];
+    const alternativeUnavailable = [];
 
     recipeIngredients.forEach((recipeIngredient) => {
       const ingredientId = recipeIngredient.ingredient.id;
       const isOwned = ownedIngredients.includes(ingredientId);
-      const isAlternative = recipeIngredient.is_alternative;
+      const isAlternative = recipeIngredient.isAlternative;
 
       const ingredientItem = {
         id: ingredientId,
         name: recipeIngredient.ingredient.name,
         amount: recipeIngredient.amount,
-        is_alternative: isAlternative,
+        isAlternative: isAlternative,
       };
 
       if (isOwned) {
         owned.push(ingredientItem);
       } else {
-        not_owned.push(ingredientItem);
+        notOwned.push(ingredientItem);
       }
 
       if (!isAlternative) {
-        alternative_unavailable.push(ingredientItem);
+        alternativeUnavailable.push(ingredientItem);
       }
     });
 
     return {
       owned,
-      not_owned,
-      alternative_unavailable,
+      notOwned,
+      alternativeUnavailable,
     };
   }
 }

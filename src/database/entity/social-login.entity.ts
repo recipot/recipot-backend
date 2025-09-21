@@ -6,9 +6,10 @@ import { User } from './user.entity';
 export class SocialLogin extends CommonEntity {
   @Column({
     type: 'int',
+    name: 'user_id',
     comment: '유저 PK',
   })
-  user_id: number;
+  userId: number;
 
   @Column({
     type: 'varchar',
@@ -23,7 +24,7 @@ export class SocialLogin extends CommonEntity {
   })
   platform: string;
 
-  @ManyToOne(() => User, (user) => user.social_logins)
+  @ManyToOne(() => User, (user) => user.socialLogins)
   @JoinColumn({ name: 'user_id' })
   user: User;
 }

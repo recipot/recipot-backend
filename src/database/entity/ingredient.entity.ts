@@ -9,7 +9,7 @@ export class Ingredient extends CommonEntity {
     name: 'ingredient_category_id',
     comment: '재료 카테고리 PK',
   })
-  ingredient_category_id: number;
+  ingredientCategoryId: number;
 
   @Column({
     type: 'varchar',
