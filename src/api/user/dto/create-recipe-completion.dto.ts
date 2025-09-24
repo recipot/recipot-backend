@@ -2,11 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, Min } from 'class-validator';
 
 export class CreateRecipeCompletionRequestDto {
-  @ApiProperty({ description: '유저 PK', example: 1 })
-  @IsInt()
-  @Min(1)
-  userId: number;
-
   @ApiProperty({ description: '레시피 PK', example: 10 })
   @IsInt()
   @Min(1)

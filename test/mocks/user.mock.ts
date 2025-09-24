@@ -9,10 +9,10 @@ import { MockJwtGuard } from './auth.mock';
 const mockUserService = {
   createBookmark: async (_userId: number, createBookmarkDto: any) => {
     // 테스트 시나리오에 따라 다른 응답 반환
-    if (createBookmarkDto.recipe_id === 99999) {
-      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 레시피 ID
+    if (createBookmarkDto.recipeId === 99999) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND); // 존재하지 않는 레시피 ID
     }
-    if (createBookmarkDto.recipe_id === 1) {
+    if (createBookmarkDto.recipeId === 1) {
       // 이미 북마크한 레시피 - 두 번째 테스트용
       throw new CustomException(ERROR_CODES.BOOKMARK_ALREADY_EXISTS);
     }
@@ -80,6 +80,20 @@ const mockUserService = {
         ],
       },
     ];
+  },
+  completeRecipe: async (userId: number, createRecipeCompletionDto: any) => {
+    const { recipeId } = createRecipeCompletionDto;
+
+    // 테스트 시나리오에 따라 다른 응답 반환
+    if (userId === 99999) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
+    }
+    if (recipeId === 99999) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND); // 존재하지 않는 레시피 ID
+    }
+
+    // 성공적인 완료
+    return true;
   },
 };
 

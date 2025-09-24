@@ -183,7 +183,7 @@ export class UserController {
   /**
    * @description 레시피를 완료합니다.
    */
-  @Post('/complete-recipe')
+  @Post('/recipe/complete')
   @ApiOperation({
     summary: '레시피 완료',
     description: '인증된 사용자가 레시피를 완료합니다.',

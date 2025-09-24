@@ -1,4 +1,4 @@
-import { HttpStatus, INestApplication } from '@nestjs/common';
+import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   authenticatedRequest,
@@ -24,6 +24,9 @@ describe('UserController (E2E)', () => {
     // 버전 관리 활성화
     app.enableVersioning();
 
+    // ValidationPipe 추가
+    app.useGlobalPipes(new ValidationPipe());
+
     await app.init();
   });
 
@@ -36,7 +39,7 @@ describe('UserController (E2E)', () => {
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 레시피를 북마크한다.`, async () => {
       const createBookmarkDto = {
-        recipe_id: testRecipeId,
+        recipeId: testRecipeId,
       };
 
       const response = await authenticatedRequest(
@@ -48,12 +51,12 @@ describe('UserController (E2E)', () => {
         .expect(HttpStatus.CREATED);
 
       console.log('Response body:', response.body);
-      expect(response.body.result).toBe(true);
+      expect(response.body.data.result).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 이미 북마크한 레시피를 다시 북마크할 경우 400 오류 발생`, async () => {
       const createBookmarkDto = {
-        recipe_id: 1, // 이미 북마크된 상태
+        recipeId: 1, // 이미 북마크된 상태
       };
 
       const response = await authenticatedRequest(
@@ -64,13 +67,12 @@ describe('UserController (E2E)', () => {
         .send(createBookmarkDto)
         .expect(HttpStatus.BAD_REQUEST);
 
-      console.log('Error response body:', response.body);
       expect(response.body.message).toBe('이미 북마크한 레시피입니다.');
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 존재하지 않는 레시피 ID로 북마크할 경우 400 오류 발생`, async () => {
       const createBookmarkDto = {
-        recipe_id: 99999,
+        recipeId: 99999,
       };
 
       const response = await authenticatedRequest(
@@ -81,7 +83,7 @@ describe('UserController (E2E)', () => {
         .send(createBookmarkDto)
         .expect(HttpStatus.BAD_REQUEST);
 
-      expect(response.body.message).toBe('사용자를 찾을 수 없습니다.');
+      expect(response.body.message).toBe('레시피를 찾을 수 없습니다.');
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 사용자의 북마크를 날짜별로 조회한다.`, async () => {
@@ -96,10 +98,10 @@ describe('UserController (E2E)', () => {
 
       expect(response.status).toBe(HttpStatus.OK);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
 
-      if (response.body.length > 0) {
-        const groupedBookmark = response.body[0];
+      if (response.body.data.length > 0) {
+        const groupedBookmark = response.body.data[0];
         expect(groupedBookmark).toHaveProperty('date');
         expect(groupedBookmark).toHaveProperty('bookmarks');
         expect(Array.isArray(groupedBookmark.bookmarks)).toBe(true);
@@ -141,7 +143,7 @@ describe('UserController (E2E)', () => {
         `/v1/user/bookmarks/${recipeId}`,
       ).expect(HttpStatus.OK);
 
-      expect(response.body.result).toBe(true);
+      expect(response.body.data.result).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks/:recipeId (DELETE) - 존재하지 않는 북마크를 해제할 경우 400 오류 발생`, async () => {
@@ -154,6 +156,99 @@ describe('UserController (E2E)', () => {
       ).expect(HttpStatus.BAD_REQUEST);
 
       expect(response.body.message).toBe('북마크를 찾을 수 없습니다.');
+    });
+  });
+
+  describe('레시피 완료 관련 테스트', () => {
+    const testRecipeId = 3; // 테스트용 레시피 ID
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/complete-recipe (POST) - 레시피를 완료한다.`, async () => {
+      const createRecipeCompletionDto = {
+        recipeId: testRecipeId,
+      };
+
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipe/complete',
+      )
+        .send(createRecipeCompletionDto)
+        .expect(HttpStatus.CREATED);
+
+      console.log('Complete recipe response:', response.body);
+      expect(response.body.data).toBe(true);
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/complete-recipe (POST) - 이미 완료한 레시피를 다시 완료할 경우 true 반환`, async () => {
+      const createRecipeCompletionDto = {
+        recipeId: testRecipeId, // 이미 완료된 레시피
+      };
+
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipe/complete',
+      )
+        .send(createRecipeCompletionDto)
+        .expect(HttpStatus.CREATED);
+
+      console.log('Duplicate completion response:', response.body);
+      expect(response.body.data).toBe(true);
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/complete-recipe (POST) - 존재하지 않는 레시피 ID로 완료할 경우 400 오류 발생`, async () => {
+      const createRecipeCompletionDto = {
+        recipeId: 99999, // 존재하지 않는 레시피 ID
+      };
+
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipe/complete',
+      )
+        .send(createRecipeCompletionDto)
+        .expect(HttpStatus.BAD_REQUEST);
+
+      console.log('Recipe not found error:', response.body);
+      expect(response.body.message).toBe('레시피를 찾을 수 없습니다.');
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/complete-recipe (POST) - 잘못된 요청 데이터로 완료할 경우 400 오류 발생`, async () => {
+      const invalidDto = {
+        recipeId: 'invalid', // 잘못된 타입
+      };
+
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipe/complete',
+      )
+        .send(invalidDto)
+        .expect(HttpStatus.BAD_REQUEST);
+
+      console.log('Validation error:', response.body);
+      expect(response.body.message).toContain(
+        'recipeId must be an integer number',
+      );
+    });
+
+    it(`${TEST_TAGS.UNAUTHENTICATED} /user/complete-recipe (POST) - 인증되지 않은 사용자가 레시피를 완료할 경우 401 오류 발생`, async () => {
+      const createRecipeCompletionDto = {
+        userId: 1,
+        recipeId: testRecipeId,
+      };
+
+      const response = await unauthenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipe/complete',
+      )
+        .send(createRecipeCompletionDto)
+        .expect(HttpStatus.FORBIDDEN);
+
+      expect(response.body).toMatchObject({
+        message: 'Forbidden resource',
+      });
     });
   });
 });
