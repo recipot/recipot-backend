@@ -13,7 +13,6 @@ import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
 import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
-import { CreateRecipeCompletionRequestDto } from './dto/create-recipe-completion.dto';
 import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import {
   SaveUserIngredientsSurveyDto,
@@ -268,12 +267,7 @@ export class UserService {
   /**
    * 사용자가 레시피를 완료합니다.
    */
-  async completeRecipe(
-    userId: number,
-    createRecipeCompletionRequestDto: CreateRecipeCompletionRequestDto,
-  ): Promise<boolean> {
-    const { recipeId } = createRecipeCompletionRequestDto;
-
+  async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -292,33 +286,73 @@ export class UserService {
       throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
 
-    // 이미 완료한 레시피인지 확인
+    // 기존 요리 시작 기록 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
       where: { userId, recipeId },
     });
 
-    // TODO 기획 방향에 따라 수정 (기존 레시피 완료 시 중복 완료 가능한지)
-    if (existing && existing.isCompleted) {
-      return true;
-    }
-
-    // 완료 기록 생성 또는 업데이트
     if (existing) {
+      // 이미 완료된 레시피인지 확인
+      if (existing.isCompleted) {
+        return true; // 이미 완료된 경우 true 반환
+      }
+
+      // 요리 시작 기록을 완료로 업데이트
       existing.isCompleted = true;
       await this.userCompletedRecipeRepository.save(existing);
     } else {
-      const entity = this.userCompletedRecipeRepository.create({
-        userId,
-        recipeId,
-        isCompleted: true,
-        isReviewed: false,
-      });
-      await this.userCompletedRecipeRepository.save(entity);
+      // 요리 시작 기록이 없는 경우 오류 반환
+      throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
     }
 
     // 사용자 완료 횟수 증가
     user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
     await this.userRepository.save(user);
+
+    return true;
+  }
+
+  /**
+   * 사용자가 레시피 요리를 시작합니다.
+   */
+  async startRecipeCooking(userId: number, recipeId: number): Promise<boolean> {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // TODO 기획 방향에 따라 수정 (기존 레시피 요리 시작 시 중복 요리 시작 가능한지)
+    // 이미 요리를 시작했는지 확인
+    const existing = await this.userCompletedRecipeRepository.findOne({
+      where: { userId, recipeId },
+    });
+
+    if (existing) {
+      // 이미 요리를 시작했다면 기존 레코드 반환
+      return true;
+    }
+
+    // 요리 시작 기록 생성 (isCompleted: false)
+    const entity = this.userCompletedRecipeRepository.create({
+      userId,
+      recipeId,
+      isCompleted: false,
+      isReviewed: false,
+    });
+    await this.userCompletedRecipeRepository.save(entity);
 
     return true;
   }

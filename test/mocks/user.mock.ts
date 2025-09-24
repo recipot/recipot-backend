@@ -81,9 +81,7 @@ const mockUserService = {
       },
     ];
   },
-  completeRecipe: async (userId: number, createRecipeCompletionDto: any) => {
-    const { recipeId } = createRecipeCompletionDto;
-
+  completeRecipe: async (userId: number, recipeId: number) => {
     // 테스트 시나리오에 따라 다른 응답 반환
     if (userId === 99999) {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
