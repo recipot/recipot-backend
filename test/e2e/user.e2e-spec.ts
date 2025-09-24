@@ -127,11 +127,9 @@ describe('UserController (E2E)', () => {
         app,
         'get',
         '/v1/user/bookmarks',
-      ).expect(HttpStatus.FORBIDDEN);
+      ).expect(HttpStatus.UNAUTHORIZED);
 
-      expect(response.body).toMatchObject({
-        message: 'Forbidden resource',
-      });
+      expect(response.body.message).toBe('인증이 필요합니다.');
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks/:recipeId (DELETE) - 레시피 북마크를 해제한다.`, async () => {
@@ -156,6 +154,55 @@ describe('UserController (E2E)', () => {
       ).expect(HttpStatus.BAD_REQUEST);
 
       expect(response.body.message).toBe('북마크를 찾을 수 없습니다.');
+    });
+  });
+
+  describe('레시피 요리 시작 관련 테스트', () => {
+    const testRecipeId = 4; // 테스트용 레시피 ID
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/recipes/:recipeId/start (POST) - 레시피 요리를 시작한다.`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        `/v1/user/recipes/${testRecipeId}/start`,
+      ).expect(HttpStatus.CREATED);
+
+      console.log('Start cooking response:', response.body);
+      expect(response.body.data).toBe(true);
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/recipes/:recipeId/start (POST) - 이미 요리를 시작한 레시피를 다시 시작할 경우 true 반환`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        `/v1/user/recipes/${testRecipeId}/start`,
+      ).expect(HttpStatus.CREATED);
+
+      console.log('Duplicate start cooking response:', response.body);
+      expect(response.body.data).toBe(true);
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/recipes/:recipeId/start (POST) - 존재하지 않는 레시피 ID로 요리 시작할 경우 404 오류 발생`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        '/v1/user/recipes/99999/start',
+      ).expect(HttpStatus.NOT_FOUND);
+
+      console.log('Non-existent recipe start cooking response:', response.body);
+      expect(response.body.code).toBe('E13002');
+      expect(response.body.message).toBe('레시피를 찾을 수 없습니다.');
+    });
+
+    it(`${TEST_TAGS.UNAUTHENTICATED} /user/recipes/:recipeId/start (POST) - 인증되지 않은 사용자가 요리 시작할 경우 401 오류 발생`, async () => {
+      const response = await unauthenticatedRequest(
+        app,
+        'post',
+        `/v1/user/recipes/${testRecipeId}/start`,
+      ).expect(HttpStatus.UNAUTHORIZED);
+
+      console.log('Unauthenticated start cooking response:', response.body);
+      expect(response.body.message).toBe('인증이 필요합니다.');
     });
   });
 
@@ -211,11 +258,9 @@ describe('UserController (E2E)', () => {
         app,
         'post',
         '/v1/user/recipes/3/complete',
-      ).expect(HttpStatus.FORBIDDEN);
+      ).expect(HttpStatus.UNAUTHORIZED);
 
-      expect(response.body).toMatchObject({
-        message: 'Forbidden resource',
-      });
+      expect(response.body.message).toBe('인증이 필요합니다.');
     });
   });
 });

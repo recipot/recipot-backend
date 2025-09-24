@@ -93,6 +93,19 @@ const mockUserService = {
     // 성공적인 완료
     return true;
   },
+  startRecipeCooking: async (userId: number, recipeId: number) => {
+    // 테스트 시나리오에 따라 다른 응답 반환
+    if (userId === 99999) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
+    }
+    if (recipeId === 99999) {
+      // 테스트에서 404를 기대하므로 NOT_FOUND 상태 코드로 예외 발생
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND, 404);
+    }
+
+    // 성공적인 요리 시작
+    return true;
+  },
 };
 
 @Module({

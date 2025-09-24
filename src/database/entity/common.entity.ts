@@ -1,6 +1,5 @@
 import {
   CreateDateColumn,
-  DeleteDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -22,11 +21,4 @@ export abstract class CommonEntity {
     comment: '수정일시',
   })
   updatedAt: Date;
-
-  @DeleteDateColumn({
-    name: 'deleted_at',
-    type: 'datetime',
-    nullable: true,
-  })
-  deletedAt: Date;
 }
