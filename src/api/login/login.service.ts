@@ -60,7 +60,7 @@ export class LoginService {
 
     if (existingSocialLogin) {
       // 기존 사용자: 기존 유저 정보 조회
-      user = await this.userService.findById(existingSocialLogin.user_id);
+      user = await this.userService.findById(existingSocialLogin.userId);
       if (!user) {
         throw new Error('User not found');
       }

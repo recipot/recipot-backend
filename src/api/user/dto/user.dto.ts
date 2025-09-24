@@ -11,13 +11,13 @@ export class UserDto {
   nickname: string;
 
   @ApiProperty({ description: '프로필 이미지 URL', example: '' })
-  profile_image_url: string;
+  profileImageUrl: string;
 
   @ApiProperty({ description: '레시피 완료 횟수', example: 0 })
-  recipe_complete_count: number;
+  recipeCompleteCount: number;
 
   @ApiProperty({ description: '최초 진입 여부', example: true })
-  is_first_entry: boolean;
+  isFirstEntry: boolean;
 
   @ApiProperty({ description: '유저 권한', example: 'general' })
   role: string;

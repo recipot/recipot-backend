@@ -9,5 +9,5 @@ export class CreateBookmarkDto {
   })
   @IsNumber()
   @IsNotEmpty()
-  recipe_id: number;
+  recipeId: number;
 }

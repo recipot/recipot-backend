@@ -10,16 +10,18 @@ export abstract class CommonEntity {
   id: number;
 
   @CreateDateColumn({
+    name: 'created_at',
     type: 'datetime',
     comment: '생성일시',
   })
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn({
+    name: 'updated_at',
     type: 'datetime',
     comment: '수정일시',
   })
-  updated_at: Date;
+  updatedAt: Date;
 
   @DeleteDateColumn({
     name: 'deleted_at',

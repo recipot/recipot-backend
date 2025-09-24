@@ -19,6 +19,10 @@ import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorat
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
+import {
+  SaveUserIngredientsSurveyDto,
+  SaveUserIngredientsSurveyResponseDto,
+} from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
 
 @Controller({ path: 'user', version: '1' })
@@ -87,6 +91,28 @@ export class UserController {
   ): Promise<boolean> {
     const userId = req.user.sub;
     return await this.userService.deleteBookmark(userId, recipeId);
+  }
+
+  /**
+   * @description 사용자의 보유 재료 설문을 저장합니다.
+   */
+  @Post('/ingredients-survey')
+  @ApiOperation({
+    summary: '보유 재료 설문 저장',
+    description: '사용자가 보유한 재료 ID 목록을 캐시에 저장합니다.',
+  })
+  @ApiSuccessResponse(
+    '보유 재료 설문 저장 성공',
+    SaveUserIngredientsSurveyResponseDto,
+  )
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async saveIngredientsSurvey(
+    @Request() req: any,
+    @Body() surveyDto: SaveUserIngredientsSurveyDto,
+  ): Promise<SaveUserIngredientsSurveyResponseDto> {
+    const userId = req.user.sub;
+    return await this.userService.saveUserIngredientsSurvey(userId, surveyDto);
   }
 
   /**
