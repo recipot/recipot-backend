@@ -100,7 +100,6 @@ describe('UserService', () => {
     const userId = 1;
     const recipeId = 10;
     const createRecipeCompletionDto: CreateRecipeCompletionRequestDto = {
-      userId,
       recipeId,
     };
 
