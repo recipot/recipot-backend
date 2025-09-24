@@ -10,6 +10,8 @@ services:
       MYSQL_PASSWORD: recipot1!11
       MYSQL_ROOT_PASSWORD: recipot1!11
       TZ: Asia/Seoul
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATION_SERVER: utf8mb4_general_ci
     volumes:
       - ./docker/mariadb/data:/var/lib/mysql
     healthcheck:
