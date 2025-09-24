@@ -3,6 +3,8 @@ import { CommonEntity } from './common.entity';
 
 @Entity('user_completed_recipes')
 export class UserCompletedRecipe extends CommonEntity {
+  // deletedAt 필드를 오버라이드하여 제거
+  deletedAt: undefined;
   @Column({
     type: 'int',
     name: 'user_id',
@@ -24,14 +26,6 @@ export class UserCompletedRecipe extends CommonEntity {
     comment: '완료 여부',
   })
   isCompleted: boolean;
-
-  @Column({
-    type: 'datetime',
-    nullable: true,
-    name: 'completed_at',
-    comment: '완료 날짜',
-  })
-  completedAt: Date;
 
   @Column({
     type: 'boolean',

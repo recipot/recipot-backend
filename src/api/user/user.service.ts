@@ -1,7 +1,9 @@
+import { CacheService } from '@/common/cache/cache.service';
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
@@ -11,15 +13,15 @@ import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
 import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { CreateRecipeCompletionRequestDto } from './dto/create-recipe-completion.dto';
 import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
-import { UserDto } from './dto/user.dto';
-import { UserRole } from './enums/role.enum';
-import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
-import { CacheService } from '@/common/cache/cache.service';
+import { UserDto } from './dto/user.dto';
+import { UserRole } from './enums/role.enum';
+import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 
 @Injectable()
 export class UserService {
@@ -31,6 +33,8 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRecipeBookmark)
     private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
+    @InjectRepository(UserCompletedRecipe)
+    private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
     @InjectRepository(Recipe)
     private readonly recipeRepository: Repository<Recipe>,
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
@@ -259,5 +263,63 @@ export class UserService {
       }
       throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  /**
+   * 사용자가 레시피를 완료합니다.
+   */
+  async completeRecipe(
+    userId: number,
+    createRecipeCompletionRequestDto: CreateRecipeCompletionRequestDto,
+  ): Promise<boolean> {
+    const { recipeId } = createRecipeCompletionRequestDto;
+
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // 이미 완료한 레시피인지 확인
+    const existing = await this.userCompletedRecipeRepository.findOne({
+      where: { userId, recipeId },
+    });
+
+    // TODO 기획 방향에 따라 수정 (기존 레시피 완료 시 중복 완료 가능한지)
+    if (existing && existing.isCompleted) {
+      return true;
+    }
+
+    // 완료 기록 생성 또는 업데이트
+    if (existing) {
+      existing.isCompleted = true;
+      await this.userCompletedRecipeRepository.save(existing);
+    } else {
+      const entity = this.userCompletedRecipeRepository.create({
+        userId,
+        recipeId,
+        isCompleted: true,
+        isReviewed: false,
+      });
+      await this.userCompletedRecipeRepository.save(entity);
+    }
+
+    // 사용자 완료 횟수 증가
+    user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
+    await this.userRepository.save(user);
+
+    return true;
   }
 }

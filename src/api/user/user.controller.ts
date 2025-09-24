@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
@@ -18,6 +18,7 @@ import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { CreateRecipeCompletionRequestDto } from './dto/create-recipe-completion.dto';
 import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
 import {
   SaveUserIngredientsSurveyDto,
@@ -177,5 +178,29 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
+  }
+
+  /**
+   * @description 레시피를 완료합니다.
+   */
+  @Post('/complete-recipe')
+  @ApiOperation({
+    summary: '레시피 완료',
+    description: '인증된 사용자가 레시피를 완료합니다.',
+  })
+  @ApiBody({ type: CreateRecipeCompletionRequestDto })
+  @ApiSuccessResponse('레시피 완료 성공', { type: 'boolean', example: true })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
+  async completeRecipe(
+    @Request() req: any,
+    @Body() createRecipeCompletionRequestDto: CreateRecipeCompletionRequestDto,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return await this.userService.completeRecipe(
+      userId,
+      createRecipeCompletionRequestDto,
+    );
   }
 }
