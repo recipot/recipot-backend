@@ -2,19 +2,25 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
-
 @Injectable()
 export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBookmark> {
   constructor(private dataSource: DataSource) {
     super(UserRecipeBookmark, dataSource.createEntityManager());
   }
-
   /**
-   * 사용자의 북마크와 레시피 정보를 함께 조회합니다.
+   * 사용자의 북마크와 레시피 정보를 페이지네이션으로 조회합니다.
    */
-  async findBookmarksWithRecipeByUserId(
+  async findBookmarksWithRecipeByUserIdPaginated(
     userId: number,
-  ): Promise<BookmarkWithRecipeDto[]> {
+    page: number,
+    limit: number,
+  ): Promise<{
+    items: BookmarkWithRecipeDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const queryBuilder = this.dataSource
       .createQueryBuilder()
       .select([
@@ -31,11 +37,8 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
       .leftJoin('recipe_images', 'image', 'recipe.id = image.recipe_id')
       .where('bookmark.user_id = :userId', { userId })
       .orderBy('bookmark.created_at', 'DESC');
-
     const rawResults = await queryBuilder.getRawMany();
-
     const bookmarkMap = new Map<number, BookmarkWithRecipeDto>();
-
     for (const result of rawResults) {
       if (!bookmarkMap.has(result.bookmark_id)) {
         bookmarkMap.set(result.bookmark_id, {
@@ -55,10 +58,19 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
         }
       }
     }
-
-    return Array.from(bookmarkMap.values());
+    const allBookmarks = Array.from(bookmarkMap.values());
+    const total = allBookmarks.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const items = allBookmarks.slice(offset, offset + limit);
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
-
   /**
    * 사용자가 특정 레시피를 북마크했는지 확인합니다.
    */
@@ -72,7 +84,6 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
       .from('user_recipe_bookmarks', 'bookmark')
       .where('bookmark.user_id = :userId', { userId })
       .andWhere('bookmark.recipe_id = :recipeId', { recipeId });
-
     const result = await queryBuilder.getRawOne();
     return parseInt(result.count) > 0;
   }

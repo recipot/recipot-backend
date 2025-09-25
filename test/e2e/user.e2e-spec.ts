@@ -48,7 +48,7 @@ describe('UserController (E2E)', () => {
         .expect(HttpStatus.CREATED);
 
       console.log('Response body:', response.body);
-      expect(response.body.result).toBe(true);
+      expect(response.body.data).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 이미 북마크한 레시피를 다시 북마크할 경우 400 오류 발생`, async () => {
@@ -84,7 +84,7 @@ describe('UserController (E2E)', () => {
       expect(response.body.message).toBe('사용자를 찾을 수 없습니다.');
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 사용자의 북마크를 날짜별로 조회한다.`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 사용자의 북마크를 페이지네이션으로 조회한다.`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
@@ -96,28 +96,53 @@ describe('UserController (E2E)', () => {
 
       expect(response.status).toBe(HttpStatus.OK);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      // 페이지네이션 응답 구조 확인
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
 
-      if (response.body.length > 0) {
-        const groupedBookmark = response.body[0];
-        expect(groupedBookmark).toHaveProperty('date');
-        expect(groupedBookmark).toHaveProperty('bookmarks');
-        expect(Array.isArray(groupedBookmark.bookmarks)).toBe(true);
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+      expect(typeof response.body.data.total).toBe('number');
+      expect(typeof response.body.data.page).toBe('number');
+      expect(typeof response.body.data.limit).toBe('number');
+      expect(typeof response.body.data.totalPages).toBe('number');
 
-        if (groupedBookmark.bookmarks.length > 0) {
-          const bookmark = groupedBookmark.bookmarks[0];
-          expect(bookmark).toHaveProperty('id');
-          expect(bookmark).toHaveProperty('user_id');
-          expect(bookmark).toHaveProperty('recipe_id');
-          expect(bookmark).toHaveProperty('recipe_description');
-          expect(bookmark).toHaveProperty('recipe_duration');
-          expect(bookmark).toHaveProperty('recipe_level');
-          expect(bookmark).toHaveProperty('recipe_method');
-          expect(bookmark).toHaveProperty('recipe_washing_level');
-          expect(bookmark).toHaveProperty('recipe_images');
-          expect(bookmark).toHaveProperty('created_at');
-        }
+      if (response.body.data.items.length > 0) {
+        const bookmark = response.body.data.items[0];
+        expect(bookmark).toHaveProperty('id');
+        expect(bookmark).toHaveProperty('userId');
+        expect(bookmark).toHaveProperty('recipeId');
+        expect(bookmark).toHaveProperty('recipeTitle');
+        expect(bookmark).toHaveProperty('recipeDescription');
+        expect(bookmark).toHaveProperty('recipeImages');
+        expect(bookmark).toHaveProperty('createdAt');
       }
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 페이지네이션 파라미터로 북마크를 조회한다.`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/user/bookmarks?page=1&limit=5',
+      );
+
+      console.log('Response status:', response.status);
+      console.log('Response body:', response.body);
+
+      expect(response.status).toBe(HttpStatus.OK);
+
+      // 페이지네이션 응답 구조 확인
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+
+      expect(response.body.data.page).toBe(1);
+      expect(response.body.data.limit).toBe(5);
+      expect(response.body.data.items.length).toBeLessThanOrEqual(5);
     });
 
     it(`${TEST_TAGS.UNAUTHENTICATED} /user/bookmarks (GET) - 인증되지 않은 사용자가 북마크를 조회할 경우 401 오류 발생`, async () => {
@@ -141,7 +166,7 @@ describe('UserController (E2E)', () => {
         `/v1/user/bookmarks/${recipeId}`,
       ).expect(HttpStatus.OK);
 
-      expect(response.body.result).toBe(true);
+      expect(response.body.data).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks/:recipeId (DELETE) - 존재하지 않는 북마크를 해제할 경우 400 오류 발생`, async () => {

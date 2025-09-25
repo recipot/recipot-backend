@@ -16,14 +16,65 @@ const mockUserService = {
       // 이미 북마크한 레시피 - 두 번째 테스트용
       throw new CustomException(ERROR_CODES.BOOKMARK_ALREADY_EXISTS);
     }
-    return { result: true }; // 객체 형태로 반환
+    return true; // boolean 값으로 반환
   },
   deleteBookmark: async (_userId: number, recipeId: number) => {
     // 테스트 시나리오에 따라 다른 응답 반환
     if (recipeId === 99999) {
       throw new CustomException(ERROR_CODES.BOOKMARK_NOT_FOUND); // 존재하지 않는 북마크
     }
-    return { result: true }; // 성공적으로 삭제
+    return true; // boolean 값으로 반환
+  },
+  getBookmarks: async (_userId: number, query: any) => {
+    // Mock 데이터: 페이지네이션 응답 구조와 동일하게
+    const { page = 1, limit = 10 } = query;
+    const pageNum = parseInt(page.toString(), 10);
+    const limitNum = parseInt(limit.toString(), 10);
+
+    const mockBookmarks = [
+      {
+        id: 1,
+        userId: _userId,
+        recipeId: 1,
+        recipeTitle: '맛있는 김치찌개',
+        recipeDescription: '매콤하고 시원한 김치찌개',
+        recipeImages: ['https://example.com/kimchi.jpg'],
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 2,
+        userId: _userId,
+        recipeId: 2,
+        recipeTitle: '간단한 계란볶음밥',
+        recipeDescription: '집에서 쉽게 만들 수 있는 계란볶음밥',
+        recipeImages: ['https://example.com/egg-rice.jpg'],
+        createdAt: new Date('2024-01-02T00:00:00.000Z'),
+      },
+      {
+        id: 3,
+        userId: _userId,
+        recipeId: 3,
+        recipeTitle: '부드러운 된장찌개',
+        recipeDescription: '구수하고 부드러운 된장찌개',
+        recipeImages: ['https://example.com/doenjang.jpg'],
+        createdAt: new Date('2024-01-03T00:00:00.000Z'),
+      },
+    ];
+
+    // 페이지네이션 계산
+    const total = mockBookmarks.length;
+    const totalPages = Math.ceil(total / limitNum);
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const items = mockBookmarks.slice(startIndex, endIndex);
+
+    return {
+      items,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+    };
   },
   getBookmarksByDate: async (_userId: number) => {
     // Mock 데이터: 실제 API 응답 구조와 동일하게
