@@ -4,9 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { HealthSurveyController } from './health-survey.controller';
 import { HealthSurveyService } from './health-survey.service';
+import { CommonCode } from '@/database/entity/common-code.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserCompletedRecipe])],
+  imports: [TypeOrmModule.forFeature([UserCompletedRecipe, CommonCode])],
   controllers: [HealthSurveyController],
   providers: [HealthSurveyService],
   exports: [HealthSurveyService],

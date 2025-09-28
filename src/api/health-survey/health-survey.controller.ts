@@ -13,6 +13,7 @@ import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorat
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { HealthSurveyService } from './health-survey.service';
 import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
+import { GetHealthSurveyPreparationResponseDto } from './dto/get-health-survey-preparation.dto';
 
 @ApiTags('Health Survey')
 @Controller({ path: 'health-survey', version: '1' })
@@ -37,5 +38,18 @@ export class HealthSurveyController {
   ): Promise<HealthSurveyEligibilityResponseDto> {
     const userId = req.user.sub;
     return this.healthSurveyService.getEligibility(userId);
+  }
+
+  @Get('preparation')
+  @ApiOperation({
+    summary: '건강 설문 작성에 필요한 데이터 조회',
+    description:
+      '건강 설문 작성 시 필요한 평소 건강 문제(H01, 단일)와 느낀 변화(H02, 복수) 코드 옵션을 반환합니다.',
+  })
+  @ApiSuccessResponse('건강 설문 준비 데이터 조회 성공', {
+    type: GetHealthSurveyPreparationResponseDto,
+  })
+  async getPreparation(): Promise<GetHealthSurveyPreparationResponseDto> {
+    return this.healthSurveyService.getPreparationData();
   }
 }

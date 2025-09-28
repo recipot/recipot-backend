@@ -4,12 +4,19 @@ import { Between, Repository } from 'typeorm';
 
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
+import { CommonCode } from '@/database/entity/common-code.entity';
+import {
+  GetHealthSurveyPreparationResponseDto,
+  HealthSurveyCodeOptionDto,
+} from './dto/get-health-survey-preparation.dto';
 
 @Injectable()
 export class HealthSurveyService {
   constructor(
     @InjectRepository(UserCompletedRecipe)
     private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
+    @InjectRepository(CommonCode)
+    private readonly commonCodeRepository: Repository<CommonCode>,
   ) {}
 
   async getEligibility(
@@ -28,6 +35,24 @@ export class HealthSurveyService {
     return {
       isEligible: completionCount > 0,
       recentCompletionCount: completionCount,
+    };
+  }
+
+  async getPreparationData(): Promise<GetHealthSurveyPreparationResponseDto> {
+    const [persistentIssueCodes, effectCodes] = await Promise.all([
+      this.commonCodeRepository.find({
+        where: { groupCode: 'H01', isActive: true },
+        order: { orderNum: 'ASC' },
+      }),
+      this.commonCodeRepository.find({
+        where: { groupCode: 'H02', isActive: true },
+        order: { orderNum: 'ASC' },
+      }),
+    ]);
+
+    return {
+      persistentIssueOption: this.mapToCodeOptions(persistentIssueCodes),
+      effectOptions: this.mapToCodeOptions(effectCodes),
     };
   }
 
@@ -52,5 +77,13 @@ export class HealthSurveyService {
     const endOfLastWeek = new Date(startOfThisWeek.getTime() - 1);
 
     return { start: startOfLastWeek, end: endOfLastWeek };
+  }
+
+  private mapToCodeOption(code: CommonCode): HealthSurveyCodeOptionDto {
+    return { code: code.code, codeName: code.codeName };
+  }
+
+  private mapToCodeOptions(codes: CommonCode[]): HealthSurveyCodeOptionDto[] {
+    return codes.map((code) => this.mapToCodeOption(code));
   }
 }
