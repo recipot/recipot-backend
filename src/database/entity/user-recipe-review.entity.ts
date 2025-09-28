@@ -16,10 +16,10 @@ export class UserRecipeReview extends CommonEntity {
   @Column({
     type: 'int',
     nullable: false,
-    name: 'recipe_id',
-    comment: '레시피 PK',
+    name: 'user_completed_recipe_id',
+    comment: '완료된 레시피 기록 PK',
   })
-  recipeId: number;
+  userCompletedRecipeId: number;
 
   @Column({
     type: 'varchar',
