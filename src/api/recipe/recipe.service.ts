@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
@@ -9,6 +9,10 @@ import { RecipeSeasoning } from '@/database/entity/recipe-seasoning.entity';
 import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { RecipeStep } from '@/database/entity/recipe-step.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
+import { Condition } from '@/database/entity/condition.entity';
+import { Ingredient } from '@/database/entity/ingredient.entity';
+import { Seasoning } from '@/database/entity/seasoning.entity';
+import { Tool } from '@/database/entity/tool.entity';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
@@ -18,6 +22,13 @@ import {
 } from './dto/get-recipe.dto';
 import { CacheService } from '@/common/cache/cache.service';
 import { CommonCodeService } from '../common-code/common-code.service';
+
+interface RecipeIngredientDetail {
+  ingredientId: number;
+  name: string;
+  amount: string;
+  isAlternative: boolean;
+}
 
 @Injectable()
 export class RecipeService {
@@ -38,6 +49,14 @@ export class RecipeService {
     private readonly recipeStepRepository: Repository<RecipeStep>,
     @InjectRepository(RecipeHealthPoint)
     private readonly recipeHealthPointRepository: Repository<RecipeHealthPoint>,
+    @InjectRepository(Condition)
+    private readonly conditionRepository: Repository<Condition>,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
+    @InjectRepository(Seasoning)
+    private readonly seasoningRepository: Repository<Seasoning>,
+    @InjectRepository(Tool)
+    private readonly toolRepository: Repository<Tool>,
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
   ) {}
@@ -128,23 +147,15 @@ export class RecipeService {
         await this.recipeHealthPointRepository.save(recipeHealthPoints);
       }
 
-      const result = await this.recipeRepository.findOne({
+      const createdRecipe = await this.recipeRepository.findOne({
         where: { id: savedRecipe.id },
-        relations: [
-          'images',
-          'ingredients',
-          'ingredients.ingredient',
-          'seasonings',
-          'seasonings.seasoning',
-          'tools',
-          'tools.tool',
-          'steps',
-          'healthPoints',
-          'condition',
-        ],
       });
 
-      return result;
+      if (!createdRecipe) {
+        throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
+      }
+
+      return createdRecipe;
     } catch (error) {
       this.logger.error('레시피 생성 중 에러 발생', error);
       throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
@@ -158,22 +169,70 @@ export class RecipeService {
     try {
       const recipe = await this.recipeRepository.findOne({
         where: { id: recipeId },
-        relations: [
-          'images',
-          'ingredients',
-          'ingredients.ingredient',
-          'seasonings',
-          'seasonings.seasoning',
-          'tools',
-          'tools.tool',
-          'steps',
-          'healthPoints',
-          'condition',
-        ],
       });
       if (!recipe) {
         throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
       }
+
+      const [
+        condition,
+        images,
+        recipeIngredients,
+        recipeSeasonings,
+        recipeTools,
+        steps,
+        healthPoints,
+      ] = await Promise.all([
+        this.conditionRepository.findOne({ where: { id: recipe.conditionId } }),
+        this.recipeImageRepository.find({ where: { recipeId } }),
+        this.recipeIngredientRepository.find({ where: { recipeId } }),
+        this.recipeSeasoningRepository.find({ where: { recipeId } }),
+        this.recipeToolRepository.find({ where: { recipeId } }),
+        this.recipeStepRepository.find({ where: { recipeId } }),
+        this.recipeHealthPointRepository.find({ where: { recipeId } }),
+      ]);
+
+      if (!condition) {
+        throw new CustomException(ERROR_CODES.CONDITION_NOT_FOUND);
+      }
+
+      const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
+      const seasoningIds = recipeSeasonings.map((item) => item.seasoningId);
+      const toolIds = recipeTools.map((item) => item.toolId);
+
+      const [ingredients, seasonings, tools] = await Promise.all([
+        ingredientIds.length
+          ? this.ingredientRepository.find({ where: { id: In(ingredientIds) } })
+          : [],
+        seasoningIds.length
+          ? this.seasoningRepository.find({ where: { id: In(seasoningIds) } })
+          : [],
+        toolIds.length
+          ? this.toolRepository.find({ where: { id: In(toolIds) } })
+          : [],
+      ]);
+
+      const ingredientMap = new Map<number, Ingredient>();
+      ingredients.forEach((ingredient) =>
+        ingredientMap.set(ingredient.id, ingredient),
+      );
+
+      const seasoningMap = new Map<number, Seasoning>();
+      seasonings.forEach((seasoning) =>
+        seasoningMap.set(seasoning.id, seasoning),
+      );
+
+      const toolMap = new Map<number, Tool>();
+      tools.forEach((tool) => toolMap.set(tool.id, tool));
+
+      const recipeIngredientsWithDetail: RecipeIngredientDetail[] =
+        recipeIngredients.map((item) => ({
+          ingredientId: item.ingredientId,
+          name: ingredientMap.get(item.ingredientId)?.name ?? '',
+          amount: item.amount,
+          isAlternative: item.isAlternative,
+        }));
+
       const userOwnedIngredients = await this.getUserOwnedIngredients(userId);
       const durationName = await this.commonCodeService.findCommonCode(
         recipe.duration,
@@ -184,34 +243,34 @@ export class RecipeService {
         description: recipe.description,
         duration: durationName.codeName,
         condition: {
-          id: recipe.condition.id,
-          name: recipe.condition.name,
+          id: condition.id,
+          name: condition.name,
         },
-        images: recipe.images.map((image) => ({
+        images: images.map((image) => ({
           id: image.id,
           imageUrl: image.imageUrl,
         })),
         ingredients: this.mapIngredientsWithOwnership(
-          recipe.ingredients,
+          recipeIngredientsWithDetail,
           userOwnedIngredients,
         ),
-        seasonings: recipe.seasonings.map((seasoning) => ({
-          id: seasoning.seasoning.id,
-          name: seasoning.seasoning.name,
+        seasonings: recipeSeasonings.map((seasoning) => ({
+          id: seasoning.seasoningId,
+          name: seasoningMap.get(seasoning.seasoningId)?.name ?? '',
           amount: seasoning.amount,
         })),
-        tools: recipe.tools.map((tool) => ({
-          id: tool.tool.id,
-          name: tool.tool.name,
-          imageUrl: tool.tool.imageUrl,
+        tools: recipeTools.map((tool) => ({
+          id: tool.toolId,
+          name: toolMap.get(tool.toolId)?.name ?? '',
+          imageUrl: toolMap.get(tool.toolId)?.imageUrl ?? '',
         })),
-        steps: recipe.steps
+        steps: steps
           .sort((a, b) => a.orderNum - b.orderNum)
           .map((step) => ({
             orderNum: step.orderNum,
             summary: step.summary,
           })),
-        healthPoints: recipe.healthPoints.map((healthPoint) => ({
+        healthPoints: healthPoints.map((healthPoint) => ({
           content: healthPoint.content,
         })),
       };
@@ -241,34 +300,31 @@ export class RecipeService {
   }
 
   private mapIngredientsWithOwnership(
-    recipeIngredients: any[],
+    recipeIngredients: RecipeIngredientDetail[],
     userOwnedIngredients: number[],
   ): RecipeIngredientDto {
-    const ownedIngredients = userOwnedIngredients || [];
+    const ownedIngredientIds = userOwnedIngredients ?? [];
 
-    const owned = [];
-    const notOwned = [];
-    const alternativeUnavailable = [];
+    const owned: RecipeIngredientDto['owned'] = [];
+    const notOwned: RecipeIngredientDto['notOwned'] = [];
+    const alternativeUnavailable: RecipeIngredientDto['alternativeUnavailable'] =
+      [];
 
-    recipeIngredients.forEach((recipeIngredient) => {
-      const ingredientId = recipeIngredient.ingredient.id;
-      const isOwned = ownedIngredients.includes(ingredientId);
-      const isAlternative = recipeIngredient.isAlternative;
-
+    recipeIngredients.forEach((ingredient) => {
       const ingredientItem = {
-        id: ingredientId,
-        name: recipeIngredient.ingredient.name,
-        amount: recipeIngredient.amount,
-        isAlternative: isAlternative,
+        id: ingredient.ingredientId,
+        name: ingredient.name,
+        amount: ingredient.amount,
+        isAlternative: ingredient.isAlternative,
       };
 
-      if (isOwned) {
+      if (ownedIngredientIds.includes(ingredient.ingredientId)) {
         owned.push(ingredientItem);
       } else {
         notOwned.push(ingredientItem);
       }
 
-      if (!isAlternative) {
+      if (!ingredient.isAlternative) {
         alternativeUnavailable.push(ingredientItem);
       }
     });

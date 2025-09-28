@@ -1,7 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { CommonEntity } from './common.entity';
-import { Recipe } from './recipe.entity';
-import { User } from './user.entity';
 
 @Entity('user_recipe_reviews')
 export class UserRecipeReview extends CommonEntity {
@@ -54,12 +52,4 @@ export class UserRecipeReview extends CommonEntity {
     comment: '리뷰 내용',
   })
   content: string | null;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
-
-  @ManyToOne(() => Recipe)
-  @JoinColumn({ name: 'recipe_id' })
-  recipe: Recipe;
 }

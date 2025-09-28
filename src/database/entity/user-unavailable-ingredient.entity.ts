@@ -1,12 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { User } from './user.entity';
-import { Ingredient } from './ingredient.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('user_unavailable_ingredients')
 export class UserUnavailableIngredient {
@@ -28,12 +20,4 @@ export class UserUnavailableIngredient {
     comment: '재료 PK',
   })
   ingredientId: number;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
-
-  @ManyToOne(() => Ingredient)
-  @JoinColumn({ name: 'ingredient_id' })
-  ingredient: Ingredient;
 }
