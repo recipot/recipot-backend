@@ -9,12 +9,15 @@ import {
   GetHealthSurveyPreparationResponseDto,
   HealthSurveyCodeOptionDto,
 } from './dto/get-health-survey-preparation.dto';
+import { UserHealthSurvey } from '@/database/entity/user-health-survey.entity';
 
 @Injectable()
 export class HealthSurveyService {
   constructor(
     @InjectRepository(UserCompletedRecipe)
     private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
+    @InjectRepository(UserHealthSurvey)
+    private readonly userHealthSurveyRepository: Repository<UserHealthSurvey>,
     @InjectRepository(CommonCode)
     private readonly commonCodeRepository: Repository<CommonCode>,
   ) {}
@@ -22,18 +25,27 @@ export class HealthSurveyService {
   async getEligibility(
     userId: number,
   ): Promise<HealthSurveyEligibilityResponseDto> {
-    const { start, end } = this.getLastWeekRange();
+    const { start: lastWeekStart, end: lastWeekEnd } = this.getWeekRange(-1);
+    const { start: thisWeekStart, end: thisWeekEnd } = this.getWeekRange(0);
 
-    const completionCount = await this.userCompletedRecipeRepository.count({
-      where: {
-        userId,
-        isCompleted: true,
-        updatedAt: Between(start, end),
-      },
-    });
+    const [completionCount, hasSubmittedThisWeek] = await Promise.all([
+      this.userCompletedRecipeRepository.count({
+        where: {
+          userId,
+          isCompleted: true,
+          updatedAt: Between(lastWeekStart, lastWeekEnd),
+        },
+      }),
+      this.userHealthSurveyRepository.exist({
+        where: {
+          userId,
+          createdAt: Between(thisWeekStart, thisWeekEnd),
+        },
+      }),
+    ]);
 
     return {
-      isEligible: completionCount > 0,
+      isEligible: completionCount > 0 && !hasSubmittedThisWeek,
       recentCompletionCount: completionCount,
     };
   }
@@ -57,13 +69,12 @@ export class HealthSurveyService {
   }
 
   /**
-   * 지난 주(월요일 00:00:00 ~ 일요일 23:59:59.999) 범위를 반환합니다.
+   * 기준 주차의 월요일 00:00:00 ~ 일요일 23:59:59.999 범위를 반환합니다.
+   * @param diff 0이면 이번 주, -1이면 지난 주, 1이면 다음 주
    */
-  private getLastWeekRange(): { start: Date; end: Date } {
+  private getWeekRange(diff: number): { start: Date; end: Date } {
     const now = new Date();
-
-    // getDay(): 일요일=0, 월요일=1 … 토요일=6
-    const today = now.getDay() === 0 ? 7 : now.getDay();
+    const today = now.getDay() === 0 ? 7 : now.getDay(); // 일요일=0 보정
     const startOfThisWeek = new Date(
       now.getFullYear(),
       now.getMonth(),
@@ -71,12 +82,14 @@ export class HealthSurveyService {
     );
     startOfThisWeek.setHours(0, 0, 0, 0);
 
-    const startOfLastWeek = new Date(startOfThisWeek);
-    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    const start = new Date(startOfThisWeek);
+    start.setDate(start.getDate() + diff * 7);
 
-    const endOfLastWeek = new Date(startOfThisWeek.getTime() - 1);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    end.setMilliseconds(end.getMilliseconds() - 1);
 
-    return { start: startOfLastWeek, end: endOfLastWeek };
+    return { start, end };
   }
 
   private mapToCodeOption(code: CommonCode): HealthSurveyCodeOptionDto {
