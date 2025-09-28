@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   HttpStatus,
+  Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +16,10 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { HealthSurveyService } from './health-survey.service';
 import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
 import { GetHealthSurveyPreparationResponseDto } from './dto/get-health-survey-preparation.dto';
+import {
+  CreateHealthSurveyRequestDto,
+  CreateHealthSurveyResponseDto,
+} from './dto/create-health-survey.dto';
 
 @ApiTags('Health Survey')
 @Controller({ path: 'health-survey', version: '1' })
@@ -51,5 +57,27 @@ export class HealthSurveyController {
   })
   async getPreparation(): Promise<GetHealthSurveyPreparationResponseDto> {
     return this.healthSurveyService.getPreparationData();
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: '건강 설문 작성',
+    description:
+      '평소 겪던 건강 문제 코드와 느낀 변화 코드 목록을 전달받아 건강 설문을 작성합니다.',
+  })
+  @ApiSuccessResponse('건강 설문 작성 성공', {
+    type: CreateHealthSurveyResponseDto,
+  })
+  @ApiErrorResponse(
+    HttpStatus.BAD_REQUEST,
+    ERROR_CODES.HEALTH_SURVEY_NOT_ELIGIBLE,
+  )
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  async submitHealthSurvey(
+    @Request() req: any,
+    @Body() dto: CreateHealthSurveyRequestDto,
+  ): Promise<CreateHealthSurveyResponseDto> {
+    const userId = req.user.sub;
+    return this.healthSurveyService.submitHealthSurvey(userId, dto);
   }
 }

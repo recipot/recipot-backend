@@ -6,6 +6,7 @@ import { HealthSurveyController } from './health-survey.controller';
 import { HealthSurveyService } from './health-survey.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { UserHealthSurvey } from '@/database/entity/user-health-survey.entity';
+import { UserHealthSurveyEffect } from '@/database/entity/user-health-survey-effect.entity';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UserHealthSurvey } from '@/database/entity/user-health-survey.entity';
       UserCompletedRecipe,
       CommonCode,
       UserHealthSurvey,
+      UserHealthSurveyEffect,
     ]),
   ],
   controllers: [HealthSurveyController],

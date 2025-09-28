@@ -67,4 +67,10 @@ export const ERROR_CODES = {
   REVIEW_NOT_ALLOWED: { code: 'E15001', message: '레시피 완료 후에만 후기를 작성할 수 있습니다.' },
   REVIEW_ALREADY_EXISTS: { code: 'E15002', message: '이미 해당 레시피에 대한 후기를 작성했습니다.' },
   REVIEW_COMPLETION_NOT_FOUND: { code: 'E15003', message: '완료된 레시피 기록을 찾을 수 없습니다.' },
+
+  // 건강 설문 오류
+  HEALTH_SURVEY_NOT_ELIGIBLE: {
+    code: 'E16001',
+    message: '현재는 건강 설문을 작성할 수 없습니다.',
+  },
 };

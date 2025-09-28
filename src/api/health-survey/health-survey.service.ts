@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
@@ -10,6 +10,16 @@ import {
   HealthSurveyCodeOptionDto,
 } from './dto/get-health-survey-preparation.dto';
 import { UserHealthSurvey } from '@/database/entity/user-health-survey.entity';
+import {
+  CreateHealthSurveyRequestDto,
+  CreateHealthSurveyResponseDto,
+} from './dto/create-health-survey.dto';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { UserHealthSurveyEffect } from '@/database/entity/user-health-survey-effect.entity';
+
+const PERSISTENT_ISSUE_GROUP = 'H01';
+const EFFECT_GROUP = 'H02';
 
 @Injectable()
 export class HealthSurveyService {
@@ -18,6 +28,8 @@ export class HealthSurveyService {
     private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
     @InjectRepository(UserHealthSurvey)
     private readonly userHealthSurveyRepository: Repository<UserHealthSurvey>,
+    @InjectRepository(UserHealthSurveyEffect)
+    private readonly userHealthSurveyEffectRepository: Repository<UserHealthSurveyEffect>,
     @InjectRepository(CommonCode)
     private readonly commonCodeRepository: Repository<CommonCode>,
   ) {}
@@ -66,6 +78,60 @@ export class HealthSurveyService {
       persistentIssueOption: this.mapToCodeOptions(persistentIssueCodes),
       effectOptions: this.mapToCodeOptions(effectCodes),
     };
+  }
+
+  async submitHealthSurvey(
+    userId: number,
+    dto: CreateHealthSurveyRequestDto,
+  ): Promise<CreateHealthSurveyResponseDto> {
+    const eligibility = await this.getEligibility(userId);
+    if (!eligibility.isEligible) {
+      throw new CustomException(
+        ERROR_CODES.HEALTH_SURVEY_NOT_ELIGIBLE,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const persistentIssueCode = await this.commonCodeRepository.findOne({
+      where: {
+        groupCode: PERSISTENT_ISSUE_GROUP,
+        code: dto.persistentIssueCode,
+        isActive: true,
+      },
+    });
+    if (!persistentIssueCode) {
+      throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
+    }
+
+    const effectCodes = await this.commonCodeRepository.find({
+      where: {
+        groupCode: EFFECT_GROUP,
+        code: In(dto.effectCodes),
+        isActive: true,
+      },
+    });
+    if (effectCodes.length !== dto.effectCodes.length) {
+      throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
+    }
+
+    const survey = this.userHealthSurveyRepository.create({
+      userId,
+      persistentIssueCode: dto.persistentIssueCode,
+      additionalNote: dto.additionalNote ?? null,
+    });
+    const savedSurvey = await this.userHealthSurveyRepository.save(survey);
+
+    if (dto.effectCodes.length > 0) {
+      const effectEntities = dto.effectCodes.map((code) =>
+        this.userHealthSurveyEffectRepository.create({
+          userHealthSurveyId: savedSurvey.id,
+          effectCode: code,
+        }),
+      );
+      await this.userHealthSurveyEffectRepository.save(effectEntities);
+    }
+
+    return { surveyId: savedSurvey.id };
   }
 
   /**
