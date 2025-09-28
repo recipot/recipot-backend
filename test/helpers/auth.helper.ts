@@ -1,5 +1,5 @@
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, UnauthorizedException } from '@nestjs/common';
 import request from 'supertest';
 
 export const mockAccessToken = 'mock-jwt-token-for-testing';
@@ -47,9 +47,9 @@ export const createMockJwtGuard = () => ({
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    // 인증 헤더가 없으면 false 반환 (403 Forbidden)
+    // 인증 헤더가 없으면 401 Unauthorized 예외 발생
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return false;
+      throw new UnauthorizedException('인증이 필요합니다.');
     }
 
     // 인증 헤더가 있으면 mock user 설정

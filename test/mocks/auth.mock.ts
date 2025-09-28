@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   Module,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 // Mock JWT Guard that always passes for testing
@@ -12,9 +13,9 @@ export class MockJwtGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    // 인증 헤더가 없으면 false 반환 (403 Forbidden)
+    // 인증 헤더가 없으면 401 Unauthorized 예외 발생
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return false;
+      throw new UnauthorizedException('인증이 필요합니다.');
     }
 
     // 인증 헤더가 있으면 mock user 설정

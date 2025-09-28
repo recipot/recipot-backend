@@ -1,12 +1,12 @@
-import { Column, Entity, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { CommonEntity } from './common.entity';
+import { Condition } from './condition.entity';
+import { RecipeHealthPoint } from './recipe-health-point.entity';
 import { RecipeImage } from './recipe-image.entity';
 import { RecipeIngredient } from './recipe-ingredient.entity';
 import { RecipeSeasoning } from './recipe-seasoning.entity';
-import { RecipeTool } from './recipe-tool.entity';
 import { RecipeStep } from './recipe-step.entity';
-import { RecipeHealthPoint } from './recipe-health-point.entity';
-import { Condition } from './condition.entity';
+import { RecipeTool } from './recipe-tool.entity';
 
 @Entity('recipes')
 export class Recipe extends CommonEntity {
