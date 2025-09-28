@@ -3,6 +3,7 @@ import { CommonEntity } from './common.entity';
 
 @Entity('user_completed_recipes')
 export class UserCompletedRecipe extends CommonEntity {
+  // deletedAt 필드를 오버라이드하여 제거
   deletedAt: undefined;
   @Column({
     type: 'int',

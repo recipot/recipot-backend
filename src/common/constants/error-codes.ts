@@ -1,9 +1,9 @@
-/* eslint-disable */
 export const ERROR_CODES = {
   // 유저 관련 오류
   USER_NOT_FOUND: { code: 'E1001', message: '사용자를 찾을 수 없습니다.' },
   BOOKMARK_ALREADY_EXISTS: { code: 'E1002', message: '이미 북마크한 레시피입니다.' },
   BOOKMARK_NOT_FOUND: { code: 'E1003', message: '북마크를 찾을 수 없습니다.' },
+  RECIPE_COOKING_NOT_STARTED: { code: 'E1004', message: '요리를 시작하지 않은 레시피입니다.' },
 
   // 인증 및 로그인 오류
   AUTH_TOKEN_EXPIRED: { code: 'E2001', message: '인증 토큰이 만료되었습니다.' },
