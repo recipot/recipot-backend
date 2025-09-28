@@ -24,14 +24,6 @@ export class UserRecipeReview extends CommonEntity {
   @Column({
     type: 'varchar',
     length: 6,
-    nullable: false,
-    comment: '만족도',
-  })
-  satisfaction: string;
-
-  @Column({
-    type: 'varchar',
-    length: 6,
     nullable: true,
     name: 'taste_code',
     comment: '맛 평가 코드',

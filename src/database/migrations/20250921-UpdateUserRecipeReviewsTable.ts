@@ -1,4 +1,4 @@
-const { TableColumn } = require('typeorm');
+import { TableColumn } from 'typeorm';
 
 module.exports = class Migration20250921213743 {
   async up(queryRunner) {
