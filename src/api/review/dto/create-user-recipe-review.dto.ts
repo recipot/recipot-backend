@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 
 export class CreateUserRecipeReviewDto {
-  @ApiProperty({ description: '완료된 레시피 기록 ID', example: 42 })
+  @ApiProperty({ description: '유저 완료 레시피 ID', example: 42 })
   @IsInt()
   @IsNotEmpty()
   completedRecipeId: number;

@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
+  HttpStatus,
   Post,
+  Query,
   Request,
   UseGuards,
-  HttpStatus,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
@@ -14,6 +16,10 @@ import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorat
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { UserRecipeReview } from '@/database/entity/user-recipe-review.entity';
 import { CreateUserRecipeReviewDto } from './dto/create-user-recipe-review.dto';
+import {
+  GetUserRecipeReviewPreparationQueryDto,
+  GetUserRecipeReviewPreparationResponseDto,
+} from './dto/get-user-recipe-review-preparation.dto';
 import { UserRecipeReviewService } from './review.service';
 
 @ApiTags('Review')
@@ -52,5 +58,31 @@ export class ReviewController {
     @Body() createDto: CreateUserRecipeReviewDto,
   ): Promise<UserRecipeReview> {
     return await this.reviewService.createReview(req.user.sub, createDto);
+  }
+
+  @Get('preparation')
+  @ApiOperation({
+    summary: '후기 작성에 필요한 데이터 조회',
+    description:
+      '완료된 레시피 정보를 기반으로 후기 작성 화면에 필요한 데이터를 제공합니다.',
+  })
+  @ApiSuccessResponse('후기 작성 준비 데이터 조회 성공', {
+    type: GetUserRecipeReviewPreparationResponseDto,
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(
+    HttpStatus.BAD_REQUEST,
+    ERROR_CODES.REVIEW_COMPLETION_NOT_FOUND,
+  )
+  async getUserRecipeReviewPreparation(
+    @Request() req: any,
+    @Query() query: GetUserRecipeReviewPreparationQueryDto,
+  ): Promise<GetUserRecipeReviewPreparationResponseDto> {
+    return await this.reviewService.getUserRecipeReviewPreparation(
+      req.user.sub,
+      query,
+    );
   }
 }

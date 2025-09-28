@@ -15,7 +15,7 @@ export class UserRecipeReview extends CommonEntity {
     type: 'int',
     nullable: false,
     name: 'user_completed_recipe_id',
-    comment: '완료된 레시피 기록 PK',
+    comment: '유저 요리 완료 PK',
   })
   userCompletedRecipeId: number;
 
