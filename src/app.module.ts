@@ -20,6 +20,8 @@ import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { ReviewModule } from './api/review/review.module';
+import { HealthSurveyModule } from './api/health-survey/health-survey.module';
 
 export const FeatureModules = [
   UserModule,
@@ -36,6 +38,8 @@ export const FeatureModules = [
   ToolModule,
   RecipeModule,
   ConditionModule,
+  ReviewModule,
+  HealthSurveyModule,
 ];
 
 @Module({

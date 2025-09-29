@@ -1,12 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Recipe } from './recipe.entity';
-import { Tool } from './tool.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('recipe_tools')
 export class RecipeTool {
@@ -28,12 +20,4 @@ export class RecipeTool {
     comment: '도구 PK',
   })
   toolId: number;
-
-  @ManyToOne(() => Recipe, (recipe) => recipe.tools)
-  @JoinColumn({ name: 'recipe_id' })
-  recipe: Recipe;
-
-  @ManyToOne(() => Tool)
-  @JoinColumn({ name: 'tool_id' })
-  tool: Tool;
 }

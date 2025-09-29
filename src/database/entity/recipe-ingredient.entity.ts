@@ -1,12 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Recipe } from './recipe.entity';
-import { Ingredient } from './ingredient.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('recipe_ingredients')
 export class RecipeIngredient {
@@ -44,12 +36,4 @@ export class RecipeIngredient {
     comment: '개수 또는 양',
   })
   amount: string;
-
-  @ManyToOne(() => Recipe, (recipe) => recipe.ingredients)
-  @JoinColumn({ name: 'recipe_id' })
-  recipe: Recipe;
-
-  @ManyToOne(() => Ingredient)
-  @JoinColumn({ name: 'ingredient_id' })
-  ingredient: Ingredient;
 }

@@ -1,13 +1,4 @@
-// src/database/entity/recipe-seasoning.entity.ts
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Recipe } from './recipe.entity';
-import { Seasoning } from './seasoning.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('recipe_seasonings')
 export class RecipeSeasoning {
@@ -36,12 +27,4 @@ export class RecipeSeasoning {
     comment: '필요량',
   })
   amount: string;
-
-  @ManyToOne(() => Recipe, (recipe) => recipe.seasonings)
-  @JoinColumn({ name: 'recipe_id' })
-  recipe: Recipe;
-
-  @ManyToOne(() => Seasoning)
-  @JoinColumn({ name: 'seasoning_id' })
-  seasoning: Seasoning;
 }
