@@ -1,7 +1,8 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { LoginService } from './login.service';
 
 @ApiTags('로그인')
@@ -38,19 +39,12 @@ export class LoginController {
     type: 'object',
     properties: {
       userId: { type: 'number', example: 1 },
-      accessToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      accessExpiresAt: { type: 'string', example: '2025-08-17T11:50:04.000Z' },
-      refreshToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      refreshExpiresAt: { type: 'string', example: '2025-08-18T10:50:04.000Z' },
     },
   })
-  async kakaoLoginCallback(@Query('code') code: string) {
-    return await this.loginService.processKakaoLogin(code);
+  async kakaoLoginCallback(
+    @Query('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.loginService.processKakaoLogin(code, res);
   }
 }

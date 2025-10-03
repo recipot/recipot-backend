@@ -3,6 +3,7 @@ import { DatabaseModule } from '@/database/database.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
+import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Module } from '@nestjs/common';
@@ -19,6 +20,7 @@ import { UserService } from './user.service';
       CommonCode,
       UserRecipeBookmark,
       UserRecentRecipes,
+      UserCompletedRecipe,
       Recipe,
     ]),
     AuthModule,

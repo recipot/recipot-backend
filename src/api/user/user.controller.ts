@@ -7,10 +7,16 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
@@ -18,7 +24,8 @@ import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
-import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
+import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
+import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
@@ -33,21 +40,29 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * @description 인증된 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.
+   * @description 인증된 사용자의 북마크를 페이지네이션으로 조회합니다.
    */
   @Get('/bookmarks')
   @ApiOperation({
-    summary: '북마크 목록 조회 (날짜별 그룹핑)',
-    description: '인증된 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.',
+    summary: '북마크 목록 조회 (페이지네이션)',
+    description: '인증된 사용자의 북마크를 페이지네이션으로 조회합니다.',
   })
-  @ApiSuccessResponse('북마크 목록 조회 성공', [GroupedBookmarksDto])
+  @ApiQuery({
+    name: 'page',
+    type: Number,
+    required: false,
+    description: '페이지 번호 (기본값: 1)',
+    example: 1,
+  })
+  @ApiSuccessResponse('북마크 목록 조회 성공', GetBookmarksResponseDto)
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getBookmarksByDate(
+  async getBookmarks(
     @Request() req: any,
-  ): Promise<GroupedBookmarksDto[]> {
+    @Query() query: GetBookmarksRequestDto,
+  ): Promise<GetBookmarksResponseDto> {
     const userId = req.user.sub;
-    return await this.userService.getBookmarksByDate(userId);
+    return await this.userService.getBookmarks(userId, query);
   }
 
   /**
@@ -188,7 +203,8 @@ export class UserController {
     type: 'boolean',
     example: true,
   })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
   async addRecentRecipe(
     @Request() req: any,
     @Param('recipeId', ParseIntPipe) recipeId: number,
@@ -204,7 +220,55 @@ export class UserController {
   })
   @ApiSuccessResponse('최근 본 레시피 목록 조회 성공', { type: 'array' })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  async getRecentRecipes(): Promise<any> {
-    // TODO
+  async getRecentRecipes(@Request() req: any): Promise<any> {
+    const userId = req.user.sub;
+    return await this.userService.getRecentRecipes(userId);
+  }
+
+  /**
+   * @description 레시피 요리를 시작합니다.
+   */
+  @Post('/recipes/:recipeId/start')
+  @ApiOperation({
+    summary: '레시피 요리 시작 (바로 해먹기)',
+    description: '인증된 사용자가 레시피 요리를 시작합니다.',
+  })
+  @ApiSuccessResponse('레시피 요리 시작 성공', {
+    type: 'boolean',
+    example: true,
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
+  async startRecipeCooking(
+    @Request() req: any,
+    @Param('recipeId', ParseIntPipe) recipeId: number,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return this.userService.startRecipeCooking(userId, recipeId);
+  }
+
+  /**
+   * @description 레시피를 완료합니다.
+   */
+  @Post('/recipes/:recipeId/complete')
+  @ApiOperation({
+    summary: '레시피 완료',
+    description: '인증된 사용자가 레시피를 완료합니다.',
+  })
+  @ApiSuccessResponse('레시피 완료 성공', { type: 'boolean', example: true })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(
+    HttpStatus.BAD_REQUEST,
+    ERROR_CODES.RECIPE_COOKING_NOT_STARTED,
+  )
+  async completeRecipe(
+    @Request() req: any,
+    @Param('recipeId', ParseIntPipe) recipeId: number,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return await this.userService.completeRecipe(userId, recipeId);
   }
 }

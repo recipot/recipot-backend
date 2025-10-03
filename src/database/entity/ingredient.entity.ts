@@ -1,6 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { CommonEntity } from './common.entity';
-import { IngredientCategory } from './ingredient-category.entity';
 
 @Entity('ingredients')
 export class Ingredient extends CommonEntity {
@@ -16,8 +15,4 @@ export class Ingredient extends CommonEntity {
     comment: '재료 이름 (예: 고등어, 게 등)',
   })
   name: string;
-
-  @ManyToOne(() => IngredientCategory, { nullable: false })
-  @JoinColumn({ name: 'ingredient_category_id' })
-  ingredientCategory: IngredientCategory;
 }

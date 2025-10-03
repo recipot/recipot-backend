@@ -3,6 +3,7 @@ import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
@@ -11,9 +12,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
-import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
-import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
+import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
+import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
@@ -32,6 +33,8 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRecipeBookmark)
     private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
+    @InjectRepository(UserCompletedRecipe)
+    private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
     @InjectRepository(Recipe)
     private readonly recipeRepository: Repository<Recipe>,
     @InjectRepository(UserRecentRecipes)
@@ -129,15 +132,16 @@ export class UserService {
       recipeId: recipeId,
     });
 
-    this.logger.log(`사용자 ${userId}가 레시피 ${recipeId}를 북마크했습니다.`);
-
     return true;
   }
 
   /**
-   * 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.
+   * 사용자의 북마크를 페이지네이션으로 조회합니다.
    */
-  async getBookmarksByDate(userId: number): Promise<GroupedBookmarksDto[]> {
+  async getBookmarks(
+    userId: number,
+    query: GetBookmarksRequestDto,
+  ): Promise<GetBookmarksResponseDto> {
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -147,43 +151,17 @@ export class UserService {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
     }
 
-    // 북마크와 레시피 정보를 함께 조회
-    const bookmarks =
-      await this.userRecipeBookmarkCustomRepository.findBookmarksWithRecipeByUserId(
+    const { page, limit } = query;
+
+    // 북마크와 레시피 정보를 페이지네이션으로 조회
+    const paginationResult =
+      await this.userRecipeBookmarkCustomRepository.findBookmarksWithRecipeByUserIdPaginated(
         userId,
+        page,
+        limit,
       );
 
-    // 날짜별로 그룹핑
-    const groupedBookmarks = new Map<string, BookmarkWithRecipeDto[]>();
-
-    for (const bookmark of bookmarks) {
-      const date = new Date(bookmark.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD 형식
-
-      const bookmarkDto: BookmarkWithRecipeDto = {
-        id: bookmark.id,
-        userId: bookmark.userId,
-        recipeId: bookmark.recipeId,
-        recipeTitle: bookmark.recipeTitle,
-        recipeDescription: bookmark.recipeDescription,
-        recipeImages: bookmark.recipeImages || [],
-        createdAt: bookmark.createdAt,
-      };
-
-      if (!groupedBookmarks.has(date)) {
-        groupedBookmarks.set(date, []);
-      }
-      groupedBookmarks.get(date)!.push(bookmarkDto);
-    }
-
-    // Map을 배열로 변환하고 날짜순으로 정렬
-    const result: GroupedBookmarksDto[] = Array.from(groupedBookmarks.entries())
-      .map(([date, bookmarks]) => ({
-        date,
-        bookmarks,
-      }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신 날짜부터
-
-    return result;
+    return paginationResult;
   }
 
   /**
@@ -290,6 +268,107 @@ export class UserService {
     });
 
     await this.userRecentRecipesRepository.save(userRecentRecipe);
+    return true;
+  }
+
+  /**
+   * 최근 본 레시피 목록 조회 (최신순 20개)
+   */
+  async getRecentRecipes(userId: number): Promise<void> {
+    // TODO
+    this.logger.log(`최근 본 레시피 목록 조회: ${userId}`);
+  }
+
+  /**
+   * 사용자가 레시피를 완료합니다.
+   */
+  async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // 기존 요리 시작 기록 확인
+    const existing = await this.userCompletedRecipeRepository.findOne({
+      where: { userId, recipeId },
+    });
+
+    if (existing) {
+      // 이미 완료된 레시피인지 확인
+      if (existing.isCompleted) {
+        return true; // 이미 완료된 경우 true 반환
+      }
+
+      // 요리 시작 기록을 완료로 업데이트
+      existing.isCompleted = true;
+      await this.userCompletedRecipeRepository.save(existing);
+    } else {
+      // 요리 시작 기록이 없는 경우 오류 반환
+      throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
+    }
+
+    // 사용자 완료 횟수 증가
+    user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
+    await this.userRepository.save(user);
+
+    return true;
+  }
+
+  /**
+   * 사용자가 레시피 요리를 시작합니다.
+   */
+  async startRecipeCooking(userId: number, recipeId: number): Promise<boolean> {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // 레시피 존재 여부 확인
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // TODO 기획 방향에 따라 수정 (기존 레시피 요리 시작 시 중복 요리 시작 가능한지)
+    // 이미 요리를 시작했는지 확인
+    const existing = await this.userCompletedRecipeRepository.findOne({
+      where: { userId, recipeId },
+    });
+
+    if (existing) {
+      // 이미 요리를 시작했다면 기존 레코드 반환
+      return true;
+    }
+
+    // 요리 시작 기록 생성 (isCompleted: false)
+    const entity = this.userCompletedRecipeRepository.create({
+      userId,
+      recipeId,
+      isCompleted: false,
+      isReviewed: false,
+    });
+    await this.userCompletedRecipeRepository.save(entity);
+
     return true;
   }
 }
