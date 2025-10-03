@@ -178,4 +178,33 @@ export class UserController {
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
   }
+
+  @Post('recent-recipes/:recipeId')
+  @ApiOperation({
+    summary: '최근 본 레시피 추가',
+    description: '레시피 ID를 받아서 최근 본 레시피 목록에 추가합니다.',
+  })
+  @ApiSuccessResponse('최근 본 레시피 추가 성공', {
+    type: 'boolean',
+    example: true,
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  async addRecentRecipe(
+    @Request() req: any,
+    @Param('recipeId', ParseIntPipe) recipeId: number,
+  ): Promise<boolean> {
+    const userId = req.user.sub;
+    return this.userService.addRecentRecipe(userId, recipeId);
+  }
+
+  @Get('recent-recipes')
+  @ApiOperation({
+    summary: '최근 본 레시피 목록 조회',
+    description: '현재 유저의 최근 본 레시피 목록을 조회합니다.',
+  })
+  @ApiSuccessResponse('최근 본 레시피 목록 조회 성공', { type: 'array' })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  async getRecentRecipes(): Promise<any> {
+    // TODO
+  }
 }

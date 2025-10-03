@@ -1,7 +1,6 @@
-import { Column, Entity, OneToMany } from 'typeorm';
-import { CommonEntity } from './common.entity';
-import { SocialLogin } from './social-login.entity';
 import { UserRole } from '@/api/user/enums/role.enum';
+import { Column, Entity } from 'typeorm';
+import { CommonEntity } from './common.entity';
 
 @Entity('users')
 export class User extends CommonEntity {
@@ -49,7 +48,4 @@ export class User extends CommonEntity {
     comment: '유저 권한 (공통 코드)',
   })
   role: UserRole;
-
-  @OneToMany(() => SocialLogin, (socialLogin) => socialLogin.user)
-  socialLogins: SocialLogin[];
 }
