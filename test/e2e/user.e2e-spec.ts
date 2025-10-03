@@ -87,7 +87,7 @@ describe('UserController (E2E)', () => {
         .send(createBookmarkDto)
         .expect(HttpStatus.CREATED);
 
-      expect(response.body.data.result).toBe(true);
+      expect(response.body.data).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/bookmarks (GET)`, async () => {
@@ -98,14 +98,12 @@ describe('UserController (E2E)', () => {
       );
 
       expect(response.status).toBe(HttpStatus.OK);
-      expect(Array.isArray(response.body.data)).toBe(true);
-
-      if (response.body.data.length > 0) {
-        const groupedBookmark = response.body.data[0];
-        expect(groupedBookmark).toHaveProperty('date');
-        expect(groupedBookmark).toHaveProperty('bookmarks');
-        expect(Array.isArray(groupedBookmark.bookmarks)).toBe(true);
-      }
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(Array.isArray(response.body.data.items)).toBe(true);
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/bookmarks/:recipeId (DELETE)`, async () => {
@@ -115,7 +113,7 @@ describe('UserController (E2E)', () => {
         `/v1/user/bookmarks/${testRecipeId}`,
       ).expect(HttpStatus.OK);
 
-      expect(response.body.data.result).toBe(true);
+      expect(response.body.data).toBe(true);
     });
   });
 });

@@ -1,7 +1,7 @@
+import { PaginationDto } from '@/common/dto/pagination.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { PageQueryDto } from '@/common/dto/pagination.dto';
 
-export class GetIngredientCategoriesDto extends PageQueryDto {}
+export class GetIngredientCategoriesDto extends PaginationDto {}
 
 export class IngredientCategoryResponseDto {
   @ApiProperty({

@@ -1,3 +1,6 @@
+import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
+import { PaginationDto } from '@/common/dto/pagination.dto';
+import { CommonCode } from '@/database/entity/common-code.entity';
 import {
   Body,
   Controller,
@@ -18,15 +21,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { CommonCodeService } from './common-code.service';
-import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { CommonCode } from '@/database/entity/common-code.entity';
-import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
-import { PageQueryDto } from '@/common/dto/pagination.dto';
-import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../user/enums/role.enum';
+import { CommonCodeService } from './common-code.service';
+import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
+import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
 
 @ApiTags('공통 코드')
 @UseGuards(RolesGuard)
@@ -72,7 +72,7 @@ export class CommonCodeController {
       },
     },
   })
-  async findCommonCodes(@Query() query: PageQueryDto): Promise<CommonCode[]> {
+  async findCommonCodes(@Query() query: PaginationDto): Promise<CommonCode[]> {
     return this.commonCodeService.findCommonCodes(query);
   }
 

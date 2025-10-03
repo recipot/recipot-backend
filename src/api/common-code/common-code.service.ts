@@ -1,12 +1,12 @@
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { PaginationDto } from '@/common/dto/pagination.dto';
+import { CustomException } from '@/common/exceptions/custom-exception';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
-import { ERROR_CODES } from '@/common/constants/error-codes';
-import { PageQueryDto } from '@/common/dto/pagination.dto';
 import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
-import { CustomException } from '@/common/exceptions/custom-exception';
 
 @Injectable()
 export class CommonCodeService {
@@ -20,7 +20,7 @@ export class CommonCodeService {
   /**
    * 공통 코드 페이지네이션 조회
    */
-  async findCommonCodes(query: PageQueryDto): Promise<CommonCode[]> {
+  async findCommonCodes(query: PaginationDto): Promise<CommonCode[]> {
     const { page, limit } = query;
     const skip = (page - 1) * limit;
 

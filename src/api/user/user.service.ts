@@ -11,9 +11,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
-import { BookmarkWithRecipeDto } from './dto/bookmark-with-recipe.dto';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
-import { GroupedBookmarksDto } from './dto/grouped-bookmarks.dto';
+import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
+import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
@@ -129,15 +129,16 @@ export class UserService {
       recipeId: recipeId,
     });
 
-    this.logger.log(`사용자 ${userId}가 레시피 ${recipeId}를 북마크했습니다.`);
-
     return true;
   }
 
   /**
-   * 사용자의 북마크를 날짜별로 그룹핑하여 조회합니다.
+   * 사용자의 북마크를 페이지네이션으로 조회합니다.
    */
-  async getBookmarksByDate(userId: number): Promise<GroupedBookmarksDto[]> {
+  async getBookmarks(
+    userId: number,
+    query: GetBookmarksRequestDto,
+  ): Promise<GetBookmarksResponseDto> {
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -147,43 +148,17 @@ export class UserService {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
     }
 
-    // 북마크와 레시피 정보를 함께 조회
-    const bookmarks =
-      await this.userRecipeBookmarkCustomRepository.findBookmarksWithRecipeByUserId(
+    const { page, limit } = query;
+
+    // 북마크와 레시피 정보를 페이지네이션으로 조회
+    const paginationResult =
+      await this.userRecipeBookmarkCustomRepository.findBookmarksWithRecipeByUserIdPaginated(
         userId,
+        page,
+        limit,
       );
 
-    // 날짜별로 그룹핑
-    const groupedBookmarks = new Map<string, BookmarkWithRecipeDto[]>();
-
-    for (const bookmark of bookmarks) {
-      const date = new Date(bookmark.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD 형식
-
-      const bookmarkDto: BookmarkWithRecipeDto = {
-        id: bookmark.id,
-        userId: bookmark.userId,
-        recipeId: bookmark.recipeId,
-        recipeTitle: bookmark.recipeTitle,
-        recipeDescription: bookmark.recipeDescription,
-        recipeImages: bookmark.recipeImages || [],
-        createdAt: bookmark.createdAt,
-      };
-
-      if (!groupedBookmarks.has(date)) {
-        groupedBookmarks.set(date, []);
-      }
-      groupedBookmarks.get(date)!.push(bookmarkDto);
-    }
-
-    // Map을 배열로 변환하고 날짜순으로 정렬
-    const result: GroupedBookmarksDto[] = Array.from(groupedBookmarks.entries())
-      .map(([date, bookmarks]) => ({
-        date,
-        bookmarks,
-      }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신 날짜부터
-
-    return result;
+    return paginationResult;
   }
 
   /**
