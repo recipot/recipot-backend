@@ -1,9 +1,9 @@
-/* eslint-disable */
 export const ERROR_CODES = {
   // 유저 관련 오류
   USER_NOT_FOUND: { code: 'E1001', message: '사용자를 찾을 수 없습니다.' },
   BOOKMARK_ALREADY_EXISTS: { code: 'E1002', message: '이미 북마크한 레시피입니다.' },
   BOOKMARK_NOT_FOUND: { code: 'E1003', message: '북마크를 찾을 수 없습니다.' },
+  RECIPE_COOKING_NOT_STARTED: { code: 'E1004', message: '요리를 시작하지 않은 레시피입니다.' },
 
   // 인증 및 로그인 오류
   AUTH_TOKEN_EXPIRED: { code: 'E2001', message: '인증 토큰이 만료되었습니다.' },
@@ -62,4 +62,15 @@ export const ERROR_CODES = {
   // 컨디션 관련 오류
   CONDITION_ALREADY_EXISTS: { code: 'E14001', message: '이미 존재하는 컨디션입니다.' },
   CONDITION_NOT_FOUND: { code: 'E14002', message: '컨디션을 찾을 수 없습니다.' },
+
+  // 후기 관련 오류
+  REVIEW_NOT_ALLOWED: { code: 'E15001', message: '레시피 완료 후에만 후기를 작성할 수 있습니다.' },
+  REVIEW_ALREADY_EXISTS: { code: 'E15002', message: '이미 해당 레시피에 대한 후기를 작성했습니다.' },
+  REVIEW_COMPLETION_NOT_FOUND: { code: 'E15003', message: '완료된 레시피 기록을 찾을 수 없습니다.' },
+
+  // 건강 설문 오류
+  HEALTH_SURVEY_NOT_ELIGIBLE: {
+    code: 'E16001',
+    message: '현재는 건강 설문을 작성할 수 없습니다.',
+  },
 };

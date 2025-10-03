@@ -11,15 +11,17 @@ import { DatabaseModule } from '@/database/database.module';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './api/auth/auth.module';
-import { LoginModule } from './api/login/login.module';
-import { UploadModule } from './api/upload/upload.module';
-import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { CommonCodeModule } from './api/common-code/common-code.module';
+import { ConditionModule } from './api/condition/condition.module';
 import { IngredientModule } from './api/ingredient/ingredient.module';
+import { LoginModule } from './api/login/login.module';
+import { RecipeModule } from './api/recipe/recipe.module';
 import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
-import { RecipeModule } from './api/recipe/recipe.module';
-import { ConditionModule } from './api/condition/condition.module';
+import { UploadModule } from './api/upload/upload.module';
+import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
+import { ReviewModule } from './api/review/review.module';
+import { HealthSurveyModule } from './api/health-survey/health-survey.module';
 
 export const FeatureModules = [
   UserModule,
@@ -36,6 +38,8 @@ export const FeatureModules = [
   ToolModule,
   RecipeModule,
   ConditionModule,
+  ReviewModule,
+  HealthSurveyModule,
 ];
 
 @Module({

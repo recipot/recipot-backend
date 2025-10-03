@@ -11,6 +11,10 @@ fi
 # 린트 및 포맷팅 실행
 npx lint-staged
 
+# 단위 테스트 실행
+echo "🧪 단위 테스트 실행 중..."
+npm run test
+
 # E2E 테스트 실행
 echo "🧪 E2E 테스트 실행 중..."
 npm run test:e2e

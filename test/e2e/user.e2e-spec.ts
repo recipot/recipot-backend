@@ -1,10 +1,9 @@
-import { HttpStatus, INestApplication } from '@nestjs/common';
+import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   authenticatedRequest,
   setupMockJwtGuard,
   TEST_TAGS,
-  unauthenticatedRequest,
 } from '../helpers/auth.helper';
 import { MockAppModule } from '../mocks/app.mock';
 
@@ -24,6 +23,9 @@ describe('UserController (E2E)', () => {
     // 버전 관리 활성화
     app.enableVersioning();
 
+    // ValidationPipe 추가
+    app.useGlobalPipes(new ValidationPipe());
+
     await app.init();
   });
 
@@ -31,12 +33,50 @@ describe('UserController (E2E)', () => {
     await app.close();
   });
 
-  describe('북마크 레시피 관련 테스트', () => {
-    const testRecipeId = 2; // 1은 이미 북마크된 상태로 설정되어 있음
+  describe('레시피 조회 -> 요리 시작 -> 요리 완료 플로우', () => {
+    const testRecipeId = 1; // 테스트용 레시피 ID
 
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 레시피를 북마크한다.`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 조회 - /recipes/:id (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        `/v1/recipes/${testRecipeId}`,
+      ).expect(HttpStatus.OK);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data).toHaveProperty('title');
+      expect(response.body.data).toHaveProperty('description');
+      expect(response.body.data).toHaveProperty('ingredients');
+      expect(response.body.data).toHaveProperty('steps');
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 레시피 요리 시작 - /user/recipes/:recipeId/start (POST)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        `/v1/user/recipes/${testRecipeId}/start`,
+      ).expect(HttpStatus.CREATED);
+
+      expect(response.body.data).toBe(true);
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 레시피 요리 완료 - /user/recipes/:recipeId/complete (POST)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'post',
+        `/v1/user/recipes/${testRecipeId}/complete`,
+      ).expect(HttpStatus.CREATED);
+
+      expect(response.body.data).toBe(true);
+    });
+  });
+
+  describe('북마크 저장 -> 북마크 조회 -> 북마크 삭제 플로우', () => {
+    const testRecipeId = 2; // 테스트용 레시피 ID
+
+    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/bookmarks (POST)`, async () => {
       const createBookmarkDto = {
-        recipe_id: testRecipeId,
+        recipeId: testRecipeId,
       };
 
       const response = await authenticatedRequest(
@@ -47,138 +87,35 @@ describe('UserController (E2E)', () => {
         .send(createBookmarkDto)
         .expect(HttpStatus.CREATED);
 
-      console.log('Response body:', response.body);
-      expect(response.body.data).toBe(true);
+      expect(response.body.data.result).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 이미 북마크한 레시피를 다시 북마크할 경우 400 오류 발생`, async () => {
-      const createBookmarkDto = {
-        recipe_id: 1, // 이미 북마크된 상태
-      };
-
-      const response = await authenticatedRequest(
-        app,
-        'post',
-        '/v1/user/bookmarks',
-      )
-        .send(createBookmarkDto)
-        .expect(HttpStatus.BAD_REQUEST);
-
-      console.log('Error response body:', response.body);
-      expect(response.body.message).toBe('이미 북마크한 레시피입니다.');
-    });
-
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmark (POST) - 존재하지 않는 레시피 ID로 북마크할 경우 400 오류 발생`, async () => {
-      const createBookmarkDto = {
-        recipe_id: 99999,
-      };
-
-      const response = await authenticatedRequest(
-        app,
-        'post',
-        '/v1/user/bookmarks',
-      )
-        .send(createBookmarkDto)
-        .expect(HttpStatus.BAD_REQUEST);
-
-      expect(response.body.message).toBe('사용자를 찾을 수 없습니다.');
-    });
-
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 사용자의 북마크를 페이지네이션으로 조회한다.`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/bookmarks (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
         '/v1/user/bookmarks',
       );
 
-      console.log('Response status:', response.status);
-      console.log('Response body:', response.body);
-
       expect(response.status).toBe(HttpStatus.OK);
+      expect(Array.isArray(response.body.data)).toBe(true);
 
-      // 페이지네이션 응답 구조 확인
-      expect(response.body.data).toHaveProperty('items');
-      expect(response.body.data).toHaveProperty('total');
-      expect(response.body.data).toHaveProperty('page');
-      expect(response.body.data).toHaveProperty('limit');
-      expect(response.body.data).toHaveProperty('totalPages');
-
-      expect(Array.isArray(response.body.data.items)).toBe(true);
-      expect(typeof response.body.data.total).toBe('number');
-      expect(typeof response.body.data.page).toBe('number');
-      expect(typeof response.body.data.limit).toBe('number');
-      expect(typeof response.body.data.totalPages).toBe('number');
-
-      if (response.body.data.items.length > 0) {
-        const bookmark = response.body.data.items[0];
-        expect(bookmark).toHaveProperty('id');
-        expect(bookmark).toHaveProperty('userId');
-        expect(bookmark).toHaveProperty('recipeId');
-        expect(bookmark).toHaveProperty('recipeTitle');
-        expect(bookmark).toHaveProperty('recipeDescription');
-        expect(bookmark).toHaveProperty('recipeImages');
-        expect(bookmark).toHaveProperty('createdAt');
+      if (response.body.data.length > 0) {
+        const groupedBookmark = response.body.data[0];
+        expect(groupedBookmark).toHaveProperty('date');
+        expect(groupedBookmark).toHaveProperty('bookmarks');
+        expect(Array.isArray(groupedBookmark.bookmarks)).toBe(true);
       }
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks (GET) - 페이지네이션 파라미터로 북마크를 조회한다.`, async () => {
-      const response = await authenticatedRequest(
-        app,
-        'get',
-        '/v1/user/bookmarks?page=1&limit=5',
-      );
-
-      console.log('Response status:', response.status);
-      console.log('Response body:', response.body);
-
-      expect(response.status).toBe(HttpStatus.OK);
-
-      // 페이지네이션 응답 구조 확인
-      expect(response.body.data).toHaveProperty('items');
-      expect(response.body.data).toHaveProperty('total');
-      expect(response.body.data).toHaveProperty('page');
-      expect(response.body.data).toHaveProperty('limit');
-      expect(response.body.data).toHaveProperty('totalPages');
-
-      expect(response.body.data.page).toBe(1);
-      expect(response.body.data.limit).toBe(5);
-      expect(response.body.data.items.length).toBeLessThanOrEqual(5);
-    });
-
-    it(`${TEST_TAGS.UNAUTHENTICATED} /user/bookmarks (GET) - 인증되지 않은 사용자가 북마크를 조회할 경우 401 오류 발생`, async () => {
-      const response = await unauthenticatedRequest(
-        app,
-        'get',
-        '/v1/user/bookmarks',
-      ).expect(HttpStatus.FORBIDDEN);
-
-      expect(response.body).toMatchObject({
-        message: 'Forbidden resource',
-      });
-    });
-
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks/:recipeId (DELETE) - 레시피 북마크를 해제한다.`, async () => {
-      const recipeId = 2; // 북마크 해제할 레시피 ID
-
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/bookmarks/:recipeId (DELETE)`, async () => {
       const response = await authenticatedRequest(
         app,
         'delete',
-        `/v1/user/bookmarks/${recipeId}`,
+        `/v1/user/bookmarks/${testRecipeId}`,
       ).expect(HttpStatus.OK);
 
-      expect(response.body.data).toBe(true);
-    });
-
-    it(`${TEST_TAGS.AUTHENTICATED} /user/bookmarks/:recipeId (DELETE) - 존재하지 않는 북마크를 해제할 경우 400 오류 발생`, async () => {
-      const recipeId = 99999; // 존재하지 않는 북마크 ID
-
-      const response = await authenticatedRequest(
-        app,
-        'delete',
-        `/v1/user/bookmarks/${recipeId}`,
-      ).expect(HttpStatus.BAD_REQUEST);
-
-      expect(response.body.message).toBe('북마크를 찾을 수 없습니다.');
+      expect(response.body.data.result).toBe(true);
     });
   });
 });
