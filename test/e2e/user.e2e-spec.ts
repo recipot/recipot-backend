@@ -74,7 +74,7 @@ describe('UserController (E2E)', () => {
   describe('북마크 저장 -> 북마크 조회 -> 북마크 삭제 플로우', () => {
     const testRecipeId = 2; // 테스트용 레시피 ID
 
-    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/bookmarks (POST)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/recipes/bookmarks (POST)`, async () => {
       const createBookmarkDto = {
         recipeId: testRecipeId,
       };
@@ -82,7 +82,7 @@ describe('UserController (E2E)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/v1/user/bookmarks',
+        '/v1/user/recipes/bookmarks',
       )
         .send(createBookmarkDto)
         .expect(HttpStatus.CREATED);
@@ -90,11 +90,11 @@ describe('UserController (E2E)', () => {
       expect(response.body.data).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/bookmarks (GET)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/recipes/bookmarks (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/v1/user/bookmarks',
+        '/v1/user/recipes/bookmarks',
       );
 
       expect(response.status).toBe(HttpStatus.OK);
@@ -106,11 +106,11 @@ describe('UserController (E2E)', () => {
       expect(Array.isArray(response.body.data.items)).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/bookmarks/:recipeId (DELETE)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/recipes/bookmarks/:recipeId (DELETE)`, async () => {
       const response = await authenticatedRequest(
         app,
         'delete',
-        `/v1/user/bookmarks/${testRecipeId}`,
+        `/v1/user/recipes/bookmarks/${testRecipeId}`,
       ).expect(HttpStatus.OK);
 
       expect(response.body.data).toBe(true);
