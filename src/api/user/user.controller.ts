@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpStatus,
   Param,
@@ -26,6 +25,7 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
+// moved to UserRecipeArchiveController
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
@@ -88,25 +88,7 @@ export class UserController {
   /**
    * @description 레시피 북마크를 해제합니다.
    */
-  @Delete('/bookmarks/:recipeId')
-  @ApiOperation({
-    summary: '레시피 북마크 해제',
-    description: '인증된 사용자가 레시피 북마크를 해제합니다.',
-  })
-  @ApiSuccessResponse('레시피 북마크 해제 성공', {
-    type: 'boolean',
-    example: true,
-  })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.BOOKMARK_NOT_FOUND)
-  async deleteBookmark(
-    @Request() req: any,
-    @Param('recipeId', ParseIntPipe) recipeId: number,
-  ): Promise<boolean> {
-    const userId = req.user.sub;
-    return await this.userService.deleteBookmark(userId, recipeId);
-  }
+  // moved to UserRecipeArchiveController
 
   /**
    * @description 사용자의 보유 재료 설문을 저장합니다.
@@ -178,7 +160,7 @@ export class UserController {
   /**
    * @description 유저를 상세조회한다.
    */
-  @Get('/:id')
+  @Get(':id')
   @Public()
   @ApiOperation({ summary: '유저를 상세조회한다.' })
   @ApiSuccessResponse('유저 상세조회 성공', {
@@ -192,83 +174,5 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
-  }
-
-  @Post('recent-recipes/:recipeId')
-  @ApiOperation({
-    summary: '최근 본 레시피 추가',
-    description: '레시피 ID를 받아서 최근 본 레시피 목록에 추가합니다.',
-  })
-  @ApiSuccessResponse('최근 본 레시피 추가 성공', {
-    type: 'boolean',
-    example: true,
-  })
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
-  async addRecentRecipe(
-    @Request() req: any,
-    @Param('recipeId', ParseIntPipe) recipeId: number,
-  ): Promise<boolean> {
-    const userId = req.user.sub;
-    return this.userService.addRecentRecipe(userId, recipeId);
-  }
-
-  @Get('recent-recipes')
-  @ApiOperation({
-    summary: '최근 본 레시피 목록 조회',
-    description: '현재 유저의 최근 본 레시피 목록을 조회합니다.',
-  })
-  @ApiSuccessResponse('최근 본 레시피 목록 조회 성공', { type: 'array' })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  async getRecentRecipes(@Request() req: any): Promise<any> {
-    const userId = req.user.sub;
-    return await this.userService.getRecentRecipes(userId);
-  }
-
-  /**
-   * @description 레시피 요리를 시작합니다.
-   */
-  @Post('/recipes/:recipeId/start')
-  @ApiOperation({
-    summary: '레시피 요리 시작 (바로 해먹기)',
-    description: '인증된 사용자가 레시피 요리를 시작합니다.',
-  })
-  @ApiSuccessResponse('레시피 요리 시작 성공', {
-    type: 'boolean',
-    example: true,
-  })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
-  async startRecipeCooking(
-    @Request() req: any,
-    @Param('recipeId', ParseIntPipe) recipeId: number,
-  ): Promise<boolean> {
-    const userId = req.user.sub;
-    return this.userService.startRecipeCooking(userId, recipeId);
-  }
-
-  /**
-   * @description 레시피를 완료합니다.
-   */
-  @Post('/recipes/:recipeId/complete')
-  @ApiOperation({
-    summary: '레시피 완료',
-    description: '인증된 사용자가 레시피를 완료합니다.',
-  })
-  @ApiSuccessResponse('레시피 완료 성공', { type: 'boolean', example: true })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
-  @ApiErrorResponse(
-    HttpStatus.BAD_REQUEST,
-    ERROR_CODES.RECIPE_COOKING_NOT_STARTED,
-  )
-  async completeRecipe(
-    @Request() req: any,
-    @Param('recipeId', ParseIntPipe) recipeId: number,
-  ): Promise<boolean> {
-    const userId = req.user.sub;
-    return await this.userService.completeRecipe(userId, recipeId);
   }
 }

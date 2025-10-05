@@ -11,6 +11,7 @@ import { User } from '@/database/entity/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserRole } from './enums/role.enum';
+import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserService } from './user.service';
 
@@ -120,6 +121,12 @@ describe('UserService', () => {
           provide: CacheService,
           useValue: {
             set: jest.fn(),
+          },
+        },
+        {
+          provide: UserRecentRecipesCustomRepository,
+          useValue: {
+            findRecentRecipesWithRecipeByUserIdPaginated: jest.fn(),
           },
         },
       ],
