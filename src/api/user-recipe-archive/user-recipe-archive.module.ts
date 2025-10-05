@@ -1,4 +1,6 @@
-import { AuthModule } from '@/api/auth/auth.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { DatabaseModule } from '@/database/database.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
@@ -6,12 +8,13 @@ import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.ent
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
-import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
+
+import { UserCompletedRecipeCustomRepository } from '@/api/user/user-completed-recipe.custom-repository';
+import { UserRecentRecipesCustomRepository } from '@/api/user/user-recent-recipes.custom-repository';
+import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookmark.custom-repository';
+import { UserService } from '@/api/user/user.service';
+import { UserRecipeArchiveController } from './user-recipe-archive.controller';
+import { UserRecipeArchiveService } from './user-recipe-archive.service';
 
 @Module({
   imports: [
@@ -24,14 +27,15 @@ import { UserService } from './user.service';
       UserCompletedRecipe,
       Recipe,
     ]),
-    AuthModule,
   ],
-  controllers: [UserController],
+  controllers: [UserRecipeArchiveController],
   providers: [
+    UserRecipeArchiveService,
     UserService,
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
+    UserCompletedRecipeCustomRepository,
   ],
-  exports: [UserService],
+  exports: [UserRecipeArchiveService],
 })
-export class UserModule {}
+export class UserRecipeArchiveModule {}

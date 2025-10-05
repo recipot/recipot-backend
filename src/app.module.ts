@@ -1,4 +1,5 @@
 import { HealthModule } from '@/api/health/health.module';
+import { UserRecipeArchiveModule } from '@/api/user-recipe-archive/user-recipe-archive.module';
 import { UserModule } from '@/api/user/user.module';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
@@ -13,18 +14,19 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './api/auth/auth.module';
 import { CommonCodeModule } from './api/common-code/common-code.module';
 import { ConditionModule } from './api/condition/condition.module';
+import { HealthSurveyModule } from './api/health-survey/health-survey.module';
 import { IngredientModule } from './api/ingredient/ingredient.module';
 import { LoginModule } from './api/login/login.module';
 import { RecipeModule } from './api/recipe/recipe.module';
+import { ReviewModule } from './api/review/review.module';
 import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
-import { ReviewModule } from './api/review/review.module';
-import { HealthSurveyModule } from './api/health-survey/health-survey.module';
 
 export const FeatureModules = [
   UserModule,
+  UserRecipeArchiveModule,
   LoginModule,
   AuthModule,
   CacheModule,
