@@ -103,6 +103,63 @@ const mockUserRecipeArchiveService = {
     // 성공적인 요리 시작
     return true;
   },
+  getCompletedRecipes: async (_userId: number, query: any) => {
+    // Mock 데이터: 페이지네이션 응답 구조와 동일하게
+    const { page = 1, limit = 10 } = query;
+    const pageNum = parseInt(page.toString(), 10);
+    const limitNum = parseInt(limit.toString(), 10);
+
+    const mockCompletedRecipes = [
+      {
+        id: 1,
+        userId: _userId,
+        recipeId: 1,
+        recipeTitle: '완성된 김치찌개',
+        recipeDescription: '매콤하고 시원한 김치찌개',
+        recipeImages: ['https://example.com/kimchi-completed.jpg'],
+        isCompleted: true,
+        isReviewed: false,
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 2,
+        userId: _userId,
+        recipeId: 2,
+        recipeTitle: '완성된 계란볶음밥',
+        recipeDescription: '집에서 쉽게 만들 수 있는 계란볶음밥',
+        recipeImages: ['https://example.com/egg-rice-completed.jpg'],
+        isCompleted: true,
+        isReviewed: true,
+        createdAt: new Date('2024-01-02T00:00:00.000Z'),
+      },
+      {
+        id: 3,
+        userId: _userId,
+        recipeId: 3,
+        recipeTitle: '완성된 된장찌개',
+        recipeDescription: '구수하고 부드러운 된장찌개',
+        recipeImages: ['https://example.com/doenjang-completed.jpg'],
+        isCompleted: true,
+        isReviewed: false,
+        createdAt: new Date('2024-01-03T00:00:00.000Z'),
+      },
+    ];
+
+    // 페이지네이션 계산
+    const total = mockCompletedRecipes.length;
+    const totalPages = Math.ceil(total / limitNum);
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const items = mockCompletedRecipes.slice(startIndex, endIndex);
+
+    return {
+      items,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+    };
+  },
 };
 
 const mockUserService = {

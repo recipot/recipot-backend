@@ -116,4 +116,57 @@ describe('UserController (E2E)', () => {
       expect(response.body.data).toBe(true);
     });
   });
+
+  describe('완료한 레시피 조회 플로우', () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 - /user/recipes/completed (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/user/recipes/completed',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+
+      // 완료한 레시피 데이터 구조 검증
+      if (response.body.data.items.length > 0) {
+        const completedRecipe = response.body.data.items[0];
+        expect(completedRecipe).toHaveProperty('id');
+        expect(completedRecipe).toHaveProperty('userId');
+        expect(completedRecipe).toHaveProperty('recipeId');
+        expect(completedRecipe).toHaveProperty('recipeTitle');
+        expect(completedRecipe).toHaveProperty('recipeDescription');
+        expect(completedRecipe).toHaveProperty('recipeImages');
+        expect(completedRecipe).toHaveProperty('isCompleted');
+        expect(completedRecipe).toHaveProperty('isReviewed');
+        expect(completedRecipe).toHaveProperty('createdAt');
+        expect(completedRecipe.isCompleted).toBe(true);
+        expect(Array.isArray(completedRecipe.recipeImages)).toBe(true);
+      }
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 (페이지네이션) - /user/recipes/completed?page=1&limit=2 (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/user/recipes/completed?page=1&limit=2',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(response.body.data.page).toBe(1);
+      expect(response.body.data.limit).toBe(2);
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+      expect(response.body.data.items.length).toBeLessThanOrEqual(2);
+    });
+  });
 });

@@ -9,6 +9,7 @@ import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity'
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 
+import { UserCompletedRecipeCustomRepository } from '@/api/user/user-completed-recipe.custom-repository';
 import { UserRecentRecipesCustomRepository } from '@/api/user/user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookmark.custom-repository';
 import { UserService } from '@/api/user/user.service';
@@ -33,6 +34,7 @@ import { UserRecipeArchiveService } from './user-recipe-archive.service';
     UserService,
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
+    UserCompletedRecipeCustomRepository,
   ],
   exports: [UserRecipeArchiveService],
 })

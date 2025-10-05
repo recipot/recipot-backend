@@ -17,8 +17,11 @@ import { User } from '@/database/entity/user.entity';
 import { CreateBookmarkDto } from '@/api/user/dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from '@/api/user/dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from '@/api/user/dto/get-bookmarks-response.dto';
+import { GetCompletedRecipesRequestDto } from '@/api/user/dto/get-completed-recipes-request.dto';
+import { GetCompletedRecipesResponseDto } from '@/api/user/dto/get-completed-recipes-response.dto';
 import { GetRecentRecipesRequestDto } from '@/api/user/dto/get-recent-recipes-request.dto';
 import { GetRecentRecipesResponseDto } from '@/api/user/dto/get-recent-recipes-response.dto';
+import { UserCompletedRecipeCustomRepository } from '@/api/user/user-completed-recipe.custom-repository';
 import { UserRecentRecipesCustomRepository } from '@/api/user/user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookmark.custom-repository';
 import { UserService } from '@/api/user/user.service';
@@ -45,6 +48,7 @@ export class UserRecipeArchiveService {
     private readonly cacheService: CacheService,
     private readonly userService: UserService,
     private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
+    private readonly userCompletedRecipeCustomRepository: UserCompletedRecipeCustomRepository,
   ) {
     this.logger = this.loggerFactory.create(UserRecipeArchiveService.name);
   }
@@ -142,5 +146,20 @@ export class UserRecipeArchiveService {
 
   async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
     return this.userService.completeRecipe(userId, recipeId);
+  }
+
+  async getCompletedRecipes(
+    userId: number,
+    query: GetCompletedRecipesRequestDto,
+  ): Promise<GetCompletedRecipesResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    const { page, limit } = query;
+    return await this.userCompletedRecipeCustomRepository.findCompletedRecipesWithRecipeByUserIdPaginated(
+      userId,
+      page,
+      limit,
+    );
   }
 }

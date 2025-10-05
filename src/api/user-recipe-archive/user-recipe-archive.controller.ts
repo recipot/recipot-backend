@@ -18,6 +18,8 @@ import { UserRecipeArchiveService } from '@/api/user-recipe-archive/user-recipe-
 import { CreateBookmarkDto } from '@/api/user/dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from '@/api/user/dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from '@/api/user/dto/get-bookmarks-response.dto';
+import { GetCompletedRecipesRequestDto } from '@/api/user/dto/get-completed-recipes-request.dto';
+import { GetCompletedRecipesResponseDto } from '@/api/user/dto/get-completed-recipes-response.dto';
 import { GetRecentRecipesRequestDto } from '@/api/user/dto/get-recent-recipes-request.dto';
 import { GetRecentRecipesResponseDto } from '@/api/user/dto/get-recent-recipes-response.dto';
 import { ERROR_CODES } from '@/common/constants/error-codes';
@@ -136,5 +138,21 @@ export class UserRecipeArchiveController {
   ): Promise<boolean> {
     const userId = req.user.sub;
     return await this.archiveService.completeRecipe(userId, recipeId);
+  }
+
+  @Get('completed')
+  @ApiOperation({ summary: '완료한 레시피 목록 조회 (페이지네이션)' })
+  @ApiSuccessResponse(
+    '완료한 레시피 목록 조회 성공',
+    GetCompletedRecipesResponseDto,
+  )
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getCompletedRecipes(
+    @Request() req: any,
+    @Query() query: GetCompletedRecipesRequestDto,
+  ): Promise<GetCompletedRecipesResponseDto> {
+    const userId = req.user.sub;
+    return await this.archiveService.getCompletedRecipes(userId, query);
   }
 }
