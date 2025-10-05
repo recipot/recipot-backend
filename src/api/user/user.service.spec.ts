@@ -5,11 +5,13 @@ import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
+import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserRole } from './enums/role.enum';
+import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserService } from './user.service';
 
@@ -33,6 +35,13 @@ describe('UserService', () => {
 
   const mockUserRecipeBookmarkRepository = {
     delete: jest.fn(),
+  };
+
+  const mockUserRecentRecipesRepository = {
+    findOne: jest.fn(),
+    remove: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
   };
 
   // 공통으로 사용할 Mock 데이터
@@ -81,6 +90,10 @@ describe('UserService', () => {
           useValue: mockUserRecipeBookmarkRepository,
         },
         {
+          provide: getRepositoryToken(UserRecentRecipes),
+          useValue: mockUserRecentRecipesRepository,
+        },
+        {
           provide: getRepositoryToken(CommonCode),
           useValue: {
             findOne: jest.fn(),
@@ -108,6 +121,12 @@ describe('UserService', () => {
           provide: CacheService,
           useValue: {
             set: jest.fn(),
+          },
+        },
+        {
+          provide: UserRecentRecipesCustomRepository,
+          useValue: {
+            findRecentRecipesWithRecipeByUserIdPaginated: jest.fn(),
           },
         },
       ],

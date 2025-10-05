@@ -4,6 +4,7 @@ import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
+import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
@@ -14,12 +15,15 @@ import { CustomException } from '../../common/exceptions/custom-exception';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
+import { GetRecentRecipesRequestDto } from './dto/get-recent-recipes-request.dto';
+import { GetRecentRecipesResponseDto } from './dto/get-recent-recipes-response.dto';
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
+import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 
 @Injectable()
@@ -36,7 +40,10 @@ export class UserService {
     private readonly userCompletedRecipeRepository: Repository<UserCompletedRecipe>,
     @InjectRepository(Recipe)
     private readonly recipeRepository: Repository<Recipe>,
+    @InjectRepository(UserRecentRecipes)
+    private readonly userRecentRecipesRepository: Repository<UserRecentRecipes>,
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
+    private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
     private readonly cacheService: CacheService,
@@ -237,6 +244,57 @@ export class UserService {
       }
       throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  /**
+   * 최근 본 레시피 추가
+   * @param userId 유저 ID
+   * @param recipeId 레시피 ID
+   */
+  async addRecentRecipe(userId: number, recipeId: number): Promise<boolean> {
+    // 이미 존재하는지 확인
+    const existingRecord = await this.userRecentRecipesRepository.findOne({
+      where: {
+        userId,
+        recipeId,
+      },
+    });
+
+    if (existingRecord) {
+      // 이미 존재하면 삭제 후 새로 생성 (최신 순서 유지)
+      await this.userRecentRecipesRepository.remove(existingRecord);
+    }
+
+    // 새 레코드 생성
+    const userRecentRecipe = this.userRecentRecipesRepository.create({
+      userId,
+      recipeId,
+    });
+
+    await this.userRecentRecipesRepository.save(userRecentRecipe);
+    return true;
+  }
+
+  /**
+   * 최근 본 레시피 목록 조회 (최신순 20개)
+   */
+  async getRecentRecipes(
+    userId: number,
+    query: GetRecentRecipesRequestDto,
+  ): Promise<GetRecentRecipesResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    const { page, limit } = query;
+    const result =
+      await this.userRecentRecipesCustomRepository.findRecentRecipesWithRecipeByUserIdPaginated(
+        userId,
+        page,
+        limit,
+      );
+    return result;
   }
 
   /**

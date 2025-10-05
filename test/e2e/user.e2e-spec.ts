@@ -74,7 +74,7 @@ describe('UserController (E2E)', () => {
   describe('북마크 저장 -> 북마크 조회 -> 북마크 삭제 플로우', () => {
     const testRecipeId = 2; // 테스트용 레시피 ID
 
-    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/bookmarks (POST)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/recipes/bookmarks (POST)`, async () => {
       const createBookmarkDto = {
         recipeId: testRecipeId,
       };
@@ -82,7 +82,7 @@ describe('UserController (E2E)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/v1/user/bookmarks',
+        '/v1/user/recipes/bookmarks',
       )
         .send(createBookmarkDto)
         .expect(HttpStatus.CREATED);
@@ -90,11 +90,11 @@ describe('UserController (E2E)', () => {
       expect(response.body.data).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/bookmarks (GET)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/recipes/bookmarks (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/v1/user/bookmarks',
+        '/v1/user/recipes/bookmarks',
       );
 
       expect(response.status).toBe(HttpStatus.OK);
@@ -106,14 +106,67 @@ describe('UserController (E2E)', () => {
       expect(Array.isArray(response.body.data.items)).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/bookmarks/:recipeId (DELETE)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/recipes/bookmarks/:recipeId (DELETE)`, async () => {
       const response = await authenticatedRequest(
         app,
         'delete',
-        `/v1/user/bookmarks/${testRecipeId}`,
+        `/v1/user/recipes/bookmarks/${testRecipeId}`,
       ).expect(HttpStatus.OK);
 
       expect(response.body.data).toBe(true);
+    });
+  });
+
+  describe('완료한 레시피 조회 플로우', () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 - /user/recipes/completed (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/user/recipes/completed',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+
+      // 완료한 레시피 데이터 구조 검증
+      if (response.body.data.items.length > 0) {
+        const completedRecipe = response.body.data.items[0];
+        expect(completedRecipe).toHaveProperty('id');
+        expect(completedRecipe).toHaveProperty('userId');
+        expect(completedRecipe).toHaveProperty('recipeId');
+        expect(completedRecipe).toHaveProperty('recipeTitle');
+        expect(completedRecipe).toHaveProperty('recipeDescription');
+        expect(completedRecipe).toHaveProperty('recipeImages');
+        expect(completedRecipe).toHaveProperty('isCompleted');
+        expect(completedRecipe).toHaveProperty('isReviewed');
+        expect(completedRecipe).toHaveProperty('createdAt');
+        expect(completedRecipe.isCompleted).toBe(true);
+        expect(Array.isArray(completedRecipe.recipeImages)).toBe(true);
+      }
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 (페이지네이션) - /user/recipes/completed?page=1&limit=2 (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/user/recipes/completed?page=1&limit=2',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(response.body.data.page).toBe(1);
+      expect(response.body.data.limit).toBe(2);
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+      expect(response.body.data.items.length).toBeLessThanOrEqual(2);
     });
   });
 });
