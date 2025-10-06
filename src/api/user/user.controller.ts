@@ -32,7 +32,7 @@ import {
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
 
-@Controller({ path: 'user', version: '1' })
+@Controller({ path: 'users', version: '1' })
 @ApiTags('User')
 @UseGuards(JwtGuard)
 @ApiBearerAuth('Authorization')

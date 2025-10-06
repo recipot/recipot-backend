@@ -26,7 +26,7 @@ import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 
-@Controller({ path: 'user/recipes', version: '1' })
+@Controller({ path: 'users/recipes', version: '1' })
 @ApiTags('User Recipe Archive')
 @UseGuards(JwtGuard)
 @ApiBearerAuth('Authorization')
