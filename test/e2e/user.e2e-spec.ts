@@ -50,21 +50,21 @@ describe('UserController (E2E)', () => {
       expect(response.body.data).toHaveProperty('steps');
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 레시피 요리 시작 - /user/recipes/:recipeId/start (POST)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 레시피 요리 시작 - /users/recipes/:recipeId/start (POST)`, async () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        `/v1/user/recipes/${testRecipeId}/start`,
+        `/v1/users/recipes/${testRecipeId}/start`,
       ).expect(HttpStatus.CREATED);
 
       expect(response.body.data).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 레시피 요리 완료 - /user/recipes/:recipeId/complete (POST)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 레시피 요리 완료 - /users/recipes/:recipeId/complete (POST)`, async () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        `/v1/user/recipes/${testRecipeId}/complete`,
+        `/v1/users/recipes/${testRecipeId}/complete`,
       ).expect(HttpStatus.CREATED);
 
       expect(response.body.data).toBe(true);
@@ -74,7 +74,7 @@ describe('UserController (E2E)', () => {
   describe('북마크 저장 -> 북마크 조회 -> 북마크 삭제 플로우', () => {
     const testRecipeId = 2; // 테스트용 레시피 ID
 
-    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /user/recipes/bookmarks (POST)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 1단계: 레시피 북마크 - /users/recipes/bookmarks (POST)`, async () => {
       const createBookmarkDto = {
         recipeId: testRecipeId,
       };
@@ -82,7 +82,7 @@ describe('UserController (E2E)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/v1/user/recipes/bookmarks',
+        '/v1/users/recipes/bookmarks',
       )
         .send(createBookmarkDto)
         .expect(HttpStatus.CREATED);
@@ -90,11 +90,11 @@ describe('UserController (E2E)', () => {
       expect(response.body.data).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /user/recipes/bookmarks (GET)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 2단계: 북마크 목록 조회 - /users/recipes/bookmarks (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/v1/user/recipes/bookmarks',
+        '/v1/users/recipes/bookmarks',
       );
 
       expect(response.status).toBe(HttpStatus.OK);
@@ -106,11 +106,11 @@ describe('UserController (E2E)', () => {
       expect(Array.isArray(response.body.data.items)).toBe(true);
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /user/recipes/bookmarks/:recipeId (DELETE)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 3단계: 북마크 해제 - /users/recipes/bookmarks/:recipeId (DELETE)`, async () => {
       const response = await authenticatedRequest(
         app,
         'delete',
-        `/v1/user/recipes/bookmarks/${testRecipeId}`,
+        `/v1/users/recipes/bookmarks/${testRecipeId}`,
       ).expect(HttpStatus.OK);
 
       expect(response.body.data).toBe(true);
@@ -118,11 +118,11 @@ describe('UserController (E2E)', () => {
   });
 
   describe('완료한 레시피 조회 플로우', () => {
-    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 - /user/recipes/completed (GET)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 - /users/recipes/completed (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/v1/user/recipes/completed',
+        '/v1/users/recipes/completed',
       );
 
       expect(response.status).toBe(HttpStatus.OK);
@@ -150,11 +150,11 @@ describe('UserController (E2E)', () => {
       }
     });
 
-    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 (페이지네이션) - /user/recipes/completed?page=1&limit=2 (GET)`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 완료한 레시피 목록 조회 (페이지네이션) - /users/recipes/completed?page=1&limit=2 (GET)`, async () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/v1/user/recipes/completed?page=1&limit=2',
+        '/v1/users/recipes/completed?page=1&limit=2',
       );
 
       expect(response.status).toBe(HttpStatus.OK);
