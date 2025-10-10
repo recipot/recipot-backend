@@ -19,14 +19,29 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // 전역 가드 설정 - Reflector를 app.get()으로 가져옴
-  const reflector = app.get('Reflector');
-  app.useGlobalGuards(new JwtGuard(reflector));
-
   const loggerFactory = app.get(LoggerFactoryService);
   const logger = loggerFactory.create(bootstrap.name);
 
   const config = app.get(ConfigService);
+
+  // CORS 설정 추가
+  const frontendUrls =
+    config.get<string>('frontendUrl.urls') || process.env.FRONTEND_URL;
+  const allowedOrigins = frontendUrls
+    ? frontendUrls.split(',').map((url) => url.trim())
+    : ['http://localhost:3000'];
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+  logger.log(`CORS enabled for: ${allowedOrigins.join(', ')}`);
+
+  // 전역 가드 설정 - Reflector를 app.get()으로 가져옴
+  const reflector = app.get('Reflector');
+  app.useGlobalGuards(new JwtGuard(reflector));
 
   // 버전 관리 활성화 - 컨트롤러의 version 옵션 사용
   app.enableVersioning();
