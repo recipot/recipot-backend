@@ -86,6 +86,7 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - FRONTEND_URL=${FRONTEND_URL}
     ports:
       - "8080:8080"
     volumes:
