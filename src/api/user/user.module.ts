@@ -12,6 +12,8 @@ import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { Ingredient } from '@/database/entity/ingredient.entity';
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { UserService } from './user.service';
       UserRecentRecipes,
       UserCompletedRecipe,
       Recipe,
+      RecipeImage,
+      Ingredient,
     ]),
     AuthModule,
   ],
@@ -32,6 +36,6 @@ import { UserService } from './user.service';
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
   ],
-  exports: [UserService],
+  exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}

@@ -31,6 +31,8 @@ import {
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { MyPageSummaryDto } from '@/api/user/dto/my-page.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -174,5 +176,52 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
+  }
+
+  /**
+   * @description 마이페이지 메인 요약 (프로필/카운트 + saved/recent/unavailable preview)
+   */
+  @Get('/mypage/summary')
+  @ApiOperation({ summary: '마이페이지 메인 요약' })
+  @ApiSuccessResponse('마이페이지 요약 조회 성공', MyPageSummaryDto)
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getMyPageSummary(@Request() req: any): Promise<MyPageSummaryDto> {
+    const userId = Number(req.user?.sub);
+    if (!userId) throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
+    return await this.userService.getMyPageSummary(userId);
+  }
+
+  /**
+   * @description 못 먹는 음식 목록 (페이지네이션)
+   */
+  @Get('/ingredients/unavailable')
+  @ApiOperation({ summary: '못 먹는 음식 목록 조회' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
+  @ApiSuccessResponse('못 먹는 음식 목록 조회 성공', {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', example: 3 },
+        name: { type: 'string', example: '게' },
+        categoryName: { type: 'string', example: '해산물류' },
+      },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  async listUnavailableIngredients(
+    @Request() req: any,
+    @Query('limit') limit = 20,
+    @Query('offset') offset = 0,
+  ) {
+    const userId = Number(req.user?.sub);
+    if (!userId) throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
+    return await this.userService.getUnavailableIngredients(
+      userId,
+      Number(limit),
+      Number(offset),
+    );
   }
 }

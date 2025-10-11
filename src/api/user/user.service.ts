@@ -25,6 +25,14 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import { Ingredient } from '@/database/entity/ingredient.entity';
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
+import {
+  MyPageIngredientDto,
+  MyPageRecipeCardDto,
+  MyPageSummaryDto,
+} from '@/api/user/dto/my-page.dto';
+import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 
 @Injectable()
 export class UserService {
@@ -47,6 +55,8 @@ export class UserService {
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
     private readonly cacheService: CacheService,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -388,5 +398,147 @@ export class UserService {
     await this.userCompletedRecipeRepository.save(entity);
 
     return true;
+  }
+
+  /** Internal: throw if user not found, returns your existing UserDto */
+  private async getUserDtoOrThrow(id: number): Promise<UserDto> {
+    const dto = await this.findById(id);
+    if (!dto) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    return dto;
+  }
+
+  /** Saved recipes preview (top N) via QueryBuilder */
+  private async getSavedRecipesPreview(
+    userId: number,
+    limit = 3,
+    offset = 0,
+  ): Promise<MyPageRecipeCardDto[]> {
+    const qb = this.recipeRepository
+      .createQueryBuilder('r')
+      .innerJoin(
+        UserRecipeBookmark,
+        'b',
+        'b.recipeId = r.id AND b.userId = :userId',
+        { userId },
+      )
+      .select(['r.id AS id', 'r.title AS title'])
+      .addSelect(
+        (sub) =>
+          sub
+            .select('ri.imageUrl')
+            .from(RecipeImage, 'ri')
+            .where('ri.recipeId = r.id')
+            .orderBy('ri.id', 'ASC')
+            .limit(1),
+        'imageUrl',
+      )
+      .orderBy('b.id', 'DESC')
+      .limit(limit)
+      .offset(offset);
+
+    return qb.getRawMany<MyPageRecipeCardDto>();
+  }
+
+  /** Recent recipes preview (top N) via QueryBuilder */
+  private async getRecentRecipesPreview(
+    userId: number,
+    limit = 3,
+    offset = 0,
+  ): Promise<MyPageRecipeCardDto[]> {
+    const qb = this.recipeRepository
+      .createQueryBuilder('r')
+      .innerJoin(
+        UserRecentRecipes,
+        'rr',
+        'rr.recipeId = r.id AND rr.userId = :userId',
+        { userId },
+      )
+      .select(['r.id AS id', 'r.title AS title'])
+      .addSelect(
+        (sub) =>
+          sub
+            .select('ri.imageUrl')
+            .from(RecipeImage, 'ri')
+            .where('ri.recipeId = r.id')
+            .orderBy('ri.id', 'ASC')
+            .limit(1),
+        'imageUrl',
+      )
+      .orderBy('rr.id', 'DESC')
+      .limit(limit)
+      .offset(offset);
+
+    return qb.getRawMany<MyPageRecipeCardDto>();
+  }
+
+  /** 못 먹는 음식 목록 (paged) via QueryBuilder; table-join for user_unavailable_ingredients */
+  async getUnavailableIngredients(
+    userId: number,
+    limit = 20,
+    offset = 0,
+  ): Promise<MyPageIngredientDto[]> {
+    const qb = this.ingredientRepository
+      .createQueryBuilder('i')
+      .innerJoin(
+        'user_unavailable_ingredients',
+        'uui',
+        'uui.ingredient_id = i.id AND uui.user_id = :userId',
+        { userId },
+      )
+      .leftJoin(IngredientCategory, 'ic', 'ic.id = i.ingredientCategoryId')
+      .select(['i.id AS id', 'i.name AS name', 'ic.name AS categoryName'])
+      .orderBy('i.name', 'ASC')
+      .limit(limit)
+      .offset(offset);
+
+    return qb.getRawMany<MyPageIngredientDto>();
+  }
+
+  /** Counts using repositories/QB only */
+  private async getCounts(userId: number): Promise<{
+    savedCount: number;
+    recentCount: number;
+    cookedCount: number;
+    unavailableCount: number;
+  }> {
+    const [savedCount, recentCount, cookedCount, unavailableCount] =
+      await Promise.all([
+        this.userRecipeBookmarkRepository.count({ where: { userId } }),
+        this.userRecentRecipesRepository.count({ where: { userId } }),
+        this.userCompletedRecipeRepository.count({
+          where: { userId, isCompleted: true },
+        }),
+        this.ingredientRepository
+          .createQueryBuilder('i')
+          .innerJoin(
+            'user_unavailable_ingredients',
+            'uui',
+            'uui.ingredient_id = i.id AND uui.user_id = :userId',
+            { userId },
+          )
+          .getCount(),
+      ]);
+
+    return { savedCount, recentCount, cookedCount, unavailableCount };
+  }
+
+  async getMyPageSummary(userId: number): Promise<MyPageSummaryDto> {
+    const profile = await this.getUserDtoOrThrow(userId);
+
+    const [savedRecipes, recentRecipes, unavailableIngredients, stats] =
+      await Promise.all([
+        this.getSavedRecipesPreview(userId, 3, 0),
+        this.getRecentRecipesPreview(userId, 3, 0),
+        this.getUnavailableIngredients(userId, 8, 0),
+        this.getCounts(userId),
+      ]);
+
+    return {
+      profile,
+      stats,
+      savedRecipes,
+      recentRecipes,
+      unavailableIngredients,
+    };
   }
 }

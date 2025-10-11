@@ -14,6 +14,7 @@ import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserService } from './user.service';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 describe('UserService', () => {
   let service: UserService;
@@ -42,6 +43,20 @@ describe('UserService', () => {
     remove: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+  };
+
+  // NEW: minimal Ingredient repository mock to satisfy DI
+  const mockIngredientRepository = {
+    createQueryBuilder: jest.fn(() => ({
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+      getCount: jest.fn().mockResolvedValue(0),
+    })),
   };
 
   // 공통으로 사용할 Mock 데이터
@@ -98,6 +113,11 @@ describe('UserService', () => {
           useValue: {
             findOne: jest.fn(),
           },
+        },
+        // NEW: provide Ingredient repository for DI
+        {
+          provide: getRepositoryToken(Ingredient),
+          useValue: mockIngredientRepository,
         },
         // 다른 의존성들도 모킹 (실제 서비스에서 사용하는 것들)
         {
