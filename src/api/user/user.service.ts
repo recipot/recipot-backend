@@ -25,6 +25,10 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import {
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
 
 @Injectable()
 export class UserService {
@@ -388,5 +392,42 @@ export class UserService {
     await this.userCompletedRecipeRepository.save(entity);
 
     return true;
+  }
+
+  /**
+   * Replace the user's unavailable-ingredients set with the provided list.
+   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   */
+  async saveUnavailableIngredients(
+    userId: number,
+    dto: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    // Deduplicate & coerce to positive integers
+    const ids = Array.from(new Set(dto.ingredientIds ?? []))
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    // Delete all for this user (MySQL uses ? placeholders)
+    await this.userRepository.query(
+      'DELETE FROM user_unavailable_ingredients WHERE user_id = ?',
+      [userId],
+    );
+
+    if (ids.length > 0) {
+      // Build VALUES (?, ?), (?, ?), ... repeating userId for each row
+      const values = ids.map(() => '(?, ?)').join(', ');
+      const params = ids.flatMap((id) => [userId, id]);
+
+      await this.userRepository.query(
+        `INSERT INTO user_unavailable_ingredients (user_id, ingredient_id) VALUES ${values}`,
+        params,
+      );
+    }
+
+    return { savedCount: ids.length };
   }
 }

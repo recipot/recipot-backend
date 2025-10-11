@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
@@ -31,6 +32,10 @@ import {
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
+import {
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -174,5 +179,19 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
+  }
+
+  @Post('ingredients/unavailable')
+  @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
+  @ApiOkResponse({
+    description: '저장된 개수',
+    type: SaveUnavailableIngredientsResponseDto,
+  })
+  async saveUnavailableIngredients(
+    @Request() req: any,
+    @Body() body: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    const userId = req.user?.sub;
+    return this.userService.saveUnavailableIngredients(userId, body);
   }
 }
