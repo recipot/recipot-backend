@@ -389,4 +389,13 @@ export class UserService {
 
     return true;
   }
+
+  async getCompletedCount(userId: number): Promise<number> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    return this.userCompletedRecipeRepository.count({
+      where: { userId, isCompleted: true },
+    });
+  }
 }

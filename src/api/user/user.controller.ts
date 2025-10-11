@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
@@ -174,5 +175,16 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
+  }
+
+  @Get('/recipes/completed/count')
+  @ApiOperation({ summary: 'Get completed recipe count for the current user' })
+  @ApiOkResponse({ schema: { example: { count: 7 } } })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getCompletedCount(@Request() req: any) {
+    const userId = req.user.sub;
+    const count = await this.userService.getCompletedCount(userId);
+    return { count };
   }
 }
