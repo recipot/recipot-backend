@@ -25,6 +25,7 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 @Injectable()
 export class UserService {
@@ -47,6 +48,8 @@ export class UserService {
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
     private readonly cacheService: CacheService,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -388,5 +391,57 @@ export class UserService {
     await this.userCompletedRecipeRepository.save(entity);
 
     return true;
+  }
+  private async getUnavailableIngredients(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<Array<{ id: number; name: string }>> {
+    return this.userRepository.manager
+      .createQueryBuilder(Ingredient, 'i')
+      .innerJoin(
+        'user_unavailable_ingredients',
+        'uui',
+        'uui.ingredient_id = i.id AND uui.user_id = :userId',
+        { userId },
+      )
+      .select(['i.id AS id', 'i.name AS name'])
+      .orderBy('i.name', 'ASC')
+      .limit(limit)
+      .offset(offset)
+      .getRawMany<{ id: number; name: string }>();
+  }
+
+  /** public: paged response */
+  async getUnavailableIngredientsPaged(
+    userId: number,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    items: Array<{ id: number; name: string }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    const offset = (safePage - 1) * safeLimit;
+
+    const [items, total] = await Promise.all([
+      this.getUnavailableIngredients(userId, safeLimit, offset),
+      this.userRepository.manager
+        .createQueryBuilder(Ingredient, 'i')
+        .innerJoin(
+          'user_unavailable_ingredients',
+          'uui',
+          'uui.ingredient_id = i.id AND uui.user_id = :userId',
+          { userId },
+        )
+        .getCount(),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    return { items, total, page: safePage, limit: safeLimit, totalPages };
   }
 }
