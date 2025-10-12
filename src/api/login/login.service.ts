@@ -67,17 +67,23 @@ export class LoginService {
       }
     } else {
       // 신규 사용자: 유저 생성
-      user = await this.userService.createUser(
+      const newUser = await this.userService.createUser(
         kakaoUserInfo.kakao_account?.email,
       );
 
       // 소셜 로그인 정보 생성
       await this.socialLoginService.createSocialLogin(
-        user.id,
+        newUser.id,
         kakaoUserInfo.id.toString(),
         // TODO 공통코드 처리
         'kakao',
       );
+
+      // newUser를 userDto로 변환
+      user = await this.userService.findById(newUser.id);
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
     }
 
     // 4. JWT 토큰 생성 (Access Token + Refresh Token)

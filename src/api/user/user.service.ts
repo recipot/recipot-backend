@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
+import { SocialLoginService } from '../social-login/social-login.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
@@ -46,6 +47,7 @@ export class UserService {
     private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
+    private readonly socialLoginService: SocialLoginService,
     private readonly cacheService: CacheService,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
@@ -81,6 +83,11 @@ export class UserService {
       where: { code: user.role },
     });
 
+    // 소셜 로그인 플랫폼 정보 조회
+    const socialLogins = await this.socialLoginService.findByUserId(id);
+    const platform =
+      socialLogins.length > 0 ? socialLogins[0].platform : undefined;
+
     return {
       id: user.id,
       email: user.email,
@@ -89,6 +96,7 @@ export class UserService {
       recipeCompleteCount: user.recipeCompleteCount,
       isFirstEntry: user.isFirstEntry,
       role: role.codeName,
+      platform,
     };
   }
 
