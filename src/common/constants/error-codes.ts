@@ -73,4 +73,14 @@ export const ERROR_CODES = {
     code: 'E16001',
     message: '현재는 건강 설문을 작성할 수 없습니다.',
   },
+
+  // 레시피 추천 컨디션 관련 오류
+  RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS: {
+    code: 'E17001',
+    message: '이미 존재하는 레시피 추천 컨디션입니다.',
+  },
+  RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND: {
+    code: 'E17002',
+    message: '레시피 추천 컨디션을 찾을 수 없습니다.',
+  },
 };
