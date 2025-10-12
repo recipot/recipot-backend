@@ -32,6 +32,7 @@ import {
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
+import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -177,14 +178,38 @@ export class UserController {
     return await this.userService.findById(id);
   }
 
-  @Get('/recipes/completed/count')
-  @ApiOperation({ summary: 'Get completed recipe count for the current user' })
-  @ApiOkResponse({ schema: { example: { count: 7 } } })
+  // @Get('/recipes/completed/count')
+  // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
+  // @ApiOkResponse({ schema: { example: { count: 7 } } })
+  // @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  // @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  // async getCompletedCount(@Request() req: any) {
+  //   const userId = req.user.sub;
+  //   const count = await this.userService.getCompletedCount(userId);
+  //   return { count };
+  // }
+  //
+
+  /**
+   * @description Returns total number of recipe completions for the authenticated user.
+   */
+  @Get('/recipes/completions/count')
+  @ApiOperation({
+    summary: 'Get total recipe completion count',
+    description:
+      'Returns the total number of recipe completions for the authenticated user.',
+  })
+  @ApiOkResponse({
+    description: 'Total completion count',
+    type: GetCompletionCountResponseDto,
+  })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getCompletedCount(@Request() req: any) {
+  async getMyCompletionCount(
+    @Request() req: any,
+  ): Promise<GetCompletionCountResponseDto> {
     const userId = req.user.sub;
-    const count = await this.userService.getCompletedCount(userId);
+    const count = await this.userService.getTotalCompletionCount(userId);
     return { count };
   }
 }
