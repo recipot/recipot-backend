@@ -1,7 +1,9 @@
 import { AuthModule } from '@/api/auth/auth.module';
+import { SocialLoginModule } from '@/api/social-login/social-login.module';
 import { DatabaseModule } from '@/database/database.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { SocialLogin } from '@/database/entity/social-login.entity';
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
@@ -23,8 +25,10 @@ import { UserService } from './user.service';
       UserRecentRecipes,
       UserCompletedRecipe,
       Recipe,
+      SocialLogin,
     ]),
     AuthModule,
+    SocialLoginModule,
   ],
   controllers: [UserController],
   providers: [

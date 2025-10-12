@@ -10,6 +10,7 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { User } from '@/database/entity/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { SocialLoginService } from '../social-login/social-login.service';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
@@ -42,6 +43,10 @@ describe('UserService', () => {
     remove: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+  };
+
+  const mockSocialLoginService = {
+    findByUserId: jest.fn(),
   };
 
   // 공통으로 사용할 Mock 데이터
@@ -128,6 +133,10 @@ describe('UserService', () => {
           useValue: {
             findRecentRecipesWithRecipeByUserIdPaginated: jest.fn(),
           },
+        },
+        {
+          provide: SocialLoginService,
+          useValue: mockSocialLoginService,
         },
       ],
     }).compile();
