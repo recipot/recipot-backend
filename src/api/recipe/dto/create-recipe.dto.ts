@@ -145,6 +145,22 @@ export class CreateRecipeDto {
   duration: string;
 
   @ApiProperty({
+    description: '조리 난이도 (공통코드)',
+    example: 'R01001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  level: string;
+
+  @ApiProperty({
+    description: '조리 방식 (공통코드)',
+    example: 'R02001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  method: string;
+
+  @ApiProperty({
     description: '컨디션 ID',
     example: 1,
   })
