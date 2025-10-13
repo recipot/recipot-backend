@@ -68,6 +68,8 @@ export class RecipeService {
         title: createRecipeDto.title,
         description: createRecipeDto.description,
         duration: createRecipeDto.duration,
+        level: createRecipeDto.level,
+        method: createRecipeDto.method,
         conditionId: createRecipeDto.conditionId,
       });
       const savedRecipe = await this.recipeRepository.save(recipe);
