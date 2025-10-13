@@ -16,6 +16,7 @@ import {
   IngredientResponseDto,
 } from './dto/create-ingredient.dto';
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
+import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 
 @Injectable()
 export class IngredientService {
@@ -28,6 +29,8 @@ export class IngredientService {
     private readonly ingredientRepository: Repository<Ingredient>,
     @InjectRepository(IngredientHealthInfo)
     private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
+    @InjectRepository(UserUnavailableIngredient) // ✅ 추가
+    private readonly userUnavailableIngredientRepository: Repository<UserUnavailableIngredient>,
   ) {}
 
   /**
@@ -137,17 +140,33 @@ export class IngredientService {
   /**
    * 재료 목록 조회
    */
-  async getIngredients(): Promise<GetIngredientsResponseDto> {
+  async getIngredients(userId: number): Promise<GetIngredientsResponseDto> {
     const ingredients = await this.ingredientRepository.find({
-      order: {
-        id: 'ASC',
-      },
+      order: { id: 'ASC' },
     });
-
+    const categoryIds = [
+      ...new Set(ingredients.map((i) => i.ingredientCategoryId)),
+    ];
+    const categories = await this.ingredientCategoryRepository.find({
+      where: { id: In(categoryIds) },
+    });
+    const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+    const unavailableIngredients =
+      await this.userUnavailableIngredientRepository.find({
+        where: { userId },
+        select: ['ingredientId'],
+      });
+    const unavailableIngredientIds = new Set(
+      unavailableIngredients.map((item) => item.ingredientId),
+    );
     return {
       data: ingredients.map((ingredient) => ({
         id: ingredient.id,
         name: ingredient.name,
+        categoryId: ingredient.ingredientCategoryId,
+        categoryName:
+          categoryMap.get(ingredient.ingredientCategoryId) || '미분류',
+        isUserRestricted: unavailableIngredientIds.has(ingredient.id),
       })),
     };
   }
