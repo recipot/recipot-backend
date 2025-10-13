@@ -9,9 +9,10 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
+import { SocialLoginService } from '../social-login/social-login.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
@@ -25,6 +26,7 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
 @Injectable()
 export class UserService {
@@ -46,6 +48,7 @@ export class UserService {
     private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
+    private readonly socialLoginService: SocialLoginService,
     private readonly cacheService: CacheService,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
@@ -81,6 +84,11 @@ export class UserService {
       where: { code: user.role },
     });
 
+    // 소셜 로그인 플랫폼 정보 조회
+    const socialLogins = await this.socialLoginService.findByUserId(id);
+    const platform =
+      socialLogins.length > 0 ? socialLogins[0].platform : undefined;
+
     return {
       id: user.id,
       email: user.email,
@@ -89,6 +97,7 @@ export class UserService {
       recipeCompleteCount: user.recipeCompleteCount,
       isFirstEntry: user.isFirstEntry,
       role: role.codeName,
+      platform,
     };
   }
 
@@ -388,5 +397,33 @@ export class UserService {
     await this.userCompletedRecipeRepository.save(entity);
 
     return true;
+  }
+
+  async getPendingReviews(
+    userId: number,
+  ): Promise<GetPendingReviewsResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    const completedRecipes = await this.userCompletedRecipeRepository.find({
+      where: {
+        userId,
+        isCompleted: true,
+        isReviewed: false,
+        updatedAt: LessThan(twentyFourHoursAgo),
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
+    const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
+    console.log(completedRecipeIds);
+    return {
+      totalCount: completedRecipes.length,
+      completedRecipeIds,
+    };
   }
 }

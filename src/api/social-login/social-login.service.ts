@@ -1,6 +1,4 @@
-import { UserService } from '@/api/user/user.service';
 import { SocialLogin } from '@/database/entity/social-login.entity';
-import { User } from '@/database/entity/user.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,9 +10,6 @@ export class SocialLoginService {
   constructor(
     @InjectRepository(SocialLogin)
     private readonly socialLoginRepository: Repository<SocialLogin>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly userService: UserService,
   ) {}
 
   /**
@@ -29,7 +24,17 @@ export class SocialLoginService {
         sid,
         platform,
       },
-      relations: ['user'],
+    });
+  }
+
+  /**
+   * 사용자 ID로 소셜 로그인 정보 조회
+   */
+  async findByUserId(userId: number): Promise<SocialLogin[]> {
+    return await this.socialLoginRepository.find({
+      where: {
+        userId,
+      },
     });
   }
 
@@ -42,7 +47,7 @@ export class SocialLoginService {
     platform: string,
   ): Promise<SocialLogin> {
     return this.socialLoginRepository.save({
-      user_id: userId,
+      userId,
       sid,
       platform,
     });
