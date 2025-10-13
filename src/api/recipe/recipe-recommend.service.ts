@@ -64,67 +64,60 @@ export class RecipeRecommendationConditionService {
   async createRecipeRecommendationCondition(
     dto: CreateRecipeRecommendationConditionRequest,
   ): Promise<RecipeRecommendationConditionResponseDto[]> {
-    try {
-      // 레시피 ID 유효성 검사
-      const recipeIds = [...new Set(dto.data.map((item) => item.recipeId))];
-      const existingRecipes = await this.recipeRepository.find({
-        where: { id: recipeIds[0] as number },
-      });
-
-      if (existingRecipes.length === 0) {
-        throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-      }
-
-      // 컨디션 ID 유효성 검사
-      const conditionIds = [
-        ...new Set(dto.data.map((item) => item.conditionId)),
-      ];
-      const existingConditions = await this.conditionRepository.find({
-        where: { id: conditionIds[0] as number },
-      });
-
-      if (existingConditions.length === 0) {
-        throw new CustomException(ERROR_CODES.CONDITION_NOT_FOUND);
-      }
-
-      // 중복 체크 (같은 레시피-컨디션 조합)
-      for (const item of dto.data) {
-        const existing =
-          await this.recipeRecommendationConditionRepository.findOne({
-            where: {
-              recipeId: item.recipeId,
-              conditionId: item.conditionId,
-            },
-          });
-
-        if (existing) {
-          throw new CustomException(
-            ERROR_CODES.RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS,
-          );
-        }
-      }
-
-      const newItems = this.recipeRecommendationConditionRepository.create(
-        dto.data,
-      );
-      const savedItems =
-        await this.recipeRecommendationConditionRepository.save(newItems);
-
-      return savedItems.map((item) => ({
-        id: item.id,
-        recipeId: item.recipeId,
-        conditionId: item.conditionId,
-        priorityScore: item.priorityScore,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      }));
-    } catch (error) {
-      this.logger.error('레시피 추천 컨디션 생성 중 에러 발생', {
-        error: error.message,
-        stack: error.stack,
-      });
-      throw error;
+    // DTO 데이터 유효성 검사
+    if (!dto || !Array.isArray(dto) || dto.length === 0) {
+      throw new CustomException(ERROR_CODES.INVALID_REQUEST_DATA);
     }
+
+    // 레시피 ID 유효성 검사
+    const recipeIds = [...new Set(dto.map((item) => item.recipeId))];
+    const existingRecipes = await this.recipeRepository.find({
+      where: { id: recipeIds[0] as number },
+    });
+
+    if (existingRecipes.length === 0) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+
+    // 컨디션 ID 유효성 검사
+    const conditionIds = [...new Set(dto.map((item) => item.conditionId))];
+    const existingConditions = await this.conditionRepository.find({
+      where: { id: conditionIds[0] as number },
+    });
+
+    if (existingConditions.length === 0) {
+      throw new CustomException(ERROR_CODES.CONDITION_NOT_FOUND);
+    }
+
+    // 중복 체크 (같은 레시피-컨디션 조합)
+    for (const item of dto) {
+      const existing =
+        await this.recipeRecommendationConditionRepository.findOne({
+          where: {
+            recipeId: item.recipeId,
+            conditionId: item.conditionId,
+          },
+        });
+
+      if (existing) {
+        throw new CustomException(
+          ERROR_CODES.RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS,
+        );
+      }
+    }
+
+    const newItems = this.recipeRecommendationConditionRepository.create(dto);
+    const savedItems =
+      await this.recipeRecommendationConditionRepository.save(newItems);
+
+    return savedItems.map((item) => ({
+      id: item.id,
+      recipeId: item.recipeId,
+      conditionId: item.conditionId,
+      priorityScore: item.priorityScore,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
   }
 
   /**

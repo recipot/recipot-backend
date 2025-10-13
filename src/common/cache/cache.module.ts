@@ -23,6 +23,6 @@ import { ConfigService } from '@/config/config.service';
     }),
   ],
   providers: [CacheService],
-  exports: [CacheService],
+  exports: [CacheService, NestCacheModule], // CACHE_MANAGER 토큰도 함께 export
 })
 export class CacheModule {}

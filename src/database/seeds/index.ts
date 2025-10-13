@@ -1,11 +1,12 @@
 import { DataSource } from 'typeorm';
 import { CommonCodeSeed } from './common-code.seed';
-import { UserSeed } from './user.seed';
+import { ConditionSeed } from './condition.seed';
 import { IngredientSeed } from './ingredient.seed';
+import { seedRecipeRecommendationCondition } from './recipe-recommendation-condition.seed';
+import { RecipeSeed } from './recipe.seed';
 import { SeasoningSeed } from './seasoning.seed';
 import { ToolSeed } from './tool.seed';
-import { ConditionSeed } from './condition.seed';
-import { RecipeSeed } from './recipe.seed';
+import { UserSeed } from './user.seed';
 
 export class DatabaseSeeder {
   constructor(
@@ -44,9 +45,12 @@ export class DatabaseSeeder {
     const recipeSeed = new RecipeSeed(this.dataSource);
     await recipeSeed.run();
 
+    // RecipeRecommendationCondition 시드 실행
+    await seedRecipeRecommendationCondition(this.dataSource);
+
     this.logger.log('All seeding completed successfully');
   }
 }
 
 // 개별 seeder들도 export
-export { CommonCodeSeed, UserSeed, IngredientSeed, ConditionSeed, RecipeSeed };
+export { CommonCodeSeed, ConditionSeed, IngredientSeed, RecipeSeed, UserSeed };
