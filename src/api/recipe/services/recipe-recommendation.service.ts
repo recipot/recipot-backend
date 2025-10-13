@@ -38,13 +38,14 @@ export class RecipeRecommendationService {
   ) {}
 
   /**
-   * 캐시를 활용한 레시피 추천
+   * 캐시를 활용한 레시피 추천 (페이지네이션 지원)
    */
   async getRecipeRecommendationsWithCache(
     params: GetRecipeRecommendationRequestDto,
     userId?: number,
   ): Promise<GetRecipeRecommendationResponseDto> {
-    const { conditionId, pantryIds } = params;
+    const { conditionId, pantryIds, page = 1, pageSize = 3 } = params;
+    const offset = (page - 1) * pageSize;
 
     // 서버 내 설정값들 사용
     const ttlSec = this.DEFAULT_TTL_SEC;
@@ -60,17 +61,27 @@ export class RecipeRecommendationService {
     // 1) Redis 해시키로 캐시 존재 여부 확인
     const cached = await this.cacheLockService.getFromCache<{
       items: RecipeRecommendationItemDto[];
+      totalItems: number;
       computedAt: number;
       ttlSec: number;
     }>(key);
 
     if (cached?.items) {
-      this.logger.log(`캐시 히트: ${key}`);
+      this.logger.log(
+        `캐시 히트: ${key}, 페이지: ${page}, 페이지크기: ${pageSize}`,
+      );
+
+      // 캐시된 데이터에서 페이지네이션 적용
+      const paginatedItems = cached.items.slice(offset, offset + pageSize);
+      const totalPages = Math.ceil(cached.totalItems / pageSize);
+
       return {
-        items: cached.items,
-        fromCache: true,
-        computedAt: cached.computedAt,
-        ttlSec: cached.ttlSec,
+        items: paginatedItems,
+        currentPage: page,
+        pageSize,
+        totalItems: cached.totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
       };
     }
 
@@ -78,25 +89,37 @@ export class RecipeRecommendationService {
     const dbRecommendations = await this.getRecommendationsFromDb(
       conditionId,
       key,
+      offset,
+      pageSize,
     );
-    if (dbRecommendations.length > 0) {
+
+    if (dbRecommendations.items.length > 0) {
       this.logger.log(
-        `DB에서 추천 결과 조회: ${key}, ${dbRecommendations.length}개`,
+        `DB에서 추천 결과 조회: ${key}, 페이지: ${page}, 페이지크기: ${pageSize}, ${dbRecommendations.items.length}개`,
       );
 
-      // 캐시에 저장
+      // 캐시에 저장 (전체 데이터)
       const computedAt = Date.now();
       await this.cacheLockService.setToCache(
         key,
-        { items: dbRecommendations, computedAt, ttlSec },
+        {
+          items: dbRecommendations.allItems,
+          totalItems: dbRecommendations.totalItems,
+          computedAt,
+          ttlSec,
+        },
         ttlSec,
       );
 
+      const totalPages = Math.ceil(dbRecommendations.totalItems / pageSize);
+
       return {
-        items: dbRecommendations,
-        fromCache: false,
-        computedAt,
-        ttlSec,
+        items: dbRecommendations.items,
+        currentPage: page,
+        pageSize,
+        totalItems: dbRecommendations.totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
       };
     } else {
       this.logger.log(`DB에서 추천 결과 없음: ${key}`);
@@ -113,23 +136,33 @@ export class RecipeRecommendationService {
       // 4) 다른 프로세스가 이미 채워두었을 수 있으니 재확인
       const cached2 = await this.cacheLockService.getFromCache<{
         items: RecipeRecommendationItemDto[];
+        totalItems: number;
         computedAt: number;
         ttlSec: number;
       }>(key);
 
       if (cached2?.items) {
-        this.logger.log(`락 후 캐시 히트: ${key}`);
+        this.logger.log(
+          `락 후 캐시 히트: ${key}, 페이지: ${page}, 페이지크기: ${pageSize}`,
+        );
+
+        // 캐시된 데이터에서 페이지네이션 적용
+        const paginatedItems = cached2.items.slice(offset, offset + pageSize);
+        const totalPages = Math.ceil(cached2.totalItems / pageSize);
+
         return {
-          items: cached2.items,
-          fromCache: true,
-          computedAt: cached2.computedAt,
-          ttlSec: cached2.ttlSec,
+          items: paginatedItems,
+          currentPage: page,
+          pageSize,
+          totalItems: cached2.totalItems,
+          totalPages,
+          hasNextPage: page < totalPages,
         };
       }
 
       // 5) 실제 계산
       this.logger.log(`캐시 미스, 계산 시작: ${key}`);
-      const items = await this.recomputeTop3({
+      const result = await this.recomputeAll({
         conditionId,
         pantryIds,
         unavailableIds,
@@ -141,15 +174,26 @@ export class RecipeRecommendationService {
       const computedAt = Date.now();
       await this.cacheLockService.setToCache(
         key,
-        { items, computedAt, ttlSec },
+        {
+          items: result.allItems,
+          totalItems: result.totalItems,
+          computedAt,
+          ttlSec,
+        },
         ttlSec,
       );
 
+      // 페이지네이션 적용
+      const paginatedItems = result.allItems.slice(offset, offset + pageSize);
+      const totalPages = Math.ceil(result.totalItems / pageSize);
+
       return {
-        items,
-        fromCache: false,
-        computedAt,
-        ttlSec,
+        items: paginatedItems,
+        currentPage: page,
+        pageSize,
+        totalItems: result.totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
       };
     } finally {
       if (hasLock) {
@@ -159,48 +203,68 @@ export class RecipeRecommendationService {
   }
 
   /**
-   * DB에서 Redis 해시키로 추천 결과를 조회합니다.
+   * DB에서 Redis 해시키로 추천 결과를 조회합니다. (페이지네이션 지원)
    */
   private async getRecommendationsFromDb(
     conditionId: number,
     redisHashKey: string,
-  ): Promise<RecipeRecommendationItemDto[]> {
+    offset: number,
+    limit: number,
+  ): Promise<{
+    items: RecipeRecommendationItemDto[];
+    allItems: RecipeRecommendationItemDto[];
+    totalItems: number;
+  }> {
     try {
-      // Redis 해시키로 DB에서 추천 결과 조회 (상위 3개만)
-      const dbRecommendations = await this.userRecipeRecommendationRepository
+      // 전체 데이터 조회 (캐시용)
+      const allDbRecommendations = await this.userRecipeRecommendationRepository
         .createQueryBuilder('urr')
         .leftJoin('Recipe', 'r', 'r.id = urr.recipeId')
         .where('urr.conditionId = :conditionId', { conditionId })
         .andWhere('urr.redisHashKey = :redisHashKey', { redisHashKey })
         .orderBy('urr.score', 'DESC')
-        .limit(3)
         .select(['urr.recipeId', 'r.title', 'r.description', 'r.imageUrl'])
         .getRawMany();
 
-      if (dbRecommendations.length === 0) {
+      if (allDbRecommendations.length === 0) {
         this.logger.log(
           `DB에서 추천 결과 없음: 컨디션 ${conditionId}, Redis 키 ${redisHashKey}`,
         );
-        return [];
+        return {
+          items: [],
+          allItems: [],
+          totalItems: 0,
+        };
       }
 
-      // 결과를 DTO 형태로 변환
-      const recommendations: RecipeRecommendationItemDto[] =
-        dbRecommendations.map((rec) => ({
+      // 전체 결과를 DTO 형태로 변환
+      const allRecommendations: RecipeRecommendationItemDto[] =
+        allDbRecommendations.map((rec) => ({
           recipeId: rec.urr_recipeId,
           title: rec.r_title,
           description: rec.r_description,
           imageUrl: rec.r_imageUrl,
         }));
 
+      // 페이지네이션 적용
+      const paginatedItems = allRecommendations.slice(offset, offset + limit);
+
       this.logger.log(
-        `DB에서 추천 결과 조회 성공: 컨디션 ${conditionId}, ${recommendations.length}개`,
+        `DB에서 추천 결과 조회 성공: 컨디션 ${conditionId}, 전체 ${allRecommendations.length}개, 페이지 ${paginatedItems.length}개`,
       );
 
-      return recommendations;
+      return {
+        items: paginatedItems,
+        allItems: allRecommendations,
+        totalItems: allRecommendations.length,
+      };
     } catch (error) {
       this.logger.error('DB에서 추천 결과 조회 중 에러 발생', error);
-      return [];
+      return {
+        items: [],
+        allItems: [],
+        totalItems: 0,
+      };
     }
   }
 
@@ -220,15 +284,18 @@ export class RecipeRecommendationService {
   }
 
   /**
-   * 실제 레시피 추천 계산 로직
+   * 실제 레시피 추천 계산 로직 (전체 데이터 반환)
    */
-  private async recomputeTop3(args: {
+  private async recomputeAll(args: {
     conditionId: number;
     pantryIds: number[];
     unavailableIds: number[];
     persist?: boolean;
     userId?: number;
-  }): Promise<RecipeRecommendationItemDto[]> {
+  }): Promise<{
+    allItems: RecipeRecommendationItemDto[];
+    totalItems: number;
+  }> {
     const { conditionId, pantryIds, unavailableIds, persist, userId } = args;
 
     this.logger.log(
@@ -247,7 +314,10 @@ export class RecipeRecommendationService {
 
     if (recommendationConditions.length === 0) {
       this.logger.warn(`컨디션 ${conditionId}에 대한 추천 레시피가 없습니다.`);
-      return [];
+      return {
+        allItems: [],
+        totalItems: 0,
+      };
     }
 
     // 2) 각 레시피의 재료 정보를 조회
@@ -371,8 +441,8 @@ export class RecipeRecommendationService {
       );
     }
 
-    // 6) 상위 3개만 반환 (스코어 및 부족한 재료 정보 제외)
-    const top3 = sortedScores.slice(0, 3).map((recipe) => ({
+    // 6) 전체 데이터 반환 (스코어 및 부족한 재료 정보 제외)
+    const allItems = sortedScores.map((recipe) => ({
       recipeId: recipe.recipeId,
       title: recipe.title,
       description: recipe.description,
@@ -380,11 +450,14 @@ export class RecipeRecommendationService {
     }));
 
     this.logger.log(
-      `상위 3개 레시피 선택: [${top3.map((r) => r.recipeId).join(', ')}]`,
+      `전체 레시피 처리 완료: [${allItems.map((r) => r.recipeId).join(', ')}]`,
     );
 
-    this.logger.log(`레시피 추천 계산 완료 - 최종 결과 ${top3.length}개`);
-    return top3;
+    this.logger.log(`레시피 추천 계산 완료 - 전체 결과 ${allItems.length}개`);
+    return {
+      allItems,
+      totalItems: allItems.length,
+    };
   }
 
   /**
@@ -419,7 +492,7 @@ export class RecipeRecommendationService {
         basedOn: 'R10001', // TODO 공통코드 조회
         score: rec.score,
         ingredientFulfillmentRate: rec.ingredientFulfillmentRate,
-        missingIngredientIds: rec.missingIngredientIds,
+        missingIngredientCount: rec.missingIngredientIds.length,
         redisHashKey,
       }),
     );

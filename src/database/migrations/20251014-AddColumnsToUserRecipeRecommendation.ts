@@ -10,10 +10,10 @@ export class Migration20251014072643 implements MigrationInterface {
         comment: '재료 충족률 (0.0 ~ 1.0)',
       }),
       new TableColumn({
-        name: 'missing_ingredient_ids',
-        type: 'json',
-        comment: '부족한 재료 ID 배열',
-        isNullable: true,
+        name: 'missing_ingredient_count',
+        type: 'int',
+        default: 0,
+        comment: '부족한 재료 개수',
       }),
       new TableColumn({
         name: 'redis_hash_key',
@@ -28,7 +28,7 @@ export class Migration20251014072643 implements MigrationInterface {
   async down(queryRunner: QueryRunner) {
     await queryRunner.dropColumns('user_recipe_recommendation', [
       'ingredient_fulfillment_rate',
-      'missing_ingredient_ids',
+      'missing_ingredient_count',
       'redis_hash_key',
     ]);
   }

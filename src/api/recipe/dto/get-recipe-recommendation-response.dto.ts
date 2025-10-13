@@ -29,26 +29,38 @@ export class RecipeRecommendationItemDto {
 
 export class GetRecipeRecommendationResponseDto {
   @ApiProperty({
-    description: '추천 레시피 목록 (상위 3개)',
+    description: '추천 레시피 목록 (페이지당 3개)',
     type: [RecipeRecommendationItemDto],
   })
   items: RecipeRecommendationItemDto[];
 
   @ApiProperty({
-    description: '캐시에서 가져온 데이터인지 여부',
+    description: '현재 페이지 번호',
+    example: 1,
+  })
+  currentPage: number;
+
+  @ApiProperty({
+    description: '페이지당 아이템 수',
+    example: 3,
+  })
+  pageSize: number;
+
+  @ApiProperty({
+    description: '전체 아이템 수',
+    example: 15,
+  })
+  totalItems: number;
+
+  @ApiProperty({
+    description: '전체 페이지 수',
+    example: 5,
+  })
+  totalPages: number;
+
+  @ApiProperty({
+    description: '다음 페이지 존재 여부',
     example: true,
   })
-  fromCache: boolean;
-
-  @ApiProperty({
-    description: '계산된 시간 (Unix timestamp)',
-    example: 1704067200000,
-  })
-  computedAt: number;
-
-  @ApiProperty({
-    description: '캐시 TTL (초)',
-    example: 3600,
-  })
-  ttlSec: number;
+  hasNextPage: boolean;
 }

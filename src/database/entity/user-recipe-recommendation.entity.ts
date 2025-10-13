@@ -55,12 +55,12 @@ export class UserRecipeRecommendation {
   ingredientFulfillmentRate: number;
 
   @Column({
-    type: 'json',
-    name: 'missing_ingredient_ids',
-    comment: '부족한 재료 ID 배열',
-    nullable: true,
+    type: 'int',
+    default: 0,
+    name: 'missing_ingredient_count',
+    comment: '부족한 재료 개수',
   })
-  missingIngredientIds: number[];
+  missingIngredientCount: number;
 
   @Column({
     type: 'varchar',
