@@ -19,7 +19,7 @@ export class RecipeRecommendationService {
   private readonly logger = new Logger(RecipeRecommendationService.name);
 
   // 서버 내 설정값들
-  private readonly DEFAULT_TTL_SEC = 3600; // 1시간
+  private readonly DEFAULT_TTL_SEC = 604800; // 1주일
   private readonly DEFAULT_PERSIST = true; // 추천 결과를 DB에 저장
   private readonly LOCK_TTL_SEC = 8; // 락 TTL
 
