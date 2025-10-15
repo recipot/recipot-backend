@@ -9,7 +9,6 @@ import { RecipeSeasoning } from '@/database/entity/recipe-seasoning.entity';
 import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { RecipeStep } from '@/database/entity/recipe-step.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
-import { Condition } from '@/database/entity/condition.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
@@ -26,7 +25,6 @@ import { CommonCodeModule } from '../common-code/common-code.module';
       RecipeTool,
       RecipeStep,
       RecipeHealthPoint,
-      Condition,
       Ingredient,
       Seasoning,
       Tool,

@@ -161,14 +161,6 @@ export class CreateRecipeDto {
   method: string;
 
   @ApiProperty({
-    description: '컨디션 ID',
-    example: 1,
-  })
-  @IsInt()
-  @IsNotEmpty()
-  conditionId: number;
-
-  @ApiProperty({
     description: '레시피 이미지들',
     type: [CreateRecipeImageDto],
   })
