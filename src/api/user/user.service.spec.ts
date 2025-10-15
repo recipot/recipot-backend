@@ -69,7 +69,6 @@ describe('UserService', () => {
     duration: '30분',
     level: '초급',
     method: '볶음',
-    conditionId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
   } as Recipe;
