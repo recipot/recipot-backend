@@ -1,3 +1,4 @@
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
 import { RecipeRecommendationCondition } from '@/database/entity/recipe-recommendation-condition.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
@@ -51,6 +52,10 @@ describe('RecipeRecommendationService', () => {
           useFactory: createRepositoryMock,
         },
         {
+          provide: getRepositoryToken(RecipeImage),
+          useFactory: createRepositoryMock,
+        },
+        {
           provide: getRepositoryToken(UserRecipeRecommendation),
           useFactory: createRepositoryMock,
         },
@@ -67,6 +72,11 @@ describe('RecipeRecommendationService', () => {
     );
 
     jest.clearAllMocks();
+    cacheLockServiceMock.getFromCache.mockReset();
+    cacheLockServiceMock.setToCache.mockReset();
+    cacheLockServiceMock.tryAcquireLock.mockReset();
+    cacheLockServiceMock.releaseLock.mockReset();
+    cacheLockServiceMock.deleteByPattern.mockReset();
   });
 
   describe('getRecipeRecommendationsWithCache', () => {
@@ -90,10 +100,6 @@ describe('RecipeRecommendationService', () => {
         ttlSec: 3600,
       });
 
-      const spyDb = jest.spyOn<any, any>(
-        service as any,
-        'getRecommendationsFromDb',
-      );
       const spyRecompute = jest.spyOn<any, any>(service as any, 'recomputeAll');
 
       const res = await service.getRecipeRecommendationsWithCache(baseParams);
@@ -104,25 +110,32 @@ describe('RecipeRecommendationService', () => {
       expect(res.currentPage).toBe(2);
       expect(res.totalPages).toBe(Math.ceil(8 / 3));
 
-      expect(spyDb).not.toHaveBeenCalled();
       expect(spyRecompute).not.toHaveBeenCalled();
       expect(cacheLockServiceMock.setToCache).not.toHaveBeenCalled();
     });
 
     it('DB 경로: 캐시 미스 + DB에서 조회 후 캐시에 전체 저장하고 페이지네이션 반환', async () => {
       cacheLockServiceMock.getFromCache.mockResolvedValueOnce(undefined as any);
+      cacheLockServiceMock.tryAcquireLock.mockResolvedValue(true);
 
       const allItems = Array.from({ length: 5 }).map((_, i) => ({
         recipeId: i + 1,
         title: `T${i + 1}`,
         description: `Desc${i + 1}`,
       }));
+      jest.spyOn<any, any>(service as any, 'recomputeAll').mockResolvedValue({
+        allItems,
+        totalItems: allItems.length,
+      });
+
+      // waitForComputation도 모킹 (락 획득 실패 시 호출됨)
       jest
-        .spyOn<any, any>(service as any, 'getRecommendationsFromDb')
+        .spyOn<any, any>(service as any, 'waitForComputation')
         .mockResolvedValue({
-          items: allItems.slice(3, 6),
-          allItems,
+          items: allItems.slice(0, 2),
           totalItems: allItems.length,
+          currentPage: 1,
+          totalPages: Math.ceil(allItems.length / 2),
         });
 
       const res = await service.getRecipeRecommendationsWithCache({
@@ -144,10 +157,10 @@ describe('RecipeRecommendationService', () => {
     it('재계산 경로: 캐시 미스 + DB 없음 => 락 획득 후 재계산, 캐시에 저장, 페이지네이션 반환', async () => {
       // 1st cache miss
       cacheLockServiceMock.getFromCache.mockResolvedValueOnce(undefined as any);
-      // DB returns empty through private method
+      // recomputeAll returns empty through private method
       jest
-        .spyOn<any, any>(service as any, 'getRecommendationsFromDb')
-        .mockResolvedValue({ items: [], allItems: [], totalItems: 0 });
+        .spyOn<any, any>(service as any, 'recomputeAll')
+        .mockResolvedValue({ allItems: [], totalItems: 0 });
       // acquire lock
       cacheLockServiceMock.tryAcquireLock.mockResolvedValue(true);
       // 2nd cache check after lock

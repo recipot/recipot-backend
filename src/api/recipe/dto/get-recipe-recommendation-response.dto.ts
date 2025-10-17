@@ -20,11 +20,15 @@ export class RecipeRecommendationItemDto {
   description: string;
 
   @ApiProperty({
-    description: '레시피 이미지 URL',
-    example: 'https://example.com/recipe.jpg',
+    description: '레시피 이미지 URL 목록',
+    example: [
+      'https://example.com/recipe1.jpg',
+      'https://example.com/recipe2.jpg',
+    ],
     required: false,
+    type: [String],
   })
-  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export class GetRecipeRecommendationResponseDto {
