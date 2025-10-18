@@ -138,6 +138,7 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
     return await this.userService.findById(userId);
   }
@@ -154,6 +155,7 @@ export class UserController {
   @ApiSuccessResponse('프로필 업데이트 성공')
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   async updateMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
     return {
       message: '프로필 업데이트 기능은 추후 구현 예정',
