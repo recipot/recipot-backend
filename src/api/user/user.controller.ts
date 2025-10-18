@@ -32,6 +32,10 @@ import {
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
+import {
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
@@ -212,6 +216,18 @@ export class UserController {
     return await this.userService.findById(id);
   }
 
+  @Post('ingredients/unavailable')
+  @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
+  @ApiOkResponse({
+    description: '저장된 개수',
+    type: SaveUnavailableIngredientsResponseDto,
+  })
+  async saveUnavailableIngredients(
+    @Request() req: any,
+    @Body() body: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    const userId = req.user?.sub;
+    return this.userService.saveUnavailableIngredients(userId, body);
   // @Get('/recipes/completed/count')
   // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
   // @ApiOkResponse({ schema: { example: { count: 7 } } })
