@@ -36,7 +36,7 @@ import {
   SaveUnavailableIngredientsDto,
   SaveUnavailableIngredientsResponseDto,
 } from '@/api/user/dto/save-unavailable-ingredients.dto';
-import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
+// import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
 @Controller({ path: 'users', version: '1' })
@@ -95,6 +95,7 @@ export class UserController {
   /**
    * @description 레시피 북마크를 해제합니다.
    */
+
   // moved to UserRecipeArchiveController
 
   /**
@@ -243,6 +244,8 @@ export class UserController {
       Number(query.page ?? 1),
       Number(query.limit ?? 20),
     );
+  } // <-- ✅ add this closing brace
+
   @Post('ingredients/unavailable')
   @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
   @ApiOkResponse({
@@ -255,39 +258,5 @@ export class UserController {
   ): Promise<SaveUnavailableIngredientsResponseDto> {
     const userId = req.user?.sub;
     return this.userService.saveUnavailableIngredients(userId, body);
-  }
-
-  // @Get('/recipes/completed/count')
-  // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
-  // @ApiOkResponse({ schema: { example: { count: 7 } } })
-  // @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  // @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  // async getCompletedCount(@Request() req: any) {
-  //   const userId = req.user.sub;
-  //   const count = await this.userService.getCompletedCount(userId);
-  //   return { count };
-  // }
-
-  /**
-   * @description Returns total number of recipe completions for the authenticated user.
-   */
-  @Get('/recipes/completions/count')
-  @ApiOperation({
-    summary: 'Get total recipe completion count',
-    description:
-      'Returns the total number of recipe completions for the authenticated user.',
-  })
-  @ApiOkResponse({
-    description: 'Total completion count',
-    type: GetCompletionCountResponseDto,
-  })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getMyCompletionCount(
-    @Request() req: any,
-  ): Promise<GetCompletionCountResponseDto> {
-    const userId = req.user.sub;
-    const count = await this.userService.getTotalCompletionCount(userId);
-    return { count };
   }
 }

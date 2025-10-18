@@ -14,7 +14,6 @@ import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { Ingredient } from '@/database/entity/ingredient.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 import { UserRecipeCompletionHistory } from '@/database/entity/user-recipe-completion-history.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
