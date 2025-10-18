@@ -32,6 +32,11 @@ import {
 } from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 import { Ingredient } from '@/database/entity/ingredient.entity';
+import {
+  MyPageIngredientDto,
+  MyPageRecipeCardDto,
+  MyPageSummaryDto,
+} from '@/api/user/dto/mypage.dto';
 
 @Injectable()
 export class UserService {
@@ -556,5 +561,102 @@ export class UserService {
       totalCount: completedRecipes.length,
       completedRecipeIds,
     };
+  }
+
+  async getMyPageSummary(userId: number): Promise<MyPageSummaryDto> {
+    const profile = await this.findById(userId);
+    if (!profile) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    const [
+      savedCount,
+      recentCount,
+      cookedCount,
+      unavailableCount,
+      savedPreview,
+      recentPreview,
+      unavailablePreview,
+    ] = await Promise.all([
+      this.userRecipeBookmarkRepository.count({ where: { userId } }),
+      this.userRecentRecipesRepository.count({ where: { userId } }),
+      this.getTotalCompletionCount(userId), // <= uses the API you made
+      this.countUnavailableIngredients(userId),
+      this.previewSavedRecipes(userId, 5),
+      this.previewRecentRecipes(userId, 5),
+      this.previewUnavailableIngredients(userId, 10),
+    ]);
+
+    return {
+      profile,
+      stats: { savedCount, recentCount, cookedCount, unavailableCount },
+      savedRecipes: savedPreview,
+      recentRecipes: recentPreview,
+      unavailableIngredients: unavailablePreview,
+    };
+  }
+
+  /** Small preview: user bookmarks -> recipe cards */
+  private async previewSavedRecipes(
+    userId: number,
+    limit = 5,
+  ): Promise<MyPageRecipeCardDto[]> {
+    const rows = await this.userRecipeBookmarkRepository
+      .createQueryBuilder('b')
+      .innerJoin(Recipe, 'r', 'r.id = b.recipeId')
+      .where('b.userId = :userId', { userId })
+      .select(['r.id AS id', 'r.title AS title'])
+      .orderBy('b.id', 'DESC')
+      .limit(limit)
+      .getRawMany<{ id: number; title: string }>();
+
+    return rows.map((r) => ({ id: r.id, title: r.title, imageUrl: null }));
+  }
+
+  /** Small preview: recent recipes -> recipe cards */
+  private async previewRecentRecipes(
+    userId: number,
+    limit = 5,
+  ): Promise<MyPageRecipeCardDto[]> {
+    const rows = await this.userRecentRecipesRepository
+      .createQueryBuilder('rr')
+      .innerJoin(Recipe, 'r', 'r.id = rr.recipeId')
+      .where('rr.userId = :userId', { userId })
+      .select(['r.id AS id', 'r.title AS title'])
+      .orderBy('rr.id', 'DESC')
+      .limit(limit)
+      .getRawMany<{ id: number; title: string }>();
+
+    return rows.map((r) => ({ id: r.id, title: r.title, imageUrl: null }));
+  }
+
+  /** Count only (for stats) */
+  private async countUnavailableIngredients(userId: number): Promise<number> {
+    const row = await this.userRepository.manager
+      .createQueryBuilder()
+      .select('COUNT(1)', 'cnt')
+      .from('user_unavailable_ingredients', 'uui')
+      .where('uui.user_id = :userId', { userId })
+      .getRawOne<{ cnt: string }>();
+    return Number(row?.cnt ?? 0);
+  }
+
+  /** Small preview: unavailable ingredients */
+  private async previewUnavailableIngredients(
+    userId: number,
+    limit = 10,
+  ): Promise<MyPageIngredientDto[]> {
+    const rows = await this.userRepository.manager
+      .createQueryBuilder(Ingredient, 'i')
+      .innerJoin(
+        'user_unavailable_ingredients',
+        'uui',
+        'uui.ingredient_id = i.id AND uui.user_id = :userId',
+        { userId },
+      )
+      .select(['i.id AS id', 'i.name AS name'])
+      .orderBy('i.name', 'ASC')
+      .limit(limit)
+      .getRawMany<{ id: number; name: string }>();
+
+    return rows.map((r) => ({ id: r.id, name: r.name, categoryName: null }));
   }
 }

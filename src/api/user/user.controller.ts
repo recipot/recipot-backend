@@ -38,6 +38,7 @@ import {
 } from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import { MyPageSummaryDto } from '@/api/user/dto/mypage.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -281,5 +282,19 @@ export class UserController {
     const userId = req.user.sub;
     const count = await this.userService.getTotalCompletionCount(userId);
     return { count };
+  }
+
+  @Get('/mypage/summary')
+  @ApiOperation({
+    summary: '마이페이지 요약',
+    description:
+      '프로필/통계(완료횟수 포함)/북마크 미리보기/최근 본 레시피/못 먹는 재료 요약을 반환합니다.',
+  })
+  @ApiSuccessResponse('마이페이지 요약 조회 성공', MyPageSummaryDto)
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getMyPageSummary(@Request() req: any): Promise<MyPageSummaryDto> {
+    const userId = req.user.sub;
+    return this.userService.getMyPageSummary(userId);
   }
 }
