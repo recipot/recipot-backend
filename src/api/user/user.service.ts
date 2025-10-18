@@ -26,7 +26,12 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import {
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 @Injectable()
 export class UserService {
@@ -50,6 +55,8 @@ export class UserService {
     private readonly commonRepository: Repository<CommonCode>,
     private readonly socialLoginService: SocialLoginService,
     private readonly cacheService: CacheService,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }
@@ -368,7 +375,6 @@ export class UserService {
       throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
 
-    // TODO 기획 방향에 따라 수정 (기존 레시피 요리 시작 시 중복 요리 시작 가능한지)
     // 이미 요리를 시작했는지 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
       where: { userId, recipeId },
@@ -389,6 +395,96 @@ export class UserService {
     await this.userCompletedRecipeRepository.save(entity);
 
     return true;
+  }
+
+  private async getUnavailableIngredients(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<Array<{ id: number; name: string }>> {
+    return this.userRepository.manager
+      .createQueryBuilder(Ingredient, 'i')
+      .innerJoin(
+        'user_unavailable_ingredients',
+        'uui',
+        'uui.ingredient_id = i.id AND uui.user_id = :userId',
+        { userId },
+      )
+      .select(['i.id AS id', 'i.name AS name'])
+      .orderBy('i.name', 'ASC')
+      .limit(limit)
+      .offset(offset)
+      .getRawMany<{ id: number; name: string }>();
+  }
+
+  /** public: paged response */
+  async getUnavailableIngredientsPaged(
+    userId: number,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    items: Array<{ id: number; name: string }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    const offset = (safePage - 1) * safeLimit;
+
+    const [items, total] = await Promise.all([
+      this.getUnavailableIngredients(userId, safeLimit, offset),
+      this.userRepository.manager
+        .createQueryBuilder(Ingredient, 'i')
+        .innerJoin(
+          'user_unavailable_ingredients',
+          'uui',
+          'uui.ingredient_id = i.id AND uui.user_id = :userId',
+          { userId },
+        )
+        .getCount(),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    return { items, total, page: safePage, limit: safeLimit, totalPages };
+  }
+
+  /**
+   * Replace the user's unavailable-ingredients set with the provided list.
+   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   */
+  async saveUnavailableIngredients(
+    userId: number,
+    dto: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    // Deduplicate & coerce to positive integers
+    const ids = Array.from(new Set(dto.ingredientIds ?? []))
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    // Delete all for this user
+    await this.userRepository.query(
+      'DELETE FROM user_unavailable_ingredients WHERE user_id = ?',
+      [userId],
+    );
+
+    if (ids.length > 0) {
+      // Build VALUES (?, ?), (?, ?), ... repeating userId for each row
+      const values = ids.map(() => '(?, ?)').join(', ');
+      const params = ids.flatMap((id) => [userId, id]);
+
+      await this.userRepository.query(
+        `INSERT INTO user_unavailable_ingredients (user_id, ingredient_id) VALUES ${values}`,
+        params,
+      );
+    }
+
+    return { savedCount: ids.length };
   }
 
   async getCompletedCount(userId: number): Promise<number> {
@@ -429,7 +525,7 @@ export class UserService {
       .getRawOne<{ count: string }>();
 
     return Number(row?.count ?? 0);
-  } // ✅ close getTotalCompletionCount
+  }
 
   async getPendingReviews(
     userId: number,
@@ -455,7 +551,6 @@ export class UserService {
     });
 
     const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
-    console.log(completedRecipeIds);
 
     return {
       totalCount: completedRecipes.length,
