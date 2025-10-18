@@ -228,6 +228,8 @@ export class UserController {
   ): Promise<SaveUnavailableIngredientsResponseDto> {
     const userId = req.user?.sub;
     return this.userService.saveUnavailableIngredients(userId, body);
+  }
+
   // @Get('/recipes/completed/count')
   // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
   // @ApiOkResponse({ schema: { example: { count: 7 } } })
@@ -238,7 +240,6 @@ export class UserController {
   //   const count = await this.userService.getCompletedCount(userId);
   //   return { count };
   // }
-  //
 
   /**
    * @description Returns total number of recipe completions for the authenticated user.

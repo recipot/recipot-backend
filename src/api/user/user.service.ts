@@ -444,6 +444,10 @@ export class UserService {
    * Replace the user's unavailable-ingredients set with the provided list.
    * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
    */
+  /**
+   * Replace the user's unavailable-ingredients set with the provided list.
+   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   */
   async saveUnavailableIngredients(
     userId: number,
     dto: SaveUnavailableIngredientsDto,
@@ -475,6 +479,8 @@ export class UserService {
     }
 
     return { savedCount: ids.length };
+  } // ✅ close saveUnavailableIngredients
+
   async getCompletedCount(userId: number): Promise<number> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
@@ -513,6 +519,8 @@ export class UserService {
       .getRawOne<{ count: string }>();
 
     return Number(row?.count ?? 0);
+  } // ✅ close getTotalCompletionCount
+
   async getPendingReviews(
     userId: number,
   ): Promise<GetPendingReviewsResponseDto> {
@@ -520,8 +528,10 @@ export class UserService {
     if (!user) {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
     }
+
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
     const completedRecipes = await this.userCompletedRecipeRepository.find({
       where: {
         userId,
@@ -533,8 +543,10 @@ export class UserService {
         updatedAt: 'DESC',
       },
     });
+
     const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
     console.log(completedRecipeIds);
+
     return {
       totalCount: completedRecipes.length,
       completedRecipeIds,
