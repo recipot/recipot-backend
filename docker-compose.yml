@@ -52,8 +52,10 @@ services:
       - "443:443"
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "https://localhost:443/"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -88,6 +90,7 @@ services:
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
       - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_LOGIN_CALLBACK_URL=${FRONTEND_LOGIN_CALLBACK_URL}
     ports:
       - "8080:8080"
     volumes:

@@ -1,7 +1,6 @@
 import { CacheService } from '@/common/cache/cache.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
-import { Condition } from '@/database/entity/condition.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
@@ -50,8 +49,6 @@ export class RecipeService {
     private readonly recipeStepRepository: Repository<RecipeStep>,
     @InjectRepository(RecipeHealthPoint)
     private readonly recipeHealthPointRepository: Repository<RecipeHealthPoint>,
-    @InjectRepository(Condition)
-    private readonly conditionRepository: Repository<Condition>,
     @InjectRepository(Ingredient)
     private readonly ingredientRepository: Repository<Ingredient>,
     @InjectRepository(Seasoning)
@@ -73,7 +70,6 @@ export class RecipeService {
         duration: createRecipeDto.duration,
         level: createRecipeDto.level,
         method: createRecipeDto.method,
-        conditionId: createRecipeDto.conditionId,
       });
       const savedRecipe = await this.recipeRepository.save(recipe);
 
@@ -201,7 +197,6 @@ export class RecipeService {
       }
 
       const [
-        condition,
         images,
         recipeIngredients,
         recipeSeasonings,
@@ -209,7 +204,6 @@ export class RecipeService {
         steps,
         healthPoints,
       ] = await Promise.all([
-        this.conditionRepository.findOne({ where: { id: recipe.conditionId } }),
         this.recipeImageRepository.find({ where: { recipeId } }),
         this.recipeIngredientRepository.find({ where: { recipeId } }),
         this.recipeSeasoningRepository.find({ where: { recipeId } }),
@@ -217,10 +211,6 @@ export class RecipeService {
         this.recipeStepRepository.find({ where: { recipeId } }),
         this.recipeHealthPointRepository.find({ where: { recipeId } }),
       ]);
-
-      if (!condition) {
-        throw new CustomException(ERROR_CODES.CONDITION_NOT_FOUND);
-      }
 
       const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
       const seasoningIds = recipeSeasonings.map((item) => item.seasoningId);
@@ -268,10 +258,6 @@ export class RecipeService {
         title: recipe.title,
         description: recipe.description,
         duration: durationName.codeName,
-        condition: {
-          id: condition.id,
-          name: condition.name,
-        },
         images: images.map((image) => ({
           id: image.id,
           imageUrl: image.imageUrl,
