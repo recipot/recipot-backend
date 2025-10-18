@@ -33,6 +33,7 @@ import {
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
 import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
+import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -157,6 +158,39 @@ export class UserController {
       userId: userId,
       user: req.user,
     };
+  }
+
+  /**
+   * @description 24시간 이상 경과한 미작성 후기 목록을 조회합니다.
+   */
+  @Get('pending-reviews')
+  @ApiOperation({
+    summary: '미작성 레시피 후기 목록 조회 (24시간 경과)',
+    description:
+      '레시피 완료 후 24시간이 지났지만 후기를 작성하지 않은 완료 레시피 ID 목록을 조회합니다. 상세 정보는 /v1/reviews/preparation API로 조회하세요.',
+  })
+  @ApiSuccessResponse('미작성 후기 목록 조회 성공', {
+    type: 'object',
+    properties: {
+      completedRecipeIds: {
+        type: 'array',
+        items: { type: 'number' },
+        example: [42, 38, 25],
+        description: '후기 미작성 완료 레시피 ID 목록',
+      },
+      totalCount: {
+        type: 'number',
+        example: 3,
+        description: '미작성 후기 개수',
+      },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getPendingReviews(
+    @Request() req: any,
+  ): Promise<GetPendingReviewsResponseDto> {
+    return await this.userService.getPendingReviews(req.user.sub);
   }
 
   /**
