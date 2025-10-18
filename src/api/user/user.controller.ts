@@ -26,12 +26,12 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
-// moved to UserRecipeArchiveController
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
+import { GetRecentRecipesRequestDto } from '@/api/user/dto/get-recent-recipes-request.dto';
 import {
   SaveUnavailableIngredientsDto,
   SaveUnavailableIngredientsResponseDto,
@@ -216,6 +216,33 @@ export class UserController {
     return await this.userService.findById(id);
   }
 
+  @Get('ingredients/unavailable')
+  @ApiOperation({ summary: '못 먹는 음식 목록 조회' })
+  @ApiOkResponse({
+    description: '페이지네이션된 못 먹는 재료 목록',
+    schema: {
+      example: {
+        items: [
+          { id: 12, name: '고등어' },
+          { id: 34, name: '새우' },
+        ],
+        total: 2,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      },
+    },
+  })
+  async getUnavailableIngredients(
+    @Request() req: any,
+    @Query() query: GetRecentRecipesRequestDto, // { page?: number; limit?: number }
+  ) {
+    const userId = req.user?.sub;
+    return this.userService.getUnavailableIngredientsPaged(
+      userId,
+      Number(query.page ?? 1),
+      Number(query.limit ?? 20),
+    );
   @Post('ingredients/unavailable')
   @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
   @ApiOkResponse({
