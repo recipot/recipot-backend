@@ -352,51 +352,6 @@ export class UserService {
     // 시작 기록이 없으면 예외
     throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
   }
-  // async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
-  //   // 사용자 존재 여부 확인
-  //   const user = await this.userRepository.findOne({
-  //     where: { id: userId },
-  //   });
-  //
-  //   if (!user) {
-  //     throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-  //   }
-  //
-  //   // 레시피 존재 여부 확인
-  //   const recipe = await this.recipeRepository.findOne({
-  //     where: { id: recipeId },
-  //   });
-  //
-  //   if (!recipe) {
-  //     throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-  //   }
-  //
-  //   // 기존 요리 시작 기록 확인
-  //   const existing = await this.userCompletedRecipeRepository.findOne({
-  //     where: { userId, recipeId },
-  //   });
-  //
-  //   if (existing) {
-  //     if (existing.isCompleted) {
-  //       // 이미 완료된 경우에도 중복 집계
-  //       await this.logCompletionHistory(userId, recipeId);
-  //       return true;
-  //     }
-  //
-  //     // 요리 시작 기록을 완료로 업데이트
-  //     existing.isCompleted = true;
-  //     await this.userCompletedRecipeRepository.save(existing);
-  //   } else {
-  //     // 요리 시작 기록이 없는 경우 오류 반환
-  //     throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
-  //   }
-  //
-  //   // 사용자 완료 횟수 증가
-  //   user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
-  //   await this.userRepository.save(user);
-  //
-  //   return true;
-  // }
 
   /**
    * 사용자가 레시피 요리를 시작합니다.
@@ -442,6 +397,7 @@ export class UserService {
 
     return true;
   }
+
   private async getUnavailableIngredients(
     userId: number,
     limit: number,
@@ -493,11 +449,8 @@ export class UserService {
 
     const totalPages = Math.max(1, Math.ceil(total / safeLimit));
     return { items, total, page: safePage, limit: safeLimit, totalPages };
+  }
 
-  /**
-   * Replace the user's unavailable-ingredients set with the provided list.
-   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
-   */
   /**
    * Replace the user's unavailable-ingredients set with the provided list.
    * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
@@ -599,7 +552,6 @@ export class UserService {
     });
 
     const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
-    console.log(completedRecipeIds);
 
     return {
       totalCount: completedRecipes.length,
