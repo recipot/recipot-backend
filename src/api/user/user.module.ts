@@ -38,6 +38,6 @@ import { UserRecipeCompletionHistory } from '@/database/entity/user-recipe-compl
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
   ],
-  exports: [UserService],
+  exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}

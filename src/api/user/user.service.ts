@@ -54,6 +54,8 @@ export class UserService {
     private readonly commonRepository: Repository<CommonCode>,
     private readonly socialLoginService: SocialLoginService,
     private readonly cacheService: CacheService,
+    @InjectRepository(Ingredient)
+    private readonly ingredientRepository: Repository<Ingredient>,
   ) {
     this.logger = this.loggerFactory.create(UserService.name);
   }

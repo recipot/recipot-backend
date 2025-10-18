@@ -17,6 +17,7 @@ import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookm
 import { UserService } from '@/api/user/user.service';
 import { UserRecipeArchiveController } from './user-recipe-archive.controller';
 import { UserRecipeArchiveService } from './user-recipe-archive.service';
+import { UserModule } from '@/api/user/user.module';
 
 @Module({
   imports: [
