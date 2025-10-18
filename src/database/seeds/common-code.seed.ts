@@ -305,6 +305,48 @@ export class CommonCodeSeed {
         orderNum: 5,
         isActive: true,
       },
+
+      // Measurement Guide Category (M01)
+      {
+        groupCode: 'M01',
+        groupCodeName: 'MEASUREMENT_CATEGORY',
+        code: 'M01001',
+        codeName: '가루류',
+        groupName: '계량 가이드 카테고리',
+        depth: 1,
+        orderNum: 1,
+        isActive: true,
+      },
+      {
+        groupCode: 'M01',
+        groupCodeName: 'MEASUREMENT_CATEGORY',
+        code: 'M01002',
+        codeName: '장,젓갈류',
+        groupName: '계량 가이드 카테고리',
+        depth: 1,
+        orderNum: 2,
+        isActive: true,
+      },
+      {
+        groupCode: 'M01',
+        groupCodeName: 'MEASUREMENT_CATEGORY',
+        code: 'M01003',
+        codeName: '액체류',
+        groupName: '계량 가이드 카테고리',
+        depth: 1,
+        orderNum: 3,
+        isActive: true,
+      },
+      {
+        groupCode: 'M01',
+        groupCodeName: 'MEASUREMENT_CATEGORY',
+        code: 'M01004',
+        codeName: '그외',
+        groupName: '계량 가이드 카테고리',
+        depth: 1,
+        orderNum: 4,
+        isActive: true,
+      },
     ];
 
     for (const commonCodeData of commonCodes) {

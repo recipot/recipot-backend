@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -22,6 +30,7 @@ import {
   IngredientResponseDto,
 } from './dto/create-ingredient.dto';
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
@@ -30,6 +39,7 @@ export class IngredientController {
   constructor(private readonly ingredientService: IngredientService) {}
 
   @Get()
+  @UseGuards(JwtGuard)
   @ApiOperation({
     summary: '재료 목록 조회',
     description: '모든 재료를 조회합니다.',
@@ -42,15 +52,24 @@ export class IngredientController {
         items: {
           type: 'object',
           properties: {
+            categoryId: { type: 'number', example: 1 },
+            categoryName: { type: 'string', example: '해산물류' },
             id: { type: 'number', example: 1 },
             name: { type: 'string', example: '고등어' },
+            isUserRestricted: {
+              type: 'boolean',
+              example: false,
+              description: '사용자가 못 먹는 재료 여부',
+            },
           },
         },
       },
     },
   })
-  async getIngredients(): Promise<GetIngredientsResponseDto> {
-    return await this.ingredientService.getIngredients();
+  async getIngredients(
+    @Request() req: any,
+  ): Promise<GetIngredientsResponseDto> {
+    return await this.ingredientService.getIngredients(req.user.sub);
   }
 
   @Get('admin/categories')
