@@ -375,7 +375,6 @@ export class UserService {
       throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
 
-    // TODO 기획 방향에 따라 수정 (기존 레시피 요리 시작 시 중복 요리 시작 가능한지)
     // 이미 요리를 시작했는지 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
       where: { userId, recipeId },
@@ -468,7 +467,7 @@ export class UserService {
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
 
-    // Delete all for this user (MySQL uses ? placeholders)
+    // Delete all for this user
     await this.userRepository.query(
       'DELETE FROM user_unavailable_ingredients WHERE user_id = ?',
       [userId],
@@ -486,7 +485,7 @@ export class UserService {
     }
 
     return { savedCount: ids.length };
-  } // ✅ close saveUnavailableIngredients
+  }
 
   async getCompletedCount(userId: number): Promise<number> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -526,7 +525,7 @@ export class UserService {
       .getRawOne<{ count: string }>();
 
     return Number(row?.count ?? 0);
-  } // ✅ close getTotalCompletionCount
+  }
 
   async getPendingReviews(
     userId: number,

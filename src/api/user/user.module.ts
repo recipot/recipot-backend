@@ -32,7 +32,6 @@ import { Ingredient } from '@/database/entity/ingredient.entity';
       IngredientCategory,
       UserRecipeCompletionHistory,
       SocialLogin,
-      Ingredient,
     ]),
     AuthModule,
     SocialLoginModule,
