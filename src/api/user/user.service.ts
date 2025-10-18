@@ -9,9 +9,10 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
+import { SocialLoginService } from '../social-login/social-login.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
@@ -25,14 +26,11 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
-import { Ingredient } from '@/database/entity/ingredient.entity';
-import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import {
-  MyPageIngredientDto,
-  MyPageRecipeCardDto,
-  MyPageSummaryDto,
-} from '@/api/user/dto/my-page.dto';
-import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
+import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
 @Injectable()
 export class UserService {
@@ -54,6 +52,7 @@ export class UserService {
     private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
     @InjectRepository(CommonCode)
     private readonly commonRepository: Repository<CommonCode>,
+    private readonly socialLoginService: SocialLoginService,
     private readonly cacheService: CacheService,
     @InjectRepository(Ingredient)
     private readonly ingredientRepository: Repository<Ingredient>,
@@ -91,6 +90,11 @@ export class UserService {
       where: { code: user.role },
     });
 
+    // 소셜 로그인 플랫폼 정보 조회
+    const socialLogins = await this.socialLoginService.findByUserId(id);
+    const platform =
+      socialLogins.length > 0 ? socialLogins[0].platform : undefined;
+
     return {
       id: user.id,
       email: user.email,
@@ -99,6 +103,7 @@ export class UserService {
       recipeCompleteCount: user.recipeCompleteCount,
       isFirstEntry: user.isFirstEntry,
       role: role.codeName,
+      platform,
     };
   }
 
@@ -311,49 +316,86 @@ export class UserService {
    * 사용자가 레시피를 완료합니다.
    */
   async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
-    // 사용자 존재 여부 확인
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
 
-    if (!user) {
-      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-    }
-
-    // 레시피 존재 여부 확인
     const recipe = await this.recipeRepository.findOne({
       where: { id: recipeId },
     });
+    if (!recipe) throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
 
-    if (!recipe) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-    }
-
-    // 기존 요리 시작 기록 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
       where: { userId, recipeId },
     });
 
     if (existing) {
-      // 이미 완료된 레시피인지 확인
       if (existing.isCompleted) {
-        return true; // 이미 완료된 경우 true 반환
+        // 이미 완료된 경우에도 히스토리 한 줄 적재 (중복 완료 집계를 위해)
+        await this.logCompletionHistory(userId, recipeId);
+        return true;
       }
 
-      // 요리 시작 기록을 완료로 업데이트
+      // 첫 완료로 전환
       existing.isCompleted = true;
       await this.userCompletedRecipeRepository.save(existing);
-    } else {
-      // 요리 시작 기록이 없는 경우 오류 반환
-      throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
+
+      // 고유 완료 횟수(유저 프로필 카운터)는 첫 완료에서만 +1
+      user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
+      await this.userRepository.save(user);
+
+      // 첫 완료 히스토리 적재
+      await this.logCompletionHistory(userId, recipeId);
+      return true;
     }
 
-    // 사용자 완료 횟수 증가
-    user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
-    await this.userRepository.save(user);
-
-    return true;
+    // 시작 기록이 없으면 예외
+    throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
   }
+  // async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
+  //   // 사용자 존재 여부 확인
+  //   const user = await this.userRepository.findOne({
+  //     where: { id: userId },
+  //   });
+  //
+  //   if (!user) {
+  //     throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+  //   }
+  //
+  //   // 레시피 존재 여부 확인
+  //   const recipe = await this.recipeRepository.findOne({
+  //     where: { id: recipeId },
+  //   });
+  //
+  //   if (!recipe) {
+  //     throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+  //   }
+  //
+  //   // 기존 요리 시작 기록 확인
+  //   const existing = await this.userCompletedRecipeRepository.findOne({
+  //     where: { userId, recipeId },
+  //   });
+  //
+  //   if (existing) {
+  //     if (existing.isCompleted) {
+  //       // 이미 완료된 경우에도 중복 집계
+  //       await this.logCompletionHistory(userId, recipeId);
+  //       return true;
+  //     }
+  //
+  //     // 요리 시작 기록을 완료로 업데이트
+  //     existing.isCompleted = true;
+  //     await this.userCompletedRecipeRepository.save(existing);
+  //   } else {
+  //     // 요리 시작 기록이 없는 경우 오류 반환
+  //     throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
+  //   }
+  //
+  //   // 사용자 완료 횟수 증가
+  //   user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
+  //   await this.userRepository.save(user);
+  //
+  //   return true;
+  // }
 
   /**
    * 사용자가 레시피 요리를 시작합니다.
@@ -400,145 +442,116 @@ export class UserService {
     return true;
   }
 
-  /** Internal: throw if user not found, returns your existing UserDto */
-  private async getUserDtoOrThrow(id: number): Promise<UserDto> {
-    const dto = await this.findById(id);
-    if (!dto) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-    return dto;
-  }
-
-  /** Saved recipes preview (top N) via QueryBuilder */
-  private async getSavedRecipesPreview(
+  /**
+   * Replace the user's unavailable-ingredients set with the provided list.
+   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   */
+  /**
+   * Replace the user's unavailable-ingredients set with the provided list.
+   * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   */
+  async saveUnavailableIngredients(
     userId: number,
-    limit = 3,
-    offset = 0,
-  ): Promise<MyPageRecipeCardDto[]> {
-    const qb = this.recipeRepository
-      .createQueryBuilder('r')
-      .innerJoin(
-        UserRecipeBookmark,
-        'b',
-        'b.recipeId = r.id AND b.userId = :userId',
-        { userId },
-      )
-      .select(['r.id AS id', 'r.title AS title'])
-      .addSelect(
-        (sub) =>
-          sub
-            .select('ri.imageUrl')
-            .from(RecipeImage, 'ri')
-            .where('ri.recipeId = r.id')
-            .orderBy('ri.id', 'ASC')
-            .limit(1),
-        'imageUrl',
-      )
-      .orderBy('b.id', 'DESC')
-      .limit(limit)
-      .offset(offset);
+    dto: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
 
-    return qb.getRawMany<MyPageRecipeCardDto>();
+    // Deduplicate & coerce to positive integers
+    const ids = Array.from(new Set(dto.ingredientIds ?? []))
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    // Delete all for this user (MySQL uses ? placeholders)
+    await this.userRepository.query(
+      'DELETE FROM user_unavailable_ingredients WHERE user_id = ?',
+      [userId],
+    );
+
+    if (ids.length > 0) {
+      // Build VALUES (?, ?), (?, ?), ... repeating userId for each row
+      const values = ids.map(() => '(?, ?)').join(', ');
+      const params = ids.flatMap((id) => [userId, id]);
+
+      await this.userRepository.query(
+        `INSERT INTO user_unavailable_ingredients (user_id, ingredient_id) VALUES ${values}`,
+        params,
+      );
+    }
+
+    return { savedCount: ids.length };
+  } // ✅ close saveUnavailableIngredients
+
+  async getCompletedCount(userId: number): Promise<number> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    return this.userCompletedRecipeRepository.count({
+      where: { userId, isCompleted: true },
+    });
   }
 
-  /** Recent recipes preview (top N) via QueryBuilder */
-  private async getRecentRecipesPreview(
+  /** Write 1 row per completion event (even if already completed). */
+  private async logCompletionHistory(
     userId: number,
-    limit = 3,
-    offset = 0,
-  ): Promise<MyPageRecipeCardDto[]> {
-    const qb = this.recipeRepository
-      .createQueryBuilder('r')
-      .innerJoin(
-        UserRecentRecipes,
-        'rr',
-        'rr.recipeId = r.id AND rr.userId = :userId',
-        { userId },
-      )
-      .select(['r.id AS id', 'r.title AS title'])
-      .addSelect(
-        (sub) =>
-          sub
-            .select('ri.imageUrl')
-            .from(RecipeImage, 'ri')
-            .where('ri.recipeId = r.id')
-            .orderBy('ri.id', 'ASC')
-            .limit(1),
-        'imageUrl',
-      )
-      .orderBy('rr.id', 'DESC')
-      .limit(limit)
-      .offset(offset);
-
-    return qb.getRawMany<MyPageRecipeCardDto>();
+    recipeId: number,
+  ): Promise<void> {
+    await this.userRepository.query(
+      'INSERT INTO user_recipe_completion_history (user_id, recipe_id) VALUES (?, ?)',
+      [userId, recipeId],
+    );
   }
 
-  /** 못 먹는 음식 목록 (paged) via QueryBuilder; table-join for user_unavailable_ingredients */
-  async getUnavailableIngredients(
+  /**
+   * Returns total number of recipe completions for a user.
+   * Uses the user_recipe_completion_history table (one row per completion).
+   */
+  async getTotalCompletionCount(userId: number): Promise<number> {
+    // Ensure user exists (consistent with other endpoints)
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+    // Raw count from history table (no entity required)
+    const row = await this.userRepository.manager
+      .createQueryBuilder()
+      .select('COUNT(1)', 'count')
+      .from('user_recipe_completion_history', 'h')
+      .where('h.user_id = :userId', { userId })
+      .getRawOne<{ count: string }>();
+
+    return Number(row?.count ?? 0);
+  } // ✅ close getTotalCompletionCount
+
+  async getPendingReviews(
     userId: number,
-    limit = 20,
-    offset = 0,
-  ): Promise<MyPageIngredientDto[]> {
-    const qb = this.ingredientRepository
-      .createQueryBuilder('i')
-      .innerJoin(
-        'user_unavailable_ingredients',
-        'uui',
-        'uui.ingredient_id = i.id AND uui.user_id = :userId',
-        { userId },
-      )
-      .leftJoin(IngredientCategory, 'ic', 'ic.id = i.ingredientCategoryId')
-      .select(['i.id AS id', 'i.name AS name', 'ic.name AS categoryName'])
-      .orderBy('i.name', 'ASC')
-      .limit(limit)
-      .offset(offset);
+  ): Promise<GetPendingReviewsResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
 
-    return qb.getRawMany<MyPageIngredientDto>();
-  }
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
-  /** Counts using repositories/QB only */
-  private async getCounts(userId: number): Promise<{
-    savedCount: number;
-    recentCount: number;
-    cookedCount: number;
-    unavailableCount: number;
-  }> {
-    const [savedCount, recentCount, cookedCount, unavailableCount] =
-      await Promise.all([
-        this.userRecipeBookmarkRepository.count({ where: { userId } }),
-        this.userRecentRecipesRepository.count({ where: { userId } }),
-        this.userCompletedRecipeRepository.count({
-          where: { userId, isCompleted: true },
-        }),
-        this.ingredientRepository
-          .createQueryBuilder('i')
-          .innerJoin(
-            'user_unavailable_ingredients',
-            'uui',
-            'uui.ingredient_id = i.id AND uui.user_id = :userId',
-            { userId },
-          )
-          .getCount(),
-      ]);
+    const completedRecipes = await this.userCompletedRecipeRepository.find({
+      where: {
+        userId,
+        isCompleted: true,
+        isReviewed: false,
+        updatedAt: LessThan(twentyFourHoursAgo),
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
 
-    return { savedCount, recentCount, cookedCount, unavailableCount };
-  }
-
-  async getMyPageSummary(userId: number): Promise<MyPageSummaryDto> {
-    const profile = await this.getUserDtoOrThrow(userId);
-
-    const [savedRecipes, recentRecipes, unavailableIngredients, stats] =
-      await Promise.all([
-        this.getSavedRecipesPreview(userId, 3, 0),
-        this.getRecentRecipesPreview(userId, 3, 0),
-        this.getUnavailableIngredients(userId, 8, 0),
-        this.getCounts(userId),
-      ]);
+    const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
+    console.log(completedRecipeIds);
 
     return {
-      profile,
-      stats,
-      savedRecipes,
-      recentRecipes,
-      unavailableIngredients,
+      totalCount: completedRecipes.length,
+      completedRecipeIds,
     };
   }
 }

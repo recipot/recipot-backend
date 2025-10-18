@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
@@ -31,8 +32,12 @@ import {
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
-import { CustomException } from '@/common/exceptions/custom-exception';
-import { MyPageSummaryDto } from '@/api/user/dto/my-page.dto';
+import {
+  SaveUnavailableIngredientsDto,
+  SaveUnavailableIngredientsResponseDto,
+} from '@/api/user/dto/save-unavailable-ingredients.dto';
+import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
+import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -160,6 +165,39 @@ export class UserController {
   }
 
   /**
+   * @description 24시간 이상 경과한 미작성 후기 목록을 조회합니다.
+   */
+  @Get('pending-reviews')
+  @ApiOperation({
+    summary: '미작성 레시피 후기 목록 조회 (24시간 경과)',
+    description:
+      '레시피 완료 후 24시간이 지났지만 후기를 작성하지 않은 완료 레시피 ID 목록을 조회합니다. 상세 정보는 /v1/reviews/preparation API로 조회하세요.',
+  })
+  @ApiSuccessResponse('미작성 후기 목록 조회 성공', {
+    type: 'object',
+    properties: {
+      completedRecipeIds: {
+        type: 'array',
+        items: { type: 'number' },
+        example: [42, 38, 25],
+        description: '후기 미작성 완료 레시피 ID 목록',
+      },
+      totalCount: {
+        type: 'number',
+        example: 3,
+        description: '미작성 후기 개수',
+      },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getPendingReviews(
+    @Request() req: any,
+  ): Promise<GetPendingReviewsResponseDto> {
+    return await this.userService.getPendingReviews(req.user.sub);
+  }
+
+  /**
    * @description 유저를 상세조회한다.
    */
   @Get(':id')
@@ -178,50 +216,51 @@ export class UserController {
     return await this.userService.findById(id);
   }
 
-  /**
-   * @description 마이페이지 메인 요약 (프로필/카운트 + saved/recent/unavailable preview)
-   */
-  @Get('/mypage/summary')
-  @ApiOperation({ summary: '마이페이지 메인 요약' })
-  @ApiSuccessResponse('마이페이지 요약 조회 성공', MyPageSummaryDto)
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getMyPageSummary(@Request() req: any): Promise<MyPageSummaryDto> {
-    const userId = Number(req.user?.sub);
-    if (!userId) throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
-    return await this.userService.getMyPageSummary(userId);
+  @Post('ingredients/unavailable')
+  @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
+  @ApiOkResponse({
+    description: '저장된 개수',
+    type: SaveUnavailableIngredientsResponseDto,
+  })
+  async saveUnavailableIngredients(
+    @Request() req: any,
+    @Body() body: SaveUnavailableIngredientsDto,
+  ): Promise<SaveUnavailableIngredientsResponseDto> {
+    const userId = req.user?.sub;
+    return this.userService.saveUnavailableIngredients(userId, body);
   }
 
+  // @Get('/recipes/completed/count')
+  // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
+  // @ApiOkResponse({ schema: { example: { count: 7 } } })
+  // @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  // @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  // async getCompletedCount(@Request() req: any) {
+  //   const userId = req.user.sub;
+  //   const count = await this.userService.getCompletedCount(userId);
+  //   return { count };
+  // }
+
   /**
-   * @description 못 먹는 음식 목록 (페이지네이션)
+   * @description Returns total number of recipe completions for the authenticated user.
    */
-  @Get('/ingredients/unavailable')
-  @ApiOperation({ summary: '못 먹는 음식 목록 조회' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
-  @ApiSuccessResponse('못 먹는 음식 목록 조회 성공', {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'number', example: 3 },
-        name: { type: 'string', example: '게' },
-        categoryName: { type: 'string', example: '해산물류' },
-      },
-    },
+  @Get('/recipes/completions/count')
+  @ApiOperation({
+    summary: 'Get total recipe completion count',
+    description:
+      'Returns the total number of recipe completions for the authenticated user.',
+  })
+  @ApiOkResponse({
+    description: 'Total completion count',
+    type: GetCompletionCountResponseDto,
   })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  async listUnavailableIngredients(
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getMyCompletionCount(
     @Request() req: any,
-    @Query('limit') limit = 20,
-    @Query('offset') offset = 0,
-  ) {
-    const userId = Number(req.user?.sub);
-    if (!userId) throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
-    return await this.userService.getUnavailableIngredients(
-      userId,
-      Number(limit),
-      Number(offset),
-    );
+  ): Promise<GetCompletionCountResponseDto> {
+    const userId = req.user.sub;
+    const count = await this.userService.getTotalCompletionCount(userId);
+    return { count };
   }
 }

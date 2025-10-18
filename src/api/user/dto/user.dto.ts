@@ -21,4 +21,11 @@ export class UserDto {
 
   @ApiProperty({ description: '유저 권한', example: 'general' })
   role: string;
+
+  @ApiProperty({
+    description: '소셜 로그인 플랫폼',
+    example: 'kakao',
+    required: false,
+  })
+  platform?: string;
 }

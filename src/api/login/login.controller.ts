@@ -41,10 +41,12 @@ export class LoginController {
       userId: { type: 'number', example: 1 },
     },
   })
-  async kakaoLoginCallback(
-    @Query('code') code: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.loginService.processKakaoLogin(code, res);
+  async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
+    const result = await this.loginService.processKakaoLogin(code, res);
+
+    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
+    redirectUrl.searchParams.set('userId', String(result.userId));
+
+    return res.redirect(302, redirectUrl.toString());
   }
 }
