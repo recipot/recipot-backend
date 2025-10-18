@@ -15,13 +15,14 @@ module.exports = class Migration20251018000000 {
             comment: '계량 가이드 PK',
           },
           {
-            name: 'category_name',
+            name: 'category_code',
             type: 'varchar',
+            length: '6',
             isNullable: false,
-            comment: '계량 카테고리 이름 (예: 스푼류, 컵, 무게 등)',
+            comment: '계량 카테고리 코드 (CommonCode M01001, M01002 등)',
           },
           {
-            name: 'measurement_standard',
+            name: 'standard',
             type: 'varchar',
             isNullable: false,
             comment: '계량 기준 (예: 큰술, 작은술, 컵, 그램 등)',

@@ -5,19 +5,20 @@ import { CommonEntity } from './common.entity';
 export class MeasurementGuide extends CommonEntity {
   @Column({
     type: 'varchar',
-    name: 'category_name',
+    length: 6,
+    name: 'category_code',
     nullable: false,
-    comment: '계량 카테고리 이름 (예: 스푼류, 컵, 무게 등)',
+    comment: '계량 카테고리 코드 (CommonCode M01001, M01002 등)',
   })
-  categoryName: string;
+  categoryCode: string;
 
   @Column({
     type: 'varchar',
-    name: 'measurement_standard',
+    name: 'standard',
     nullable: false,
     comment: '계량 기준 (예: 큰술, 작은술, 컵, 그램 등)',
   })
-  measurementStandard: string;
+  standard: string;
 
   @Column({
     type: 'varchar',
