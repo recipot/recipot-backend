@@ -59,6 +59,8 @@ describe('UserService', () => {
       getRawMany: jest.fn().mockResolvedValue([]),
       getCount: jest.fn().mockResolvedValue(0),
     })),
+  };
+
   const mockSocialLoginService = {
     findByUserId: jest.fn(),
   };

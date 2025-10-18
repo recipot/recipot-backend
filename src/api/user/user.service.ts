@@ -31,6 +31,7 @@ import {
   SaveUnavailableIngredientsResponseDto,
 } from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 @Injectable()
 export class UserService {
