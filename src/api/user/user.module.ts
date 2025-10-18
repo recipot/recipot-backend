@@ -14,6 +14,7 @@ import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserRecipeCompletionHistory } from '@/database/entity/user-recipe-completion-history.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { UserService } from './user.service';
       UserRecentRecipes,
       UserCompletedRecipe,
       Recipe,
+      UserRecipeCompletionHistory,
       SocialLogin,
     ]),
     AuthModule,

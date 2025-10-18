@@ -22,6 +22,7 @@ describe('UserService', () => {
   const mockUserRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
+    query: jest.fn(),
   };
 
   const mockRecipeRepository = {
