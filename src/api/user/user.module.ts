@@ -1,7 +1,9 @@
 import { AuthModule } from '@/api/auth/auth.module';
+import { SocialLoginModule } from '@/api/social-login/social-login.module';
 import { DatabaseModule } from '@/database/database.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { SocialLogin } from '@/database/entity/social-login.entity';
 import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
@@ -14,6 +16,8 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+import { UserRecipeCompletionHistory } from '@/database/entity/user-recipe-completion-history.entity';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 @Module({
   imports: [
@@ -27,8 +31,12 @@ import { IngredientCategory } from '@/database/entity/ingredient-category.entity
       Recipe,
       Ingredient,
       IngredientCategory,
+      UserRecipeCompletionHistory,
+      SocialLogin,
+      Ingredient,
     ]),
     AuthModule,
+    SocialLoginModule,
   ],
   controllers: [UserController],
   providers: [
@@ -36,6 +44,6 @@ import { IngredientCategory } from '@/database/entity/ingredient-category.entity
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
   ],
-  exports: [UserService],
+  exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}

@@ -36,12 +36,4 @@ export class Recipe extends CommonEntity {
     comment: '조리 방식',
   })
   method: string;
-
-  @Column({
-    type: 'int',
-    nullable: false,
-    name: 'condition_id',
-    comment: '컨디션 PK',
-  })
-  conditionId: number;
 }

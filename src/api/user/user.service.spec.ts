@@ -10,11 +10,12 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { User } from '@/database/entity/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { SocialLoginService } from '../social-login/social-login.service';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserService } from './user.service';
-import { Ingredient } from '@/database/entity/ingredient.entity'; // ✅ NEW
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 describe('UserService', () => {
   let service: UserService;
@@ -22,6 +23,7 @@ describe('UserService', () => {
   const mockUserRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
+    query: jest.fn(),
   };
 
   const mockRecipeRepository = {
@@ -45,7 +47,23 @@ describe('UserService', () => {
     save: jest.fn(),
   };
 
-  const mockIngredientRepository = {};
+  // NEW: minimal Ingredient repository mock to satisfy DI
+  const mockIngredientRepository = {
+    createQueryBuilder: jest.fn(() => ({
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+      getCount: jest.fn().mockResolvedValue(0),
+    })),
+  };
+
+  const mockSocialLoginService = {
+    findByUserId: jest.fn(),
+  };
 
   // 공통으로 사용할 Mock 데이터
   const mockUser: User = {
@@ -67,7 +85,6 @@ describe('UserService', () => {
     duration: '30분',
     level: '초급',
     method: '볶음',
-    conditionId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
   } as Recipe;
@@ -100,12 +117,12 @@ describe('UserService', () => {
           provide: getRepositoryToken(CommonCode),
           useValue: { findOne: jest.fn() },
         },
-        // provide IngredientRepository so Nest can construct UserService
+        // NEW: provide Ingredient repository for DI
         {
           provide: getRepositoryToken(Ingredient),
           useValue: mockIngredientRepository,
         },
-        // 다른 의존성들도 모킹
+        // 다른 의존성들도 모킹 (실제 서비스에서 사용하는 것들)
         {
           provide: LoggerFactoryService,
           useValue: {
@@ -132,6 +149,10 @@ describe('UserService', () => {
           useValue: {
             findRecentRecipesWithRecipeByUserIdPaginated: jest.fn(),
           },
+        },
+        {
+          provide: SocialLoginService,
+          useValue: mockSocialLoginService,
         },
       ],
     }).compile();

@@ -3,7 +3,6 @@ import { Recipe } from '../entity/recipe.entity';
 import { Ingredient } from '../entity/ingredient.entity';
 import { Seasoning } from '../entity/seasoning.entity';
 import { Tool } from '../entity/tool.entity';
-import { Condition } from '../entity/condition.entity';
 import { RecipeImage } from '../entity/recipe-image.entity';
 import { RecipeIngredient } from '../entity/recipe-ingredient.entity';
 import { RecipeSeasoning } from '../entity/recipe-seasoning.entity';
@@ -25,7 +24,6 @@ export class RecipeSeed {
     const ingredientRepository = this.dataSource.getRepository(Ingredient);
     const seasoningRepository = this.dataSource.getRepository(Seasoning);
     const toolRepository = this.dataSource.getRepository(Tool);
-    const conditionRepository = this.dataSource.getRepository(Condition);
     const recipeImageRepository = this.dataSource.getRepository(RecipeImage);
     const recipeIngredientRepository =
       this.dataSource.getRepository(RecipeIngredient);
@@ -40,13 +38,11 @@ export class RecipeSeed {
     const ingredients = await ingredientRepository.find();
     const seasonings = await seasoningRepository.find();
     const tools = await toolRepository.find();
-    const conditions = await conditionRepository.find();
 
     // Create maps for easy ID lookup
     const ingredientMap = new Map(ingredients.map((i) => [i.name, i.id]));
     const seasoningMap = new Map(seasonings.map((s) => [s.name, s.id]));
     const toolMap = new Map(tools.map((t) => [t.name, t.id]));
-    const conditionMap = new Map(conditions.map((c) => [c.name, c.id]));
 
     // --- Define 10 recipe data objects ---
     const recipesData = [
@@ -56,7 +52,6 @@ export class RecipeSeed {
         title: '돼지고기 김치찌개',
         description: '한국인의 소울푸드, 얼큰하고 맛있는 김치찌개입니다.',
         duration: 'R01003', // 30분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/kFDU54j.jpeg' }],
         ingredients: [
           {
@@ -102,7 +97,6 @@ export class RecipeSeed {
         title: '차돌박이 된장찌개',
         description: '구수한 된장과 고소한 차돌박이의 완벽한 조화',
         duration: 'R01003', // 30분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/A1O2d6c.jpeg' }],
         ingredients: [
           { name: '두부', amount: '1/2모', isAlternative: false },
@@ -147,7 +141,6 @@ export class RecipeSeed {
         title: '에어프라이어 고등어 구이',
         description: '냄새 걱정 없이 간편하게 만드는 담백한 고등어 구이',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/4l8dJmN.jpeg' }],
         ingredients: [
           { name: '고등어', amount: '1마리', isAlternative: false },
@@ -182,7 +175,6 @@ export class RecipeSeed {
         title: '클래식 김치볶음밥',
         description: '누구나 좋아하는 기본에 충실한 김치볶음밥',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/jgw82P3.jpeg' }],
         ingredients: [
           { name: '백미', amount: '1공기', isAlternative: false },
@@ -223,7 +215,6 @@ export class RecipeSeed {
         title: '바삭한 감자전',
         description: '겉은 바삭, 속은 쫀득! 막걸리를 부르는 감자전',
         duration: 'R01003', // 30분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/h9d8f2S.jpeg' }],
         ingredients: [
           { name: '감자', amount: '3개', isAlternative: false },
@@ -262,7 +253,6 @@ export class RecipeSeed {
         title: '초간단 참치마요 덮밥',
         description: '자취생 필수 레시피! 10분 완성 참치마요 덮밥',
         duration: 'R01001', // 10분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/tT4fE8t.jpeg' }],
         ingredients: [
           { name: '백미', amount: '1공기', isAlternative: false },
@@ -296,7 +286,6 @@ export class RecipeSeed {
         title: '학교 앞 추억의 떡볶이',
         description: '달콤하고 매콤한, 옛날 학교 앞에서 먹던 바로 그 맛!',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/oB4dY6c.jpeg' }],
         ingredients: [
           { name: '밀떡', amount: '300g', isAlternative: true },
@@ -332,7 +321,6 @@ export class RecipeSeed {
         title: '시원한 어묵탕',
         description: '쌀쌀한 날 생각나는 뜨끈하고 시원한 국물의 어묵탕',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/sJ5gX2e.jpeg' }],
         ingredients: [
           { name: '어묵', amount: '300g', isAlternative: false },
@@ -367,7 +355,6 @@ export class RecipeSeed {
         title: '기본 토마토 스파게티',
         description: '시판 소스로 간단하게 만드는 클래식 토마토 스파게티',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/Y7aLp2p.jpeg' }],
         ingredients: [
           { name: '파스타', amount: '1인분', isAlternative: false },
@@ -412,7 +399,6 @@ export class RecipeSeed {
         title: '알리오 올리오 파스타',
         description: '마늘과 올리브유의 풍미가 가득한 기본 오일 파스타',
         duration: 'R01002', // 20분 이내
-        conditionName: '그럭저럭',
         images: [{ imageUrl: 'https://i.imgur.com/5gXyZ8R.jpeg' }],
         ingredients: [
           { name: '파스타', amount: '1인분', isAlternative: false },
@@ -457,7 +443,6 @@ export class RecipeSeed {
         title: data.title,
         description: data.description,
         duration: data.duration,
-        conditionId: conditionMap.get(data.conditionName),
       });
       const savedRecipe = await recipeRepository.save(recipe);
 
