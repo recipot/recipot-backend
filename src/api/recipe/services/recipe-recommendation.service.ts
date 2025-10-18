@@ -68,7 +68,7 @@ export class RecipeRecommendationService {
     // 캐시 미스는 데이터가 무효화되었다는 의미이므로 DB 폴백 없이 재계산
     return await this.computeWithLock(
       key,
-      { conditionId, pantryIds, unavailableIds, userId },
+      { conditionId, pantryIds, unavailableIds, persist: true, userId },
       page,
       pageSize,
     );
@@ -142,7 +142,7 @@ export class RecipeRecommendationService {
         }
 
         // 실제 계산 수행
-        this.logger.log(`계산 시작: ${key}`);
+        this.logger.debug(`계산 시작: ${key}`);
         const result = await this.recomputeAll(params);
 
         // 캐시 저장
@@ -214,7 +214,7 @@ export class RecipeRecommendationService {
     const paginatedItems = items.slice(offset, offset + pageSize);
     const totalPages = Math.ceil(data.totalItems / pageSize);
 
-    this.logger.log(
+    this.logger.debug(
       `→ ${source} 응답: 페이지 ${page}/${totalPages}, ${paginatedItems.length}개 항목`,
     );
 
@@ -253,9 +253,9 @@ export class RecipeRecommendationService {
   private async recomputeAll(
     params: RecomputeParams,
   ): Promise<PaginationResult> {
-    const { conditionId, pantryIds, unavailableIds, persist, userId } = params;
+    const { conditionId, pantryIds, unavailableIds, persist } = params;
 
-    this.logger.log(
+    this.logger.debug(
       `추천 계산 - 조건: ${conditionId}, 팬트리: ${pantryIds.length}개, 제외: ${unavailableIds.length}개`,
     );
 
@@ -282,7 +282,12 @@ export class RecipeRecommendationService {
     // 4. 정렬 및 DB 저장
     const sortedScores = this.sortByScore(recipeScores);
 
-    if (persist && userId) {
+    if (
+      persist &&
+      conditionId &&
+      Array.isArray(pantryIds) &&
+      Array.isArray(unavailableIds)
+    ) {
       await this.persistRecommendations(
         sortedScores,
         conditionId,
@@ -293,7 +298,7 @@ export class RecipeRecommendationService {
 
     const allItems = this.mapToDto(sortedScores);
 
-    this.logger.log(`계산 완료: ${allItems.length}개 레시피`);
+    this.logger.debug(`계산 완료: ${allItems.length}개 레시피`);
 
     return {
       allItems,
@@ -312,7 +317,7 @@ export class RecipeRecommendationService {
       where: { conditionId },
     });
 
-    this.logger.log(`→ 추천 조건 ${conditions.length}개 조회`);
+    this.logger.debug(`→ 추천 조건 ${conditions.length}개 조회`);
     return conditions;
   }
 
@@ -326,7 +331,7 @@ export class RecipeRecommendationService {
       where: recipeIds.map((id) => ({ recipeId: id })),
     });
 
-    this.logger.log(`→ 재료 정보 ${ingredients.length}개 조회`);
+    this.logger.debug(`→ 재료 정보 ${ingredients.length}개 조회`);
     return ingredients;
   }
 
@@ -497,7 +502,7 @@ export class RecipeRecommendationService {
 
     await this.userRecipeRecommendationRepository.save(entities);
 
-    this.logger.log(
+    this.logger.debug(
       `DB 저장 완료: 조건 ${conditionId}, ${entities.length}개 항목`,
     );
   }
