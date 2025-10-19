@@ -46,6 +46,8 @@ export class LoginController {
 
     const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
     redirectUrl.searchParams.set('userId', String(result.userId));
+    redirectUrl.searchParams.set('accessToken', result.accessToken);
+    redirectUrl.searchParams.set('refreshToken', result.refreshToken);
 
     return res.redirect(302, redirectUrl.toString());
   }
