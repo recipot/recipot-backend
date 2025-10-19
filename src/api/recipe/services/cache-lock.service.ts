@@ -121,24 +121,24 @@ export class CacheLockService {
   async deleteByPattern(pattern: string): Promise<void> {
     const store: any = (this.cache as any).store;
     if (store?.client) {
-      let cursor = 0;
+      let cursor = '0';
       let totalDeleted = 0;
 
       do {
         // SCAN을 사용하여 안전하게 패턴 매칭
-        const result = await store.client.scan(cursor, {
+        const result: any = await store.client.scan(cursor, {
           MATCH: pattern,
           COUNT: 100,
         });
 
-        cursor = result.cursor;
-        const keys = result.keys;
+        cursor = String(result?.cursor ?? result?.[0] ?? '0');
+        const keys: string[] = result?.keys ?? result?.[1] ?? [];
 
         if (keys.length > 0) {
           await store.client.del(...keys);
           totalDeleted += keys.length;
         }
-      } while (cursor !== 0);
+      } while (cursor !== '0');
 
       if (totalDeleted > 0) {
         this.logger.debug(`패턴 ${pattern}으로 ${totalDeleted}개 키 삭제`);
