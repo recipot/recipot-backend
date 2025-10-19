@@ -9,6 +9,7 @@ import {
   CreateSeasoningDtoTx,
   SeasoningResponseDto,
 } from './dto/create-seasoning.dto';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('양념')
 @Controller({ path: 'seasonings', version: '1' })
@@ -16,7 +17,7 @@ export class SeasoningController {
   constructor(private readonly seasoningService: SeasoningService) {}
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({

@@ -25,6 +25,7 @@ import { UserRole } from '../user/enums/role.enum';
 import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { GetRecipeResponseDto } from './dto/get-recipe.dto';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
@@ -32,7 +33,7 @@ export class RecipeController {
   constructor(private readonly recipeService: RecipeService) {}
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({

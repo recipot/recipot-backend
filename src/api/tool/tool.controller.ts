@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/enums/role.enum';
 import { CreateToolDtoTx, ToolResponseDto } from './dto/create-tool.dto';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('조리 도구')
 @Controller({ path: 'tools', version: '1' })
@@ -13,7 +14,7 @@ export class ToolController {
   constructor(private readonly toolService: ToolService) {}
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({
