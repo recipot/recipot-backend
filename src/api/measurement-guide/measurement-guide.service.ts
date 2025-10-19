@@ -92,6 +92,13 @@ export class MeasurementGuideService {
     for (const guide of guides) {
       const categoryCodeName = codeNameMap.get(guide.categoryCode);
 
+      if (!categoryCodeName) {
+        this.logger.warn(
+          `CommonCode에 없는 카테고리 코드: ${guide.categoryCode}`,
+        );
+        continue;
+      }
+
       if (!groupedData[categoryCodeName]) {
         groupedData[categoryCodeName] = [];
       }
