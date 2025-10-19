@@ -24,6 +24,7 @@ export class CacheLockService {
 
   /**
    * 캐시에 데이터를 저장합니다.
+   * cache-manager v5는 밀리초 단위 TTL을 직접 전달합니다.
    */
   async setToCache<T>(key: string, value: T, ttlSec: number): Promise<void> {
     await this.cache.set(key, JSON.stringify(value), ttlSec * 1000); // ms 단위

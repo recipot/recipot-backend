@@ -22,6 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../user/enums/role.enum';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
@@ -39,6 +40,8 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
+@UseGuards(JwtGuard)
+@ApiBearerAuth('Authorization')
 export class RecipeController {
   constructor(
     private readonly recipeService: RecipeService,
@@ -49,7 +52,6 @@ export class RecipeController {
   @Post('admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 레시피 생성',
     description:
@@ -225,7 +227,6 @@ export class RecipeController {
   }
 
   @Get(':id')
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '레시피 상세 조회',
     description:
@@ -349,7 +350,6 @@ export class RecipeController {
 
   // 레시피 추천 API
   @Post('recommendations')
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '레시피 추천',
     description:
@@ -379,7 +379,6 @@ export class RecipeController {
   @Get('recommendations/admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 컨디션별 레시피 추천 목록 조회',
     description: '모든 컨디션별 레시피 추천을 조회합니다.',
@@ -419,7 +418,6 @@ export class RecipeController {
   @Post('recommendations/admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 컨디션별 레시피 추천 생성',
     description: '새로운 레시피 추천을 데이터베이스에 생성합니다.',
@@ -462,7 +460,6 @@ export class RecipeController {
   @Patch('recommendations/admin/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 컨디션별 레시피 추천 수정',
     description: '기존 컨디션별 레시피 추천의 우선순위 점수를 수정합니다.',
@@ -508,7 +505,6 @@ export class RecipeController {
   @Delete('recommendations/admin/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 컨디션별 레시피 추천 삭제',
     description: '기존 컨디션별 레시피 추천을 삭제합니다.',
@@ -531,7 +527,6 @@ export class RecipeController {
   @Post('recommendations/admin/cache/invalidate')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 추천 캐시 무효화',
     description: '레시피 추천 캐시를 무효화합니다.',
@@ -545,7 +540,6 @@ export class RecipeController {
   @Post('recommendations/admin/cache/invalidate/:conditionId')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 특정 컨디션 추천 캐시 무효화',
     description: '특정 컨디션의 레시피 추천 캐시를 무효화합니다.',
