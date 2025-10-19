@@ -23,7 +23,7 @@ import { SeasoningModule } from './api/seasoning/seasoning.module';
 import { ToolModule } from './api/tool/tool.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
-import { MeasurementGuideModule } from './api/measurement-guide/mesurement-guide.module';
+import { MeasurementGuideModule } from './api/measurement-guide/measurement-guide.module';
 
 export const FeatureModules = [
   UserModule,
