@@ -50,7 +50,7 @@ export class RecipeController {
   ) {}
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '[어드민] 레시피 생성',

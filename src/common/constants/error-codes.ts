@@ -84,4 +84,13 @@ export const ERROR_CODES = {
     code: 'E17002',
     message: '레시피 추천 컨디션을 찾을 수 없습니다.',
   },
+  // 계량 가이드 오류
+  MEASUREMENT_GUIDE_ALREADY_EXISTS: { 
+    code: 'E18001', 
+    message: '이미 존재하는 계량 가이드입니다.' 
+  },
+  MEASUREMENT_GUIDE_NOT_FOUND: { 
+    code: 'E18002', 
+    message: '계량 가이드를 찾을 수 없습니다.' 
+  },
 };

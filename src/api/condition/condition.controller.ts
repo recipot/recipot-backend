@@ -10,6 +10,7 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/enums/role.enum';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('컨디션')
 @Controller({ path: 'conditions', version: '1' })
@@ -37,7 +38,7 @@ export class ConditionController {
   }
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '[어드민] 컨디션 생성',

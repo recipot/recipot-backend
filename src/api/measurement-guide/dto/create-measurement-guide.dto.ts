@@ -62,10 +62,10 @@ export class MeasurementGuideResponseDto {
   id: number;
 
   @ApiProperty({
-    description: '계량 카테고리 이름',
-    example: '스푼류',
+    description: '계량 카테고리 코드 (CommonCode)',
+    example: 'M01001',
   })
-  name: string;
+  categoryCode: string;
 
   @ApiProperty({
     description: '계량 기준',

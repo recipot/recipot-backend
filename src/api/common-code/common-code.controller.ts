@@ -27,9 +27,10 @@ import { UserRole } from '../user/enums/role.enum';
 import { CommonCodeService } from './common-code.service';
 import { CreateCommonCodeDtoTx } from './dto/create-common-code.dto';
 import { UpdateCommonCodeDto } from './dto/update-common-code.dto';
+import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('공통 코드')
-@UseGuards(RolesGuard)
+@UseGuards(JwtGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller({ path: 'common-codes', version: '1' })
 @ApiBearerAuth('Authorization')
