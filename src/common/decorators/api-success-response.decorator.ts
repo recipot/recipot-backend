@@ -22,7 +22,7 @@ export const ApiSuccessResponse = (
         schema: {
           type: 'object',
           properties: {
-            status: { type: 'number', example: 200 },
+            status: { type: 'integer', format: 'int32', example: 200 },
             data: { type: 'object' },
           },
         },
@@ -40,7 +40,7 @@ export const ApiSuccessResponse = (
         schema: {
           type: 'object',
           properties: {
-            status: { type: 'number', example: 200 },
+            status: { type: 'integer', format: 'int32', example: 200 },
             data: { $ref: getSchemaPath(options as Type<any>) },
           },
         },
@@ -49,7 +49,7 @@ export const ApiSuccessResponse = (
   }
 
   // 객체 형태의 옵션이 전달된 경우
-  const { type, isArray } = options as any;
+  const { type, isArray, ...rest } = options as any;
 
   // type이 클래스인 경우
   if (typeof type === 'function') {
@@ -61,13 +61,32 @@ export const ApiSuccessResponse = (
         schema: {
           type: 'object',
           properties: {
-            status: { type: 'number', example: 200 },
+            status: { type: 'integer', format: 'int32', example: 200 },
             data: isArray
               ? {
                   type: 'array',
                   items: { $ref: getSchemaPath(type as Type<any>) },
                 }
               : { $ref: getSchemaPath(type as Type<any>) },
+          },
+        },
+      }),
+    );
+  }
+
+  // type이 문자열(원시 스키마)인 경우 (예: { type: 'string', isArray: true, format: 'uuid' })
+  if (typeof type === 'string') {
+    return applyDecorators(
+      ApiResponse({
+        status: 200,
+        description,
+        schema: {
+          type: 'object',
+          properties: {
+            status: { type: 'integer', format: 'int32', example: 200 },
+            data: isArray
+              ? { type: 'array', items: { type, ...rest } }
+              : { type, ...rest },
           },
         },
       }),
@@ -83,7 +102,7 @@ export const ApiSuccessResponse = (
       schema: {
         type: 'object',
         properties: {
-          status: { type: 'number', example: 200 },
+          status: { type: 'integer', format: 'int32', example: 200 },
           data: options as any, // 전달된 스키마를 그대로 사용
         },
       },
