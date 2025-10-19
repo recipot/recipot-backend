@@ -18,8 +18,13 @@ export const ERROR_CODES = {
   AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
   AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
+  // 로그아웃 관련
+  LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
+  REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
+  ACCESS_BLACKLIST_FAILED: { code: 'E2103', message: '액세스 토큰 블랙리스트 처리에 실패했습니다.' },
+
   // 인가 오류
-  AUTH_PERMISSION_DENIED: { code: 'E2014', message: '이 작업을 수행할 권한이 없습니다.' }, // <-- 추가
+  AUTH_PERMISSION_DENIED: { code: 'E2014', message: '이 작업을 수행할 권한이 없습니다.' },
 
   // 공통 오류
   COMMON_CODE_ALREADY_EXISTS: { code: 'E3001', message: '이미 존재하는 공통 코드입니다.' },
@@ -51,7 +56,7 @@ export const ERROR_CODES = {
   SEASONING_ALREADY_EXISTS: { code: 'E11001', message: '이미 존재하는 양념입니다.' },
   SEASONING_NOT_FOUND: { code: 'E11002', message: '양념을 찾을 수 없습니다.' },
 
-  // 조리 도구 관련 오류'
+  // 조리 도구 관련 오류
   TOOL_ALREADY_EXISTS: { code: 'E12001', message: '이미 존재하는 조리 도구입니다.' },
 
   // 레시피 관련 오류
@@ -69,18 +74,9 @@ export const ERROR_CODES = {
   REVIEW_COMPLETION_NOT_FOUND: { code: 'E15003', message: '완료된 레시피 기록을 찾을 수 없습니다.' },
 
   // 건강 설문 오류
-  HEALTH_SURVEY_NOT_ELIGIBLE: {
-    code: 'E16001',
-    message: '현재는 건강 설문을 작성할 수 없습니다.',
-  },
+  HEALTH_SURVEY_NOT_ELIGIBLE: { code: 'E16001', message: '현재는 건강 설문을 작성할 수 없습니다.' },
 
   // 계량 가이드 오류
-  MEASUREMENT_GUIDE_ALREADY_EXISTS: { 
-    code: 'E17001', 
-    message: '이미 존재하는 계량 가이드입니다.' 
-  },
-  MEASUREMENT_GUIDE_NOT_FOUND: { 
-    code: 'E17002', 
-    message: '계량 가이드를 찾을 수 없습니다.' 
-  },
+  MEASUREMENT_GUIDE_ALREADY_EXISTS: { code: 'E17001', message: '이미 존재하는 계량 가이드입니다.' },
+  MEASUREMENT_GUIDE_NOT_FOUND: { code: 'E17002', message: '계량 가이드를 찾을 수 없습니다.' },
 };
