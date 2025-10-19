@@ -3,9 +3,9 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { Condition } from '@/database/entity/condition.entity';
 import { RecipeRecommendationCondition } from '@/database/entity/recipe-recommendation-condition.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
 import { GetRecipeRecommendationConditionsResponseDto } from './dto/get-recipe-recommends.dto';
 import { RecipeRecommendationConditionResponseDto } from './dto/recipe-recommend-response.dto';
@@ -71,22 +71,28 @@ export class RecipeRecommendationConditionService {
 
     // 레시피 ID 유효성 검사
     const recipeIds = [...new Set(dto.map((item) => item.recipeId))];
-    const existingRecipes = await this.recipeRepository.find({
-      where: { id: recipeIds[0] as number },
+    const existingRecipes = await this.recipeRepository.findBy({
+      id: In(recipeIds),
     });
 
-    if (existingRecipes.length === 0) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    if (existingRecipes.length !== recipeIds.length) {
+      throw new CustomException(
+        ERROR_CODES.RECIPE_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // 컨디션 ID 유효성 검사
     const conditionIds = [...new Set(dto.map((item) => item.conditionId))];
-    const existingConditions = await this.conditionRepository.find({
-      where: { id: conditionIds[0] as number },
+    const existingConditions = await this.conditionRepository.findBy({
+      id: In(conditionIds),
     });
 
-    if (existingConditions.length === 0) {
-      throw new CustomException(ERROR_CODES.CONDITION_NOT_FOUND);
+    if (existingConditions.length !== conditionIds.length) {
+      throw new CustomException(
+        ERROR_CODES.CONDITION_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // 중복 체크 (같은 레시피-컨디션 조합)
@@ -102,6 +108,7 @@ export class RecipeRecommendationConditionService {
       if (existing) {
         throw new CustomException(
           ERROR_CODES.RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS,
+          HttpStatus.CONFLICT,
         );
       }
     }
@@ -136,6 +143,7 @@ export class RecipeRecommendationConditionService {
       if (!existing) {
         throw new CustomException(
           ERROR_CODES.RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND,
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -175,6 +183,7 @@ export class RecipeRecommendationConditionService {
       if (!existing) {
         throw new CustomException(
           ERROR_CODES.RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND,
+          HttpStatus.NOT_FOUND,
         );
       }
 

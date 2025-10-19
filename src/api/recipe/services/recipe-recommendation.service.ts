@@ -134,12 +134,12 @@ export class RecipeRecommendationService {
     pageSize: number,
   ): Promise<GetRecipeRecommendationResponseDto> {
     const lockKeyStr = lockKey(key);
-    const hasLock = await this.cacheLockService.tryAcquireLock(
+    const lockToken = await this.cacheLockService.acquireLock(
       lockKeyStr,
       RECOMMENDATION_CONFIG.LOCK_TTL_SEC,
     );
 
-    if (hasLock) {
+    if (lockToken) {
       // 락을 획득한 경우: 계산 수행
       try {
         // 락 획득 후 캐시 재확인 (다른 프로세스가 이미 계산했을 수 있음)
@@ -162,7 +162,15 @@ export class RecipeRecommendationService {
 
         return this.paginateResult(result, page, pageSize, 'computed');
       } finally {
-        await this.cacheLockService.releaseLock(lockKeyStr);
+        const released = await this.cacheLockService.releaseLock(
+          lockKeyStr,
+          lockToken,
+        );
+        if (!released) {
+          this.logger.warn(
+            `락 해제 실패 (이미 만료되었을 수 있음): ${lockKeyStr}`,
+          );
+        }
       }
     } else {
       // 락을 획득하지 못한 경우: 다른 프로세스가 계산할 때까지 대기
@@ -423,6 +431,9 @@ export class RecipeRecommendationService {
       select: ['id', 'title', 'description', 'duration'],
     });
 
+    // 레시피 맵 생성 (N+1 쿼리 방지)
+    const recipeById = new Map(recipes.map((r) => [r.id, r]));
+
     const durationCodes = [
       ...new Set(recipes.map((r) => r.duration).filter((d) => d)),
     ];
@@ -437,9 +448,7 @@ export class RecipeRecommendationService {
     }
 
     for (const condition of conditions) {
-      const recipe = await this.recipeRepository.findOne({
-        where: { id: condition.recipeId },
-      });
+      const recipe = recipeById.get(condition.recipeId);
 
       if (!recipe) {
         this.logger.debug(`레시피 ${condition.recipeId} 없음, 스킵`);
@@ -501,10 +510,13 @@ export class RecipeRecommendationService {
     );
 
     // 재료 충족률
+    // pantryIds가 비어있으면 재료 조건을 고려하지 않으므로 충족률 1로 간주
     const ingredientFulfillmentRate =
-      availableIngredients.length > 0
-        ? ownedIngredients.length / availableIngredients.length
-        : 0;
+      pantryIds.length === 0
+        ? 1
+        : availableIngredients.length > 0
+          ? ownedIngredients.length / availableIngredients.length
+          : 0;
 
     // 종합 점수
     const score = priorityScore * ingredientFulfillmentRate;
@@ -535,9 +547,18 @@ export class RecipeRecommendationService {
 
   /**
    * 점수 기준 정렬
+   * 1차: score (종합 점수)
+   * 2차: priorityScore (컨디션별 가중치)
    */
   private sortByScore(scores: RecipeScore[]): RecipeScore[] {
-    return scores.sort((a, b) => b.score - a.score);
+    return scores.sort((a, b) => {
+      // 1차 정렬: score (높은 순)
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // 2차 정렬: priorityScore (높은 순)
+      return b.priorityScore - a.priorityScore;
+    });
   }
 
   /**

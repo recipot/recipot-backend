@@ -496,7 +496,7 @@ export class RecipeController {
     },
   })
   async updateRecipeRecommendationCondition(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateRecipeRecommendationConditionDto,
   ): Promise<RecipeRecommendationConditionResponseDto> {
     return await this.recipeRecommendationConditionService.updateRecipeRecommendationCondition(
@@ -520,7 +520,7 @@ export class RecipeController {
   })
   @ApiSuccessResponse('레시피 추천 삭제 성공')
   async deleteRecipeRecommendationCondition(
-    @Param('id')
+    @Param('id', ParseIntPipe)
     id: number,
   ): Promise<void> {
     return await this.recipeRecommendationConditionService.deleteRecipeRecommendationCondition(

@@ -230,7 +230,7 @@ describe('RecipeRecommendation (E2E)', () => {
         app,
         'post',
         '/v1/recipes/recommendations/admin/cache/invalidate',
-      );
+      ).expect(HttpStatus.CREATED);
 
       const requestDto = {
         conditionId: 5,

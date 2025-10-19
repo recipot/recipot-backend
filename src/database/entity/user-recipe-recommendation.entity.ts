@@ -18,14 +18,14 @@ export class UserRecipeRecommendation {
   createdAt: Date;
 
   @Column({
-    type: 'bigint',
+    type: 'int',
     name: 'recipe_id',
     comment: '레시피 PK',
   })
   recipeId: number;
 
   @Column({
-    type: 'bigint',
+    type: 'int',
     name: 'condition_id',
     comment: '컨디션 PK',
   })
@@ -69,5 +69,5 @@ export class UserRecipeRecommendation {
     comment: 'Redis 캐시 해시키',
     nullable: true,
   })
-  redisHashKey: string;
+  redisHashKey: string | null;
 }

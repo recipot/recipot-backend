@@ -34,7 +34,7 @@ describe('RecipeRecommendationService', () => {
   const cacheLockServiceMock: jest.Mocked<CacheLockService> = {
     getFromCache: jest.fn(),
     setToCache: jest.fn(),
-    tryAcquireLock: jest.fn(),
+    acquireLock: jest.fn(),
     releaseLock: jest.fn(),
     deleteByPattern: jest.fn(),
   } as any;
@@ -94,7 +94,7 @@ describe('RecipeRecommendationService', () => {
     jest.clearAllMocks();
     cacheLockServiceMock.getFromCache.mockReset();
     cacheLockServiceMock.setToCache.mockReset();
-    cacheLockServiceMock.tryAcquireLock.mockReset();
+    cacheLockServiceMock.acquireLock.mockReset();
     cacheLockServiceMock.releaseLock.mockReset();
     cacheLockServiceMock.deleteByPattern.mockReset();
   });
@@ -136,7 +136,7 @@ describe('RecipeRecommendationService', () => {
 
     it('DB 경로: 캐시 미스 + DB에서 조회 후 캐시에 전체 저장하고 페이지네이션 반환', async () => {
       cacheLockServiceMock.getFromCache.mockResolvedValueOnce(undefined as any);
-      cacheLockServiceMock.tryAcquireLock.mockResolvedValue(true);
+      cacheLockServiceMock.acquireLock.mockResolvedValue('lock-token');
 
       const allItems = Array.from({ length: 5 }).map((_, i) => ({
         recipeId: i + 1,
@@ -182,7 +182,7 @@ describe('RecipeRecommendationService', () => {
         .spyOn<any, any>(service as any, 'recomputeAll')
         .mockResolvedValue({ allItems: [], totalItems: 0 });
       // acquire lock
-      cacheLockServiceMock.tryAcquireLock.mockResolvedValue(true);
+      cacheLockServiceMock.acquireLock.mockResolvedValue('lock-token');
       // 2nd cache check after lock
       cacheLockServiceMock.getFromCache.mockResolvedValueOnce(undefined as any);
 

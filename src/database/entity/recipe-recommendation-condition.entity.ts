@@ -4,14 +4,14 @@ import { CommonEntity } from './common.entity';
 @Entity('recipe_recommendation_condition')
 export class RecipeRecommendationCondition extends CommonEntity {
   @Column({
-    type: 'bigint',
+    type: 'int',
     name: 'recipe_id',
     comment: '레시피 PK',
   })
   recipeId: number;
 
   @Column({
-    type: 'bigint',
+    type: 'int',
     name: 'condition_id',
     comment: '컨디션 PK',
   })

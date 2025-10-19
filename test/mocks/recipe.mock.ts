@@ -1,5 +1,6 @@
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
 import { RecipeService } from '@/api/recipe/recipe.service';
+import { cacheKey as buildCacheKey } from '@/api/recipe/utils/cache-key.util';
 import {
   BadRequestException,
   Body,
@@ -78,12 +79,6 @@ const mockRecipeService = {
 // Mock 캐시 저장소 (메모리)
 const mockCache = new Map<string, any>();
 
-// 캐시 키 생성
-const getCacheKey = (conditionId: number, pantryIds: number[]) => {
-  const sortedIds = [...pantryIds].sort((a, b) => a - b).join(',');
-  return `recommend:${conditionId}:${sortedIds}`;
-};
-
 // Mock 추천 데이터 생성
 const generateRecommendations = (conditionId: number, pantryIds: number[]) => {
   const allRecipes = Array.from({ length: 10 }, (_, i) => ({
@@ -151,16 +146,16 @@ export class MockRecipeController {
       throw new BadRequestException('pageSize must be greater than 0');
     }
 
-    // 캐시 키 생성
-    const cacheKey = getCacheKey(conditionId, pantryIds);
+    // 캐시 키 생성 (실제 유틸과 동일 포맷 사용)
+    const key = buildCacheKey(conditionId, pantryIds, []);
 
     // 캐시 확인
-    let cachedData = mockCache.get(cacheKey);
+    let cachedData = mockCache.get(key);
 
     if (!cachedData) {
       // 캐시 미스: 새로 계산
       cachedData = generateRecommendations(conditionId, pantryIds);
-      mockCache.set(cacheKey, cachedData);
+      mockCache.set(key, cachedData);
     }
 
     // 페이지네이션 적용
@@ -179,10 +174,10 @@ export class MockRecipeController {
   async invalidateConditionCache(
     @Param('conditionId', ParseIntPipe) conditionId: number,
   ) {
-    // conditionId가 포함된 캐시 키 삭제
+    // conditionId 기반 prefix로 삭제 (실서비스 패턴과 동일)
     const keysToDelete: string[] = [];
     mockCache.forEach((_, key) => {
-      if (key.startsWith(`recommend:${conditionId}:`)) {
+      if (key.startsWith(`recommend:v1:c:${conditionId}:`)) {
         keysToDelete.push(key);
       }
     });
