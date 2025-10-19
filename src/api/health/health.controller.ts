@@ -1,4 +1,4 @@
-import { Public } from '@/api/auth/auth.decorators';
+import { Public } from '@/api/auth/decorators/auth.decorators';
 import { Controller, Get } from '@nestjs/common';
 import {
   DiskHealthIndicator,

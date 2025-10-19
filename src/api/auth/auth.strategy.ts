@@ -44,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // 검증된 페이로드 반환
       return {
         sub: parseInt(verifiedPayload.sub),
+        role: payload.role,
         iat: verifiedPayload.iat,
         exp: verifiedPayload.exp,
       };

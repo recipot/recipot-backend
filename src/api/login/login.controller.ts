@@ -1,7 +1,8 @@
-import { Public } from '@/api/auth/auth.decorators';
+import { Public } from '@/api/auth/decorators/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { LoginService } from './login.service';
 import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
 import { GoogleLoginResponseDto } from './dto/google-login.response.dto';
@@ -40,40 +41,27 @@ export class LoginController {
     type: 'object',
     properties: {
       userId: { type: 'number', example: 1 },
-      accessToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      accessExpiresAt: { type: 'string', example: '2025-08-17T11:50:04.000Z' },
-      refreshToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      refreshExpiresAt: { type: 'string', example: '2025-08-18T10:50:04.000Z' },
     },
   })
-  async kakaoLoginCallback(@Query('code') code: string) {
-    return await this.loginService.processKakaoLogin(code);
+  async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
+    const result = await this.loginService.processKakaoLogin(code, res);
+
+    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL as string);
+    redirectUrl.searchParams.set('userId', String(result.userId));
+    redirectUrl.searchParams.set('accessToken', result.accessToken);
+    redirectUrl.searchParams.set('refreshToken', result.refreshToken);
+
+    return res.redirect(302, redirectUrl.toString());
   }
 
   @Public()
   @Get('google')
   @ApiOperation({ summary: '구글 로그인 URL 생성' })
-  @ApiResponse({ status: 200, type: GoogleLoginResponseDto })
+  @ApiSuccessResponse('구글 로그인 URL 생성 성공', GoogleLoginResponseDto)
   generateGoogleLoginUrl(): GoogleLoginResponseDto {
     const loginUrl = this.loginService.generateGoogleLoginUrl();
     return { loginUrl };
   }
-
-  // @Public()
-  // @Get('google')
-  // @Redirect() // default 302
-  // generateGoogleLoginUrl() {
-  //   return {
-  //     url: this.loginService.generateGoogleLoginUrl(),
-  //     statusCode: 302,
-  //   };
-  // }
 
   @Public()
   @Get('google/callback')
@@ -83,7 +71,7 @@ export class LoginController {
     required: true,
     description: '구글에서 받은 인가 코드',
   })
-  @ApiResponse({ status: 200, type: LoginCallbackResponseDto })
+  @ApiSuccessResponse('구글 로그인 성공', LoginCallbackResponseDto)
   async googleLoginCallback(@Query('code') code: string) {
     return await this.loginService.handleGoogleCallback(code);
   }

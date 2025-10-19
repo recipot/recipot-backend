@@ -8,6 +8,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
+import { Public } from '@/api/auth/decorators/auth.decorators';
 
 /**
  * @author 김진태 <realbig4199@gmail.com>
@@ -19,6 +20,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
+  @Public()
   @ApiOperation({ summary: '파일 업로드' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

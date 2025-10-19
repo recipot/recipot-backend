@@ -75,6 +75,12 @@ module.exports = class Migration20250803144638 {
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '공통 코드 테이블',
       }),
@@ -125,6 +131,13 @@ module.exports = class Migration20250803144638 {
             comment: '최초 진입 여부',
           },
           {
+            name: 'role',
+            type: 'varchar',
+            length: '6',
+            isNullable: false,
+            comment: '유저 권한 (ADMIN, PAID, GENERAL)',
+          },
+          {
             name: 'created_at',
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
@@ -134,6 +147,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '유저 테이블',
@@ -182,6 +201,12 @@ module.exports = class Migration20250803144638 {
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '소셜 로그인 정보 테이블',
       }),
@@ -216,6 +241,12 @@ module.exports = class Migration20250803144638 {
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '재료 카테고리 테이블',
       }),
@@ -234,7 +265,7 @@ module.exports = class Migration20250803144638 {
             comment: '재료 PK',
           },
           {
-            name: 'ingredient_categorie_id',
+            name: 'ingredient_category_id',
             type: 'int',
             isNullable: false,
             comment: '재료 카테고리 PK',
@@ -255,6 +286,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '재료 테이블',
@@ -295,6 +332,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '재료별 건강 정보 테이블',
@@ -343,6 +386,12 @@ module.exports = class Migration20250803144638 {
             comment: '레시피 PK',
           },
           {
+            name: 'title',
+            type: 'varchar',
+            isNullable: false,
+            comment: '제목',
+          },
+          {
             name: 'description',
             type: 'text',
             isNullable: false,
@@ -356,25 +405,10 @@ module.exports = class Migration20250803144638 {
             comment: '소요 시간',
           },
           {
-            name: 'level',
-            type: 'varchar',
-            length: '6',
+            name: 'condition_id',
+            type: 'int',
             isNullable: false,
-            comment: '조리 난이도',
-          },
-          {
-            name: 'method',
-            type: 'varchar',
-            method: '6',
-            isNullable: false,
-            comment: '조리 방식',
-          },
-          {
-            name: 'washing_level',
-            type: 'varchar',
-            method: '6',
-            isNullable: false,
-            comment: '설거지 난이도',
+            comment: '컨디션 PK',
           },
           {
             name: 'created_at',
@@ -386,6 +420,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '레시피 테이블',
@@ -426,6 +466,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '레시피 이미지 테이블',
@@ -493,12 +539,6 @@ module.exports = class Migration20250803144638 {
             comment: '양념 이름',
           },
           {
-            name: 'image_url',
-            type: 'varchar',
-            isNullable: false,
-            comment: '양념 이미지 주소',
-          },
-          {
             name: 'created_at',
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
@@ -508,6 +548,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '양념 테이블',
@@ -527,6 +573,12 @@ module.exports = class Migration20250803144638 {
             comment: '조리 도구 PK',
           },
           {
+            name: 'image_url',
+            type: 'varchar',
+            isNullable: false,
+            comment: '조리 도구 이미지 주소',
+          },
+          {
             name: 'name',
             type: 'varchar',
             isNullable: false,
@@ -542,6 +594,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '조리 도구 테이블',
@@ -567,10 +625,16 @@ module.exports = class Migration20250803144638 {
             comment: '레시피 PK',
           },
           {
-            name: 'tool_id',
+            name: 'seasoning_id',
             type: 'int',
             isNullable: false,
             comment: '양념 PK',
+          },
+          {
+            name: 'amount',
+            type: 'varchar',
+            isNullable: false,
+            comment: '필요량',
           },
         ],
         comment: '레시피 양념 테이블',
@@ -631,6 +695,18 @@ module.exports = class Migration20250803144638 {
             comment: '순서',
           },
           {
+            name: 'image_url',
+            type: 'varchar',
+            isNullable: false,
+            comment: '요리 예시 이미지 주소',
+          },
+          {
+            name: 'summary',
+            type: 'text',
+            isNullable: false,
+            comment: '요약',
+          },
+          {
             name: 'content',
             type: 'text',
             isNullable: false,
@@ -646,6 +722,12 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
           },
         ],
         comment: '레시피 요리 순서 테이블',
@@ -743,6 +825,12 @@ module.exports = class Migration20250803144638 {
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '유저 완료 레시피 후기 테이블',
       }),
@@ -836,6 +924,12 @@ module.exports = class Migration20250803144638 {
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '컨디션 테이블',
       }),
@@ -926,8 +1020,100 @@ module.exports = class Migration20250803144638 {
             type: 'datetime',
             default: 'CURRENT_TIMESTAMP',
           },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
         ],
         comment: '유저별 추천 레시피 결과 테이블',
+      }),
+    );
+
+    await queryRunner.createTable(
+      new Table({
+        name: 'recipe_health_points',
+        columns: [
+          {
+            name: 'id',
+            type: 'int',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'increment',
+            comment: 'PK',
+          },
+          {
+            name: 'recipe_id',
+            type: 'int',
+            isNullable: false,
+            comment: '레시피 PK',
+          },
+          {
+            name: 'content',
+            type: 'varchar',
+            length: '255',
+            isNullable: false,
+            comment: '한줄 건강 포인트',
+          },
+          {
+            name: 'created_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updated_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+            onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'datetime',
+            isNullable: true,
+            comment: '삭제일시',
+          },
+        ],
+        comment: '레시피별 한줄 건강 포인트 테이블',
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'user_recent_view_recipes',
+        columns: [
+          {
+            name: 'id',
+            type: 'int',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'increment',
+            comment: 'PK',
+          },
+          {
+            name: 'user_id',
+            type: 'int',
+            isNullable: false,
+            comment: '유저 PK',
+          },
+          {
+            name: 'recipe_id',
+            type: 'int',
+            isNullable: false,
+            comment: '레시피 PK',
+          },
+          {
+            name: 'created_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updated_at',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+            onUpdate: 'CURRENT_TIMESTAMP',
+          },
+        ],
+        comment: '유저 최근 조회 레시피 테이블',
       }),
     );
   }
@@ -935,7 +1121,6 @@ module.exports = class Migration20250803144638 {
   async down(queryRunner) {
     await queryRunner.dropTable('common_codes');
     await queryRunner.dropTable('users');
-    await queryRunner.dropTable('common_codes');
     await queryRunner.dropTable('user_unavailable_ingredients');
     await queryRunner.dropTable('ingredient_health_infos');
     await queryRunner.dropTable('ingredients');
@@ -955,5 +1140,8 @@ module.exports = class Migration20250803144638 {
     await queryRunner.dropTable('user_recipe_recommendation');
     await queryRunner.dropTable('recipe_recommendation_condition');
     await queryRunner.dropTable('conditions');
+    await queryRunner.dropTable('social_logins');
+    await queryRunner.dropTable('recipe_health_points');
+    await queryRunner.dropTable('user_recent_view_recipes');
   }
 };

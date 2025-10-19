@@ -9,6 +9,7 @@ docker/
 
 # IDE
 *.iml
+.idea/
 
 # Infisical
 .infisical*
@@ -28,5 +29,4 @@ CLAUDE.md
 .claude
 *.pem
 .vscode
-.idea/
-*.iml
+copilot-instructions.md
