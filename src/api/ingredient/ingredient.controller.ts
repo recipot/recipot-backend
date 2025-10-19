@@ -73,7 +73,7 @@ export class IngredientController {
   }
 
   @Get('admin/categories')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '[어드민] 재료 카테고리 조회',
@@ -113,7 +113,7 @@ export class IngredientController {
   }
 
   @Post('admin/categories')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '[어드민] 재료 카테고리 생성',
@@ -150,7 +150,7 @@ export class IngredientController {
   }
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '[어드민] 재료 생성',

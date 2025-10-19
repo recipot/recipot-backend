@@ -61,7 +61,7 @@ export class MeasurementGuideController {
   }
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({
