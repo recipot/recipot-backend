@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { MeasurementGuide } from '@/database/entity/measurement-guide.entity';
 import {
   CreateMeasurementGuideRequestDto,
@@ -35,7 +35,7 @@ export class MeasurementGuideService {
       ...new Set(dto.data.map((element) => element.categoryCode)),
     ];
     const validCategoryCodes = await this.commonCodeRepository.find({
-      where: categoryCodes.map((code) => ({ code })),
+      where: { code: In(categoryCodes) },
     });
     if (validCategoryCodes.length !== categoryCodes.length) {
       this.logger.error(`유효하지 않은 카테고리 코드: ${categoryCodes}`);
@@ -80,7 +80,7 @@ export class MeasurementGuideService {
       ...new Set(guides.map((guide) => guide.categoryCode)),
     ];
     const commonCodes = await this.commonCodeRepository.find({
-      where: categoryCodes.map((code) => ({ code })),
+      where: { code: In(categoryCodes) },
     });
     const codeNameMap = new Map(
       commonCodes.map((code) => [code.code, code.codeName]),
