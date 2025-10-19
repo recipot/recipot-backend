@@ -29,6 +29,28 @@ export class RecipeRecommendationItemDto {
     type: [String],
   })
   imageUrls?: string[];
+
+  @ApiProperty({
+    description: '조리 시간',
+    example: '30분',
+    required: false,
+  })
+  duration?: string;
+
+  @ApiProperty({
+    description: '조리 도구 목록',
+    example: ['프라이팬', '냄비'],
+    required: false,
+    type: [String],
+  })
+  tools?: string[];
+
+  @ApiProperty({
+    description: '북마크 여부',
+    example: true,
+    required: false,
+  })
+  isBookmarked?: boolean;
 }
 
 export class GetRecipeRecommendationResponseDto {

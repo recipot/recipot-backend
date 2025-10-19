@@ -1,14 +1,18 @@
 import { RECOMMENDATION_CONFIG } from '@/common/constants/recipe.constants';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { CommonCode } from '@/database/entity/common-code.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
 import { RecipeRecommendationCondition } from '@/database/entity/recipe-recommendation-condition.entity';
+import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { Tool } from '@/database/entity/tool.entity';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { UserRecipeRecommendation } from '@/database/entity/user-recipe-recommendation.entity';
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { GetRecipeRecommendationRequestDto } from '../dto/get-recipe-recommendation-request.dto';
 import {
   GetRecipeRecommendationResponseDto,
@@ -36,10 +40,18 @@ export class RecipeRecommendationService {
     private readonly recipeRepository: Repository<Recipe>,
     @InjectRepository(RecipeImage)
     private readonly recipeImageRepository: Repository<RecipeImage>,
+    @InjectRepository(RecipeTool)
+    private readonly recipeToolRepository: Repository<RecipeTool>,
+    @InjectRepository(Tool)
+    private readonly toolRepository: Repository<Tool>,
+    @InjectRepository(UserRecipeBookmark)
+    private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
     @InjectRepository(UserRecipeRecommendation)
     private readonly userRecipeRecommendationRepository: Repository<UserRecipeRecommendation>,
     @InjectRepository(UserUnavailableIngredient)
     private readonly userUnavailableIngredientRepository: Repository<UserUnavailableIngredient>,
+    @InjectRepository(CommonCode)
+    private readonly commonCodeRepository: Repository<CommonCode>,
     private readonly cacheLockService: CacheLockService,
   ) {}
 
@@ -277,6 +289,7 @@ export class RecipeRecommendationService {
       recipeIngredients,
       pantryIds,
       unavailableIds,
+      params.userId,
     );
 
     // 4. 정렬 및 DB 저장
@@ -343,6 +356,7 @@ export class RecipeRecommendationService {
     allIngredients: RecipeIngredient[],
     pantryIds: number[],
     unavailableIds: number[],
+    userId?: number,
   ): Promise<RecipeScore[]> {
     const scores: RecipeScore[] = [];
 
@@ -361,6 +375,65 @@ export class RecipeRecommendationService {
         imageMap.set(img.recipeId, []);
       }
       imageMap.get(img.recipeId)!.push(img.imageUrl);
+    }
+
+    // 레시피 조리도구 일괄 조회
+    const recipeTools = await this.recipeToolRepository.find({
+      where: recipeIds.map((id) => ({ recipeId: id })),
+    });
+
+    // 도구 ID 목록 추출
+    const toolIds = [...new Set(recipeTools.map((rt) => rt.toolId))];
+
+    // 도구 정보 일괄 조회
+    const tools = await this.toolRepository.find({
+      where: { id: In(toolIds) },
+    });
+    const toolMap = new Map<number, string>();
+    for (const tool of tools) {
+      toolMap.set(tool.id, tool.name);
+    }
+
+    // 레시피별 조리도구 맵 생성
+    const recipeToolsMap = new Map<number, string[]>();
+    for (const rt of recipeTools) {
+      if (!recipeToolsMap.has(rt.recipeId)) {
+        recipeToolsMap.set(rt.recipeId, []);
+      }
+      const toolName = toolMap.get(rt.toolId);
+      if (toolName) {
+        recipeToolsMap.get(rt.recipeId)!.push(toolName);
+      }
+    }
+
+    // 북마크 정보 일괄 조회 (userId가 있을 경우)
+    const bookmarkMap = new Map<number, boolean>();
+    if (userId) {
+      const bookmarks = await this.userRecipeBookmarkRepository.find({
+        where: { userId, recipeId: In(recipeIds) },
+      });
+      for (const bookmark of bookmarks) {
+        bookmarkMap.set(bookmark.recipeId, true);
+      }
+    }
+
+    // duration 공통코드 일괄 조회
+    const recipes = await this.recipeRepository.find({
+      where: { id: In(recipeIds) },
+      select: ['id', 'title', 'description', 'duration'],
+    });
+
+    const durationCodes = [
+      ...new Set(recipes.map((r) => r.duration).filter((d) => d)),
+    ];
+
+    const durationCommonCodes = await this.commonCodeRepository.find({
+      where: { code: In(durationCodes) },
+    });
+
+    const durationMap = new Map<string, string>();
+    for (const commonCode of durationCommonCodes) {
+      durationMap.set(commonCode.code, commonCode.codeName);
     }
 
     for (const condition of conditions) {
@@ -392,6 +465,9 @@ export class RecipeRecommendationService {
         unavailableIds,
         condition.priorityScore,
         imageMap.get(recipe.id),
+        recipeToolsMap.get(recipe.id),
+        bookmarkMap.get(recipe.id),
+        durationMap.get(recipe.duration),
       );
 
       scores.push(score);
@@ -410,6 +486,9 @@ export class RecipeRecommendationService {
     unavailableIds: number[],
     priorityScore: number,
     imageUrls?: string[],
+    tools?: string[],
+    isBookmarked?: boolean,
+    durationName?: string,
   ): RecipeScore {
     // 사용 가능한 재료 (못 먹는 재료 제외)
     const availableIngredients = essentialIngredients.filter(
@@ -436,7 +515,7 @@ export class RecipeRecommendationService {
       .map((ri) => ri.ingredientId);
 
     this.logger.debug(
-      `  레시피 ${recipe.id}: 충족률 ${(ingredientFulfillmentRate * 100).toFixed(1)}%, 점수 ${score.toFixed(2)}`,
+      `레시피 ${recipe.id}: 충족률 ${(ingredientFulfillmentRate * 100).toFixed(1)}%, 점수 ${score.toFixed(2)}`,
     );
 
     return {
@@ -448,6 +527,9 @@ export class RecipeRecommendationService {
       priorityScore,
       missingIngredientIds,
       imageUrls,
+      duration: durationName || recipe.duration,
+      tools,
+      isBookmarked: isBookmarked || false,
     };
   }
 
@@ -467,6 +549,9 @@ export class RecipeRecommendationService {
       title: score.title,
       description: score.description,
       imageUrls: score.imageUrls,
+      duration: score.duration,
+      tools: score.tools,
+      isBookmarked: score.isBookmarked,
     }));
   }
 

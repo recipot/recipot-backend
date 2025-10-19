@@ -1,7 +1,11 @@
+import { CommonCode } from '@/database/entity/common-code.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
 import { RecipeRecommendationCondition } from '@/database/entity/recipe-recommendation-condition.entity';
+import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
+import { Tool } from '@/database/entity/tool.entity';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { UserRecipeRecommendation } from '@/database/entity/user-recipe-recommendation.entity';
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -56,11 +60,27 @@ describe('RecipeRecommendationService', () => {
           useFactory: createRepositoryMock,
         },
         {
+          provide: getRepositoryToken(RecipeTool),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(Tool),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(UserRecipeBookmark),
+          useFactory: createRepositoryMock,
+        },
+        {
           provide: getRepositoryToken(UserRecipeRecommendation),
           useFactory: createRepositoryMock,
         },
         {
           provide: getRepositoryToken(UserUnavailableIngredient),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(CommonCode),
           useFactory: createRepositoryMock,
         },
         { provide: CacheLockService, useValue: cacheLockServiceMock },

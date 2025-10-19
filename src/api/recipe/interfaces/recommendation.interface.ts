@@ -22,6 +22,9 @@ export interface RecipeScore {
   priorityScore: number;
   missingIngredientIds: number[];
   imageUrls?: string[];
+  duration?: string;
+  tools?: string[];
+  isBookmarked?: boolean;
 }
 
 /**
