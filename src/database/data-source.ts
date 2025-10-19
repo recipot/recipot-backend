@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 
 async function createDataSource(): Promise<DataSource> {
   return new DataSource({
-    type: process.env.DB_TYPE as 'mysql',
+    type: process.env.DB_TYPE,
     host: process.env.DB_HOST,
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     username: process.env.DB_USERNAME,
@@ -17,6 +17,10 @@ async function createDataSource(): Promise<DataSource> {
     synchronize: false,
     migrationsTableName: 'migrations_history',
     logging: ['query', 'error'],
+    extra: {
+      charset: 'utf8mb4',
+      // collation은 서버/DB 기본값을 따르고, 필요 시 연결 레벨에서만 지정
+    },
   } as any); // `seeds` 때문에 타입 강제 필요
 }
 

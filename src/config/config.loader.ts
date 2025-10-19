@@ -47,5 +47,9 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
       password: env.DB_PASSWORD,
       database: env.DB_DATABASE,
     },
+
+    frontendUrl: {
+      urls: env.FRONTEND_URL,
+    },
   };
 };

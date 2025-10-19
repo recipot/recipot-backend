@@ -21,13 +21,16 @@ export class AuthService {
   /**
    * 소셜 로그인 사용자를 위한 Access Token과 Refresh Token 생성
    */
-  public async generateSocialLoginTokens(userId: number): Promise<{
+  public async generateSocialLoginTokens(
+    userId: number,
+    role: string,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
     accessExpiresAt: string;
     refreshExpiresAt: string;
   }> {
-    const accessToken = await this.generateAccessToken(userId);
+    const accessToken = await this.generateAccessToken(userId, role);
     const refreshToken = await this.generateRefreshToken(userId);
 
     // 만료 시간 계산
@@ -48,13 +51,17 @@ export class AuthService {
   /**
    * Access Token 생성
    */
-  public async generateAccessToken(userId: number): Promise<string> {
+  public async generateAccessToken(
+    userId: number,
+    role: string,
+  ): Promise<string> {
     const accessSecret = process.env.JWT_ACCESS_SECRET;
     const accessExpire = process.env.JWT_ACCESS_EXPIRE;
     const algorithm = process.env.JWT_ALGORITHM as any;
 
     const payload = {
       sub: userId.toString(),
+      role: role,
       type: 'access',
     };
 
@@ -119,6 +126,7 @@ export class AuthService {
       }
 
       const userId = parseInt(payload.sub);
+      const userRole = payload.role;
 
       // Redis에서 Refresh Token 유효성 확인
       const isValidRefreshToken = await this.validateRefreshTokenInRedis(
@@ -132,7 +140,7 @@ export class AuthService {
       }
 
       // 새로운 토큰 쌍 생성
-      const newAccessToken = await this.generateAccessToken(userId);
+      const newAccessToken = await this.generateAccessToken(userId, userRole);
       const newRefreshToken = await this.generateRefreshToken(userId);
 
       // 기존 Refresh Token 제거
@@ -347,13 +355,16 @@ export class AuthService {
   /**
    * 디버그용 토큰 생성 (컨트롤러용)
    */
-  public async generateDebugToken(userId: number): Promise<{
+  public async generateDebugToken(
+    userId: number,
+    role: string,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
     accessExpiresAt: string;
     refreshExpiresAt: string;
   }> {
-    const accessToken = await this.generateAccessToken(userId);
+    const accessToken = await this.generateAccessToken(userId, role);
     const refreshToken = await this.generateRefreshToken(userId);
 
     // 토큰 만료 시간 계산

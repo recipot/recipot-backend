@@ -8,6 +8,7 @@ import {
 } from '@/common/constants/kakao-api.constants';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import { Response } from 'express';
 import * as qs from 'qs';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
@@ -39,7 +40,7 @@ export class LoginService {
   /**
    * 카카오 로그인을 처리합니다.
    */
-  async processKakaoLogin(code: string) {
+  async processKakaoLogin(code: string, res?: Response) {
     // 1. 인가 코드로 액세스 토큰 요청
     const tokenResponse = await this.getKakaoAccessToken(code);
 
@@ -60,35 +61,59 @@ export class LoginService {
 
     if (existingSocialLogin) {
       // 기존 사용자: 기존 유저 정보 조회
-      user = await this.userService.findById(existingSocialLogin.user_id);
+      user = await this.userService.findById(existingSocialLogin.userId);
       if (!user) {
         throw new Error('User not found');
       }
     } else {
       // 신규 사용자: 유저 생성
-      user = await this.userService.createUser(
+      const newUser = await this.userService.createUser(
         kakaoUserInfo.kakao_account?.email,
       );
 
       // 소셜 로그인 정보 생성
       await this.socialLoginService.createSocialLogin(
-        user.id,
+        newUser.id,
         kakaoUserInfo.id.toString(),
         // TODO 공통코드 처리
         'kakao',
       );
+
+      // newUser를 userDto로 변환
+      user = await this.userService.findById(newUser.id);
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
     }
 
     // 4. JWT 토큰 생성 (Access Token + Refresh Token)
     const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
-      await this.authService.generateSocialLoginTokens(user.id);
+      await this.authService.generateSocialLoginTokens(user.id, user.role);
+
+    if (res) {
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        expires: new Date(accessExpiresAt as unknown as string),
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        expires: new Date(refreshExpiresAt as unknown as string),
+      });
+    }
 
     return {
       userId: user.id,
       accessToken,
-      accessExpiresAt,
       refreshToken,
-      refreshExpiresAt,
     };
   }
 

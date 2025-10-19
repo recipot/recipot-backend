@@ -1,7 +1,8 @@
-import { Public } from '@/api/auth/auth.decorators';
+import { Public } from '@/api/auth/decorators/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { LoginService } from './login.service';
 
 @ApiTags('로그인')
@@ -38,19 +39,16 @@ export class LoginController {
     type: 'object',
     properties: {
       userId: { type: 'number', example: 1 },
-      accessToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      accessExpiresAt: { type: 'string', example: '2025-08-17T11:50:04.000Z' },
-      refreshToken: {
-        type: 'string',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
-      refreshExpiresAt: { type: 'string', example: '2025-08-18T10:50:04.000Z' },
     },
   })
-  async kakaoLoginCallback(@Query('code') code: string) {
-    return await this.loginService.processKakaoLogin(code);
+  async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
+    const result = await this.loginService.processKakaoLogin(code, res);
+
+    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
+    redirectUrl.searchParams.set('userId', String(result.userId));
+    redirectUrl.searchParams.set('accessToken', result.accessToken);
+    redirectUrl.searchParams.set('refreshToken', result.refreshToken);
+
+    return res.redirect(302, redirectUrl.toString());
   }
 }
