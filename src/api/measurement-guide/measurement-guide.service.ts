@@ -9,6 +9,10 @@ import {
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
+import {
+  GetMeasurementGuidesResponseDto,
+  MeasurementGuideDetailDto,
+} from './dto/get-measurement-guide.dto';
 
 @Injectable()
 export class MeasurementGuideService {
@@ -60,5 +64,44 @@ export class MeasurementGuideService {
       createdAt: guide.createdAt,
       updatedAt: guide.updatedAt,
     }));
+  }
+
+  /**
+   * 계량 가이드 조회
+   */
+  async getMeasurementGuides(): Promise<GetMeasurementGuidesResponseDto> {
+    const guides = await this.measurementGuideRepository.find({
+      order: { categoryCode: 'ASC', id: 'ASC' },
+    });
+    if (guides.length === 0) {
+      throw new CustomException(ERROR_CODES.MEASUREMENT_GUIDE_NOT_FOUND);
+    }
+    const categoryCodes = [
+      ...new Set(guides.map((guide) => guide.categoryCode)),
+    ];
+    const commonCodes = await this.commonCodeRepository.find({
+      where: categoryCodes.map((code) => ({ code })),
+    });
+    const codeNameMap = new Map(
+      commonCodes.map((code) => [code.code, code.codeName]),
+    );
+    const groupedData: {
+      [categoryCodeName: string]: MeasurementGuideDetailDto[];
+    } = {};
+
+    for (const guide of guides) {
+      const categoryCodeName = codeNameMap.get(guide.categoryCode);
+
+      if (!groupedData[categoryCodeName]) {
+        groupedData[categoryCodeName] = [];
+      }
+
+      groupedData[categoryCodeName].push({
+        standard: guide.standard,
+        imageUrl: guide.imageUrl,
+        description: guide.description,
+      });
+    }
+    return { data: groupedData };
   }
 }
