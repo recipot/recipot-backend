@@ -17,6 +17,7 @@ import {
 } from './dto/create-ingredient.dto';
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
+import { GetRestrictedIngredientsResponseDto } from './dto/get-restricted-ingredients.dto';
 
 @Injectable()
 export class IngredientService {
@@ -29,7 +30,7 @@ export class IngredientService {
     private readonly ingredientRepository: Repository<Ingredient>,
     @InjectRepository(IngredientHealthInfo)
     private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
-    @InjectRepository(UserUnavailableIngredient) // ✅ 추가
+    @InjectRepository(UserUnavailableIngredient)
     private readonly userUnavailableIngredientRepository: Repository<UserUnavailableIngredient>,
   ) {}
 
@@ -166,6 +167,33 @@ export class IngredientService {
         categoryId: ingredient.ingredientCategoryId,
         categoryName:
           categoryMap.get(ingredient.ingredientCategoryId) || '미분류',
+        isUserRestricted: unavailableIngredientIds.has(ingredient.id),
+      })),
+    };
+  }
+
+  /**
+   * 못먹는 음식 조회 (온보딩용)
+   */
+  async getRestrictedIngredients(
+    userId: number,
+  ): Promise<GetRestrictedIngredientsResponseDto> {
+    const restrictedIngredients = await this.ingredientRepository.find({
+      where: { isRestrictedIngredient: true },
+      order: { id: 'ASC' },
+    });
+    const unavailableIngredients =
+      await this.userUnavailableIngredientRepository.find({
+        where: { userId },
+        select: ['ingredientId'],
+      });
+    const unavailableIngredientIds = new Set(
+      unavailableIngredients.map((item) => item.ingredientId),
+    );
+    return {
+      data: restrictedIngredients.map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
         isUserRestricted: unavailableIngredientIds.has(ingredient.id),
       })),
     };
