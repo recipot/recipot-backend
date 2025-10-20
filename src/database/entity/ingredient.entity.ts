@@ -15,4 +15,12 @@ export class Ingredient extends CommonEntity {
     comment: '재료 이름 (예: 고등어, 게 등)',
   })
   name: string;
+
+  @Column({
+    type: 'boolean',
+    name: 'is_restricted_ingredient',
+    default: false,
+    comment: '온보딩 단계에서 노출하는 제한 식품 여부',
+  })
+  isRestrictedIngredient: boolean;
 }

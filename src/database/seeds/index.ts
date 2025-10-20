@@ -6,6 +6,7 @@ import { SeasoningSeed } from './seasoning.seed';
 import { ToolSeed } from './tool.seed';
 import { ConditionSeed } from './condition.seed';
 import { RecipeSeed } from './recipe.seed';
+import { IngredientRestrictedSeed } from './ingredient-restricted.seed';
 
 export class DatabaseSeeder {
   constructor(
@@ -27,6 +28,12 @@ export class DatabaseSeeder {
     // IngredientSeed 실행
     const ingredientSeed = new IngredientSeed(this.dataSource);
     await ingredientSeed.run();
+
+    // IngredientRestrictedSeed
+    const ingredientRestrictedSeed = new IngredientRestrictedSeed(
+      this.dataSource,
+    );
+    await ingredientRestrictedSeed.run();
 
     // SeasoningSeed 실행
     const seasoningSeed = new SeasoningSeed(this.dataSource);
