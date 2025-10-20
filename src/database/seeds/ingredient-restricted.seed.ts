@@ -15,6 +15,15 @@ export class IngredientRestrictedSeed {
     const ingredientRepository =
       this.dataSource.manager.getRepository(Ingredient);
 
+    const restrictedCount = await ingredientRepository.count({
+      where: { isRestrictedIngredient: true },
+    });
+
+    if (restrictedCount > 0) {
+      this.logger.log('Restricted ingredients already seeded, skipping...');
+      return;
+    }
+
     this.logger.log('Starting IngredientRestrictedSeed...');
 
     // 온보딩에 노출할 제한 식품 Set
