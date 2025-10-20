@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { CommonCodeSeed } from './common-code.seed';
 import { ConditionSeed } from './condition.seed';
+import { IngredientRestrictedSeed } from './ingredient-restricted.seed';
 import { IngredientSeed } from './ingredient.seed';
 import { seedRecipeRecommendationCondition } from './recipe-recommendation-condition.seed';
 import { RecipeSeed } from './recipe.seed';
@@ -28,6 +29,12 @@ export class DatabaseSeeder {
     // IngredientSeed 실행
     const ingredientSeed = new IngredientSeed(this.dataSource);
     await ingredientSeed.run();
+
+    // IngredientRestrictedSeed
+    const ingredientRestrictedSeed = new IngredientRestrictedSeed(
+      this.dataSource,
+    );
+    await ingredientRestrictedSeed.run();
 
     // SeasoningSeed 실행
     const seasoningSeed = new SeasoningSeed(this.dataSource);

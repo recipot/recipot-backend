@@ -31,6 +31,7 @@ import {
 } from './dto/create-ingredient.dto';
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
+import { GetRestrictedIngredientsResponseDto } from './dto/get-restricted-ingredients.dto';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
@@ -70,6 +71,38 @@ export class IngredientController {
     @Request() req: any,
   ): Promise<GetIngredientsResponseDto> {
     return await this.ingredientService.getIngredients(req.user.sub);
+  }
+
+  @Get('restricted')
+  @UseGuards(JwtGuard)
+  @ApiOperation({
+    summary: '못 먹는 음식 목록 조회 (온보딩)',
+    description: '사용자가 선택할 수 있는 제한 재료 목록을 반환합니다.',
+  })
+  @ApiSuccessResponse('못 먹는 음식 조회 성공', {
+    type: 'object',
+    properties: {
+      data: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '연어' },
+            isUserRestricted: {
+              type: 'boolean',
+              example: false,
+              description: '사용자가 선택한 못먹는 음식 여부',
+            },
+          },
+        },
+      },
+    },
+  })
+  async getRestrictedIngredients(
+    @Request() req: any,
+  ): Promise<GetRestrictedIngredientsResponseDto> {
+    return await this.ingredientService.getRestrictedIngredients(req.user.sub);
   }
 
   @Get('admin/categories')

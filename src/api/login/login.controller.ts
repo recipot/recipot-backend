@@ -1,9 +1,16 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 import { LoginService } from './login.service';
+import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
+import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
 
 @ApiTags('로그인')
 @Controller({ path: 'login', version: '1' })
@@ -48,5 +55,42 @@ export class LoginController {
     redirectUrl.searchParams.set('userId', String(result.userId));
 
     return res.redirect(302, redirectUrl.toString());
+  }
+
+  // ApiSuccessResponse 사용 시 Swagger 번들에서
+  //    'swagger_1 is not defined' 런타임 오류가 발생하여
+  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
+  @Public()
+  @Public()
+  @Get('google')
+  @ApiOperation({ summary: '구글 로그인 URL 생성' })
+  @ApiOkResponse({
+    description: '구글 로그인 URL 생성 성공',
+    type: GoogleLoginResponseDto,
+  })
+  generateGoogleLoginUrl(): GoogleLoginResponseDto {
+    const loginUrl = this.loginService.generateGoogleLoginUrl();
+    return { loginUrl };
+  }
+
+  // ApiSuccessResponse 사용 시 Swagger 번들에서
+  //    'swagger_1 is not defined' 런타임 오류가 발생하여
+  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
+  @Public()
+  @Get('google/callback')
+  @ApiOperation({ summary: '구글 로그인 콜백 처리' })
+  @ApiQuery({
+    name: 'code',
+    required: true,
+    description: '구글에서 받은 인가 코드',
+  })
+  @ApiOkResponse({
+    description: '구글 로그인 성공',
+    type: LoginCallbackResponseDto,
+  })
+  async googleLoginCallback(
+    @Query('code') code: string,
+  ): Promise<LoginCallbackResponseDto> {
+    return await this.loginService.handleGoogleCallback(code);
   }
 }
