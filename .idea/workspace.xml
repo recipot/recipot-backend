@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="877a34dc-a287-45b7-af8a-51998ab368f4" name="Changes" comment="" />
+    <list default="true" id="877a34dc-a287-45b7-af8a-51998ab368f4" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/api/login/dto/google-login.response.dto.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/common/constants/google-api.constants.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/login/login.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/login/login.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/login/login.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/login/login.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/constants/error-codes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/constants/error-codes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/swagger.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/swagger.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -17,12 +25,17 @@
       </list>
     </option>
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/sangwonlee/Projects/recipot-add-google-login/recipot-backend/node_modules/typescript/lib&quot;
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "git-widget-placeholder": "feature/add-new-google-login",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "prettierjs.PrettierConfiguration.Package": "/Users/sangwonlee/Projects/recipot-add-google-login/recipot-backend/node_modules/prettier",
+    "ts.external.directory.path": "/Users/sangwonlee/Projects/recipot-add-google-login/recipot-backend/node_modules/typescript/lib"
   }
-}</component>
+}]]></component>
   <component name="TaskManager">
     <servers />
   </component>
