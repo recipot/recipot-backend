@@ -18,11 +18,6 @@ export const ERROR_CODES = {
   AUTH_TOKEN_INFO_FAILED: { code: 'E2012', message: '토큰 정보를 확인할 수 없습니다.' },
   AUTH_TOKEN_NOT_PROVIDED: { code: 'E2013', message: '토큰이 제공되지 않았습니다.' },
 
-  // 로그아웃 관련
-  LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
-  REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
-  ACCESS_BLACKLIST_FAILED: { code: 'E2103', message: '액세스 토큰 블랙리스트 처리에 실패했습니다.' },
-
   // 인가 오류
   AUTH_PERMISSION_DENIED: { code: 'E2014', message: '이 작업을 수행할 권한이 없습니다.' },
 
@@ -40,12 +35,21 @@ export const ERROR_CODES = {
   // 파일 업로드 오류
   FILE_UPLOAD_FAILED: { code: 'E7003', message: '파일 업로드 중 오류가 발생했습니다.' },
 
-  // 소셜 로그인 오류
+  // 소셜 로그인 오류 (Kakao)
   KAKAO_USER_INFO_FAILED: { code: 'E9003', message: '카카오 사용자 정보 조회에 실패했습니다.' },
   INVALID_KAKAO_CODE: { code: 'E9006', message: '유효하지 않은 카카오 인가 코드입니다.' },
   KAKAO_SERVICE_UNAVAILABLE: { code: 'E9007', message: '카카오 서비스를 이용할 수 없습니다.' },
   KAKAO_LOGIN_PROCESS_ERROR: { code: 'E9008', message: '카카오 로그인 처리 중 오류가 발생했습니다.' },
   KAKAO_CONFIG_ERROR: { code: 'E9009', message: '카카오 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+
+  // 소셜 로그인 오류 (Google)
+  GOOGLE_USER_INFO_FAILED: { code: 'E9101', message: '구글 사용자 정보 조회에 실패했습니다.' },
+  INVALID_GOOGLE_CODE: { code: 'E9102', message: '유효하지 않은 구글 인가 코드입니다.' },
+  GOOGLE_TOKEN_FAILED: { code: 'E9103', message: '구글 액세스 토큰을 가져오지 못했습니다.' },
+  GOOGLE_SERVICE_UNAVAILABLE: { code: 'E9104', message: '구글 서비스를 이용할 수 없습니다.' },
+  GOOGLE_LOGIN_PROCESS_ERROR: { code: 'E9105', message: '구글 로그인 처리 중 오류가 발생했습니다.' },
+  GOOGLE_CONFIG_ERROR: { code: 'E9106', message: '구글 설정이 올바르지 않습니다. 환경변수를 확인해주세요.' },
+  GOOGLE_AUTH_FAILED: { code: 'E9107', message: '구글 인증에 실패했습니다.' },
 
   // 재료 관련 오류
   INGREDIENT_CATEGORY_ALREADY_EXISTS: { code: 'E10001', message: '이미 존재하는 재료 카테고리입니다.' },
@@ -79,4 +83,9 @@ export const ERROR_CODES = {
   // 계량 가이드 오류
   MEASUREMENT_GUIDE_ALREADY_EXISTS: { code: 'E17001', message: '이미 존재하는 계량 가이드입니다.' },
   MEASUREMENT_GUIDE_NOT_FOUND: { code: 'E17002', message: '계량 가이드를 찾을 수 없습니다.' },
+
+  // 로그아웃 관련
+  LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
+  REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
+  ACCESS_BLACKLIST_FAILED: { code: 'E2103', message: '액세스 토큰 블랙리스트 처리에 실패했습니다.' },
 };
