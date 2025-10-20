@@ -1,12 +1,18 @@
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
+import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
+import { Recipe } from '@/database/entity/recipe.entity';
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
-  UseGuards,
   Request,
-  Get,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -15,27 +21,37 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { RecipeService } from './recipe.service';
-import { CreateRecipeDto } from './dto/create-recipe.dto';
-import { Recipe } from '@/database/entity/recipe.entity';
-import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../user/enums/role.enum';
-import { ApiErrorResponse } from '@/common/decorators/api-error-response.decorator';
-import { ERROR_CODES } from '@/common/constants/error-codes';
-import { GetRecipeResponseDto } from './dto/get-recipe.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '../user/enums/role.enum';
+import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
+import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
+import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { GetRecipeRecommendationRequestDto } from './dto/get-recipe-recommendation-request.dto';
+import { GetRecipeRecommendationResponseDto } from './dto/get-recipe-recommendation-response.dto';
+import { GetRecipeRecommendationConditionsResponseDto } from './dto/get-recipe-recommends.dto';
+import { GetRecipeResponseDto } from './dto/get-recipe.dto';
+import { RecipeRecommendationConditionResponseDto } from './dto/recipe-recommend-response.dto';
+import { UpdateRecipeRecommendationConditionDto } from './dto/update-recipe-recommend.dto';
+import { RecipeRecommendationConditionService } from './recipe-recommend.service';
+import { RecipeService } from './recipe.service';
+import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
+@UseGuards(JwtGuard)
+@ApiBearerAuth('Authorization')
 export class RecipeController {
-  constructor(private readonly recipeService: RecipeService) {}
+  constructor(
+    private readonly recipeService: RecipeService,
+    private readonly recipeRecommendationConditionService: RecipeRecommendationConditionService,
+    private readonly recipeRecommendationService: RecipeRecommendationService,
+  ) {}
 
   @Post('admin')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 레시피 생성',
     description:
@@ -211,7 +227,6 @@ export class RecipeController {
   }
 
   @Get(':id')
-  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '레시피 상세 조회',
     description:
@@ -331,5 +346,217 @@ export class RecipeController {
   ): Promise<GetRecipeResponseDto> {
     const userId = req.user.sub;
     return await this.recipeService.getRecipe(userId, recipeId);
+  }
+
+  // 레시피 추천 API
+  @Post('recommendations')
+  @ApiOperation({
+    summary: '레시피 추천',
+    description:
+      '컨디션과 보유 재료를 기반으로 레시피를 추천합니다. Redis 캐싱을 통해 성능을 최적화합니다.',
+  })
+  @ApiBody({
+    description: '레시피 추천 요청 데이터',
+    type: GetRecipeRecommendationRequestDto,
+  })
+  @ApiSuccessResponse('레시피 추천 성공', {
+    type: GetRecipeRecommendationResponseDto,
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  async getRecipeRecommendations(
+    @Body() dto: GetRecipeRecommendationRequestDto,
+    @Request() req: any,
+  ): Promise<GetRecipeRecommendationResponseDto> {
+    const userId = req.user?.sub;
+    return await this.recipeRecommendationService.getRecipeRecommendationsWithCache(
+      dto,
+      userId,
+    );
+  }
+
+  // 레시피 추천 관련 엔드포인트들
+  @Get('recommendations/admin')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 컨디션별 레시피 추천 목록 조회',
+    description: '모든 컨디션별 레시피 추천을 조회합니다.',
+  })
+  @ApiSuccessResponse('컨디션별 레시피 추천 목록 조회 성공', {
+    type: 'object',
+    properties: {
+      data: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            recipeId: { type: 'number', example: 1 },
+            conditionId: { type: 'number', example: 1 },
+            priorityScore: { type: 'number', example: 1.0 },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-01-01T00:00:00.000Z',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-01-01T00:00:00.000Z',
+            },
+          },
+        },
+      },
+      total: { type: 'number', example: 10 },
+    },
+  })
+  async getRecipeRecommendationConditions(): Promise<GetRecipeRecommendationConditionsResponseDto> {
+    return await this.recipeRecommendationConditionService.getRecipeRecommendationConditions();
+  }
+
+  @Post('recommendations/admin')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 컨디션별 레시피 추천 생성',
+    description: '새로운 레시피 추천을 데이터베이스에 생성합니다.',
+  })
+  @ApiBody({
+    description: '생성할 레시피 추천의 데이터',
+    type: [CreateRecipeRecommendationConditionDto],
+  })
+  @ApiSuccessResponse('레시피 추천 생성 성공', {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', example: 1 },
+        recipeId: { type: 'number', example: 1 },
+        conditionId: { type: 'number', example: 1 },
+        priorityScore: { type: 'number', example: 1.0 },
+        createdAt: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-01-01T00:00:00.000Z',
+        },
+        updatedAt: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-01-01T00:00:00.000Z',
+        },
+      },
+    },
+  })
+  async createRecipeRecommendationCondition(
+    @Body()
+    dto: CreateRecipeRecommendationConditionRequest,
+  ): Promise<RecipeRecommendationConditionResponseDto[]> {
+    return await this.recipeRecommendationConditionService.createRecipeRecommendationCondition(
+      dto,
+    );
+  }
+
+  @Patch('recommendations/admin/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 컨디션별 레시피 추천 수정',
+    description: '기존 컨디션별 레시피 추천의 우선순위 점수를 수정합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '레시피 추천 ID',
+    example: 1,
+  })
+  @ApiBody({
+    description: '수정할 레시피 추천의 데이터',
+    type: UpdateRecipeRecommendationConditionDto,
+  })
+  @ApiSuccessResponse('레시피 추천 수정 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      recipeId: { type: 'number', example: 1 },
+      conditionId: { type: 'number', example: 1 },
+      priorityScore: { type: 'number', example: 1.5 },
+      createdAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2025-01-01T00:00:00.000Z',
+      },
+      updatedAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2025-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  async updateRecipeRecommendationCondition(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateRecipeRecommendationConditionDto,
+  ): Promise<RecipeRecommendationConditionResponseDto> {
+    return await this.recipeRecommendationConditionService.updateRecipeRecommendationCondition(
+      id,
+      dto,
+    );
+  }
+
+  @Delete('recommendations/admin/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 컨디션별 레시피 추천 삭제',
+    description: '기존 컨디션별 레시피 추천을 삭제합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '레시피 추천 ID',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 추천 삭제 성공')
+  async deleteRecipeRecommendationCondition(
+    @Param('id', ParseIntPipe)
+    id: number,
+  ): Promise<void> {
+    return await this.recipeRecommendationConditionService.deleteRecipeRecommendationCondition(
+      id,
+    );
+  }
+
+  @Post('recommendations/admin/cache/invalidate')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 추천 캐시 무효화',
+    description: '레시피 추천 캐시를 무효화합니다.',
+  })
+  @ApiSuccessResponse('캐시 무효화 성공')
+  async invalidateRecommendationCache(): Promise<{ message: string }> {
+    await this.recipeRecommendationService.invalidateAllCache();
+    return { message: '추천 캐시가 무효화되었습니다.' };
+  }
+
+  @Post('recommendations/admin/cache/invalidate/:conditionId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 특정 컨디션 추천 캐시 무효화',
+    description: '특정 컨디션의 레시피 추천 캐시를 무효화합니다.',
+  })
+  @ApiParam({
+    name: 'conditionId',
+    description: '컨디션 ID',
+    example: 1,
+  })
+  @ApiSuccessResponse('캐시 무효화 성공')
+  async invalidateRecommendationCacheByCondition(
+    @Param('conditionId', ParseIntPipe)
+    conditionId: number,
+  ): Promise<{ message: string }> {
+    await this.recipeRecommendationService.invalidateCacheByCondition(
+      conditionId,
+    );
+    return { message: `컨디션 ${conditionId}의 추천 캐시가 무효화되었습니다.` };
   }
 }

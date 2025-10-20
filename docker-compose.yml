@@ -72,6 +72,7 @@ services:
       - .env
       - .env.production
     environment:
+      - LOG_LEVEL=${LOG_LEVEL}
       - DB_HOST=${DB_HOST}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}

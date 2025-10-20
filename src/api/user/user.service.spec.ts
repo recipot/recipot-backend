@@ -15,7 +15,6 @@ import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { UserService } from './user.service';
-import { Ingredient } from '@/database/entity/ingredient.entity';
 
 describe('UserService', () => {
   let service: UserService;
@@ -23,7 +22,6 @@ describe('UserService', () => {
   const mockUserRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
-    query: jest.fn(),
   };
 
   const mockRecipeRepository = {
@@ -45,20 +43,6 @@ describe('UserService', () => {
     remove: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
-  };
-
-  // NEW: minimal Ingredient repository mock to satisfy DI
-  const mockIngredientRepository = {
-    createQueryBuilder: jest.fn(() => ({
-      innerJoin: jest.fn().mockReturnThis(),
-      leftJoin: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      offset: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn().mockResolvedValue([]),
-      getCount: jest.fn().mockResolvedValue(0),
-    })),
   };
 
   const mockSocialLoginService = {
@@ -115,12 +99,9 @@ describe('UserService', () => {
         },
         {
           provide: getRepositoryToken(CommonCode),
-          useValue: { findOne: jest.fn() },
-        },
-        // NEW: provide Ingredient repository for DI
-        {
-          provide: getRepositoryToken(Ingredient),
-          useValue: mockIngredientRepository,
+          useValue: {
+            findOne: jest.fn(),
+          },
         },
         // 다른 의존성들도 모킹 (실제 서비스에서 사용하는 것들)
         {
@@ -142,7 +123,9 @@ describe('UserService', () => {
         },
         {
           provide: CacheService,
-          useValue: { set: jest.fn() },
+          useValue: {
+            set: jest.fn(),
+          },
         },
         {
           provide: UserRecentRecipesCustomRepository,
@@ -169,6 +152,7 @@ describe('UserService', () => {
     const recipeId = 10;
 
     it('레시피를 성공적으로 완료해야 한다', async () => {
+      // Given
       const existingCookingRecord = {
         userId,
         recipeId,
@@ -184,8 +168,10 @@ describe('UserService', () => {
       mockUserCompletedRecipeRepository.save.mockResolvedValue({});
       mockUserRepository.save.mockResolvedValue(mockUser);
 
+      // When
       const result = await service.completeRecipe(userId, recipeId);
 
+      // Then
       expect(result).toBe(true);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
@@ -209,6 +195,7 @@ describe('UserService', () => {
     });
 
     it('이미 완료된 레시피를 다시 완료할 경우 true를 반환해야 한다', async () => {
+      // Given
       const existingCompletion: UserCompletedRecipe = {
         id: 1,
         userId,
@@ -225,16 +212,20 @@ describe('UserService', () => {
         existingCompletion,
       );
 
+      // When
       const result = await service.completeRecipe(userId, recipeId);
 
+      // Then
       expect(result).toBe(true);
       expect(mockUserCompletedRecipeRepository.save).not.toHaveBeenCalled();
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
-    it('존재하지 않는 사용자로 완료할 경우 USER_NOT_FOUND 예외', async () => {
+    it('존재하지 않는 사용자로 완료할 경우 USER_NOT_FOUND 예외를 발생시켜야 한다', async () => {
+      // Given
       mockUserRepository.findOne.mockResolvedValue(null);
 
+      // When & Then
       await expect(service.completeRecipe(userId, recipeId)).rejects.toThrow(
         CustomException,
       );
@@ -243,10 +234,12 @@ describe('UserService', () => {
       );
     });
 
-    it('존재하지 않는 레시피로 완료할 경우 RECIPE_NOT_FOUND 예외', async () => {
+    it('존재하지 않는 레시피로 완료할 경우 RECIPE_NOT_FOUND 예외를 발생시켜야 한다', async () => {
+      // Given
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockRecipeRepository.findOne.mockResolvedValue(null);
 
+      // When & Then
       await expect(service.completeRecipe(userId, recipeId)).rejects.toThrow(
         CustomException,
       );
@@ -255,11 +248,13 @@ describe('UserService', () => {
       );
     });
 
-    it('요리 시작 기록이 없으면 RECIPE_COOKING_NOT_STARTED 예외', async () => {
+    it('요리 시작 기록이 없는 레시피로 완료할 경우 RECIPE_COOKING_NOT_STARTED 예외를 발생시켜야 한다', async () => {
+      // Given
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockRecipeRepository.findOne.mockResolvedValue(mockRecipe);
       mockUserCompletedRecipeRepository.findOne.mockResolvedValue(null);
 
+      // When & Then
       await expect(service.completeRecipe(userId, recipeId)).rejects.toThrow(
         CustomException,
       );
@@ -274,6 +269,7 @@ describe('UserService', () => {
     const recipeId = 10;
 
     it('레시피 요리를 성공적으로 시작해야 한다', async () => {
+      // Given
       const mockCreatedEntity = {
         userId,
         recipeId,
@@ -291,8 +287,10 @@ describe('UserService', () => {
         mockCreatedEntity,
       );
 
+      // When
       const result = await service.startRecipeCooking(userId, recipeId);
 
+      // Then
       expect(result).toBe(true);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
@@ -314,7 +312,8 @@ describe('UserService', () => {
       );
     });
 
-    it('이미 시작된 경우 true 반환', async () => {
+    it('이미 요리를 시작한 레시피를 다시 시작할 경우 true를 반환해야 한다', async () => {
+      // Given
       const existingCookingRecord: UserCompletedRecipe = {
         id: 1,
         userId,
@@ -331,16 +330,20 @@ describe('UserService', () => {
         existingCookingRecord,
       );
 
+      // When
       const result = await service.startRecipeCooking(userId, recipeId);
 
+      // Then
       expect(result).toBe(true);
       expect(mockUserCompletedRecipeRepository.create).not.toHaveBeenCalled();
       expect(mockUserCompletedRecipeRepository.save).not.toHaveBeenCalled();
     });
 
-    it('존재하지 않는 사용자면 USER_NOT_FOUND', async () => {
+    it('존재하지 않는 사용자로 요리 시작할 경우 USER_NOT_FOUND 예외를 발생시켜야 한다', async () => {
+      // Given
       mockUserRepository.findOne.mockResolvedValue(null);
 
+      // When & Then
       await expect(
         service.startRecipeCooking(userId, recipeId),
       ).rejects.toThrow(CustomException);
@@ -349,10 +352,12 @@ describe('UserService', () => {
       ).rejects.toThrow(ERROR_CODES.USER_NOT_FOUND.message);
     });
 
-    it('존재하지 않는 레시피면 RECIPE_NOT_FOUND', async () => {
+    it('존재하지 않는 레시피로 요리 시작할 경우 RECIPE_NOT_FOUND 예외를 발생시켜야 한다', async () => {
+      // Given
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockRecipeRepository.findOne.mockResolvedValue(null);
 
+      // When & Then
       await expect(
         service.startRecipeCooking(userId, recipeId),
       ).rejects.toThrow(CustomException);

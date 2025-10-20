@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
@@ -26,19 +25,13 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
+// moved to UserRecipeArchiveController
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
-import { GetRecentRecipesRequestDto } from '@/api/user/dto/get-recent-recipes-request.dto';
-import {
-  SaveUnavailableIngredientsDto,
-  SaveUnavailableIngredientsResponseDto,
-} from '@/api/user/dto/save-unavailable-ingredients.dto';
-import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
-import { MyPageSummaryDto } from '@/api/user/dto/mypage.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -93,7 +86,10 @@ export class UserController {
     return await this.userService.createBookmark(userId, createBookmarkDto);
   }
 
-  // (delete bookmark moved to UserRecipeArchiveController)
+  /**
+   * @description 레시피 북마크를 해제합니다.
+   */
+  // moved to UserRecipeArchiveController
 
   /**
    * @description 사용자의 보유 재료 설문을 저장합니다.
@@ -136,6 +132,7 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
     return await this.userService.findById(userId);
   }
@@ -152,6 +149,7 @@ export class UserController {
   @ApiSuccessResponse('프로필 업데이트 성공')
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   async updateMyProfile(@Request() req: any) {
+    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
     return {
       message: '프로필 업데이트 기능은 추후 구현 예정',
@@ -210,91 +208,5 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.findById(id);
-  }
-
-  /**
-   * @description 못 먹는 음식 목록 조회 (페이지네이션)
-   */
-  @Get('ingredients/unavailable')
-  @ApiOperation({ summary: '못 먹는 음식 목록 조회' })
-  @ApiOkResponse({
-    description: '페이지네이션된 못 먹는 재료 목록',
-    schema: {
-      example: {
-        items: [
-          { id: 12, name: '고등어' },
-          { id: 34, name: '새우' },
-        ],
-        total: 2,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
-      },
-    },
-  })
-  async getUnavailableIngredients(
-    @Request() req: any,
-    @Query() query: GetRecentRecipesRequestDto,
-  ) {
-    const userId = req.user?.sub;
-    return this.userService.getUnavailableIngredientsPaged(
-      userId,
-      Number(query.page ?? 1),
-      Number(query.limit ?? 20),
-    );
-  }
-
-  /**
-   * @description 못 먹는 음식 저장(교체)
-   */
-  @Post('ingredients/unavailable')
-  @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
-  @ApiOkResponse({
-    description: '저장된 개수',
-    type: SaveUnavailableIngredientsResponseDto,
-  })
-  async saveUnavailableIngredients(
-    @Request() req: any,
-    @Body() body: SaveUnavailableIngredientsDto,
-  ): Promise<SaveUnavailableIngredientsResponseDto> {
-    const userId = req.user?.sub;
-    return this.userService.saveUnavailableIngredients(userId, body);
-  }
-
-  /**
-   * @description Returns total number of recipe completions for the authenticated user.
-   */
-  @Get('/recipes/completions/count')
-  @ApiOperation({
-    summary: 'Get total recipe completion count',
-    description:
-      'Returns the total number of recipe completions for the authenticated user.',
-  })
-  @ApiOkResponse({
-    description: 'Total completion count',
-    type: GetCompletionCountResponseDto,
-  })
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getMyCompletionCount(
-    @Request() req: any,
-  ): Promise<GetCompletionCountResponseDto> {
-    const userId = req.user.sub;
-    const count = await this.userService.getTotalCompletionCount(userId);
-    return { count };
-  }
-
-  @Get('/mypage/summary')
-  @ApiOperation({
-    summary: '마이페이지 요약',
-    description:
-      '프로필/통계(완료횟수 포함)/북마크 미리보기/최근 본 레시피/못 먹는 재료 요약을 반환합니다.',
-  })
-  @ApiSuccessResponse('마이페이지 요약 조회 성공', MyPageSummaryDto)
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  async getMyPageSummary(@Request() req: any): Promise<MyPageSummaryDto> {
-    const userId = req.user.sub;
-    return this.userService.getMyPageSummary(userId);
   }
 }

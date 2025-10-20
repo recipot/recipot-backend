@@ -1,26 +1,27 @@
+import { CacheService } from '@/common/cache/cache.service';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { Ingredient } from '@/database/entity/ingredient.entity';
+import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
+import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
+import { RecipeRecommendationCondition } from '@/database/entity/recipe-recommendation-condition.entity';
+import { RecipeSeasoning } from '@/database/entity/recipe-seasoning.entity';
+import { RecipeStep } from '@/database/entity/recipe-step.entity';
+import { RecipeTool } from '@/database/entity/recipe-tool.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
+import { Seasoning } from '@/database/entity/seasoning.entity';
+import { Tool } from '@/database/entity/tool.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
-import { Recipe } from '@/database/entity/recipe.entity';
-import { RecipeImage } from '@/database/entity/recipe-image.entity';
-import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
-import { RecipeSeasoning } from '@/database/entity/recipe-seasoning.entity';
-import { RecipeTool } from '@/database/entity/recipe-tool.entity';
-import { RecipeStep } from '@/database/entity/recipe-step.entity';
-import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
-import { Ingredient } from '@/database/entity/ingredient.entity';
-import { Seasoning } from '@/database/entity/seasoning.entity';
-import { Tool } from '@/database/entity/tool.entity';
+import { CommonCodeService } from '../common-code/common-code.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
-import { CustomException } from '@/common/exceptions/custom-exception';
-import { ERROR_CODES } from '@/common/constants/error-codes';
 import {
   GetRecipeResponseDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
-import { CacheService } from '@/common/cache/cache.service';
-import { CommonCodeService } from '../common-code/common-code.service';
 
 interface RecipeIngredientDetail {
   ingredientId: number;
@@ -54,6 +55,8 @@ export class RecipeService {
     private readonly seasoningRepository: Repository<Seasoning>,
     @InjectRepository(Tool)
     private readonly toolRepository: Repository<Tool>,
+    @InjectRepository(RecipeRecommendationCondition)
+    private readonly recipeRecommendationConditionRepository: Repository<RecipeRecommendationCondition>,
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
   ) {}
@@ -143,6 +146,27 @@ export class RecipeService {
             }),
         );
         await this.recipeHealthPointRepository.save(recipeHealthPoints);
+      }
+
+      // 컨디션별 가중치 저장
+      if (
+        createRecipeDto.conditionWeights &&
+        createRecipeDto.conditionWeights.length > 0
+      ) {
+        const recipeRecommendationConditions =
+          createRecipeDto.conditionWeights.map((conditionWeight) =>
+            this.recipeRecommendationConditionRepository.create({
+              recipeId: savedRecipe.id,
+              conditionId: conditionWeight.conditionId,
+              priorityScore: conditionWeight.priorityScore,
+            }),
+          );
+        await this.recipeRecommendationConditionRepository.save(
+          recipeRecommendationConditions,
+        );
+        this.logger.log(
+          `레시피 ${savedRecipe.id}의 컨디션별 가중치 ${recipeRecommendationConditions.length}개 저장 완료`,
+        );
       }
 
       const createdRecipe = await this.recipeRepository.findOne({

@@ -1,14 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsString,
-  IsNotEmpty,
   IsArray,
-  ValidateNested,
-  IsInt,
   IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsString,
   IsUrl,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateRecipeIngredientDto {
@@ -119,6 +120,24 @@ export class CreateRecipeImageDto {
   imageUrl: string;
 }
 
+export class CreateRecipeConditionWeightDto {
+  @ApiProperty({
+    description: '컨디션 ID',
+    example: 1,
+  })
+  @IsInt()
+  @IsNotEmpty()
+  conditionId: number;
+
+  @ApiProperty({
+    description: '가중치 (높을수록 더 적합)',
+    example: 1.5,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  priorityScore: number;
+}
+
 export class CreateRecipeDto {
   @ApiProperty({
     description: '레시피 제목',
@@ -217,4 +236,14 @@ export class CreateRecipeDto {
   @Type(() => CreateRecipeHealthPointDto)
   @IsOptional()
   healthPoints?: CreateRecipeHealthPointDto[];
+
+  @ApiProperty({
+    description: '컨디션별 가중치들',
+    type: [CreateRecipeConditionWeightDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateRecipeConditionWeightDto)
+  @IsOptional()
+  conditionWeights?: CreateRecipeConditionWeightDto[];
 }
