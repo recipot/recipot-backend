@@ -463,8 +463,8 @@ export class UserService {
       this.logger.log(
         `User ${userId} condition saved to cache: conditionId=${conditionId}`,
       );
-      let timeSlot: TimeSlot;
       if (isRecommendationStarted) {
+        let timeSlot: TimeSlot;
         const currentHour = new Date().getHours();
         if (currentHour >= 5 && currentHour < 12) {
           timeSlot = TimeSlot.MORNING;
@@ -480,10 +480,10 @@ export class UserService {
           timeSlot,
         });
         await this.userDailyConditionsRepository.save(userDailyCondition);
+        this.logger.log(
+          `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+        );
       }
-      this.logger.log(
-        `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
-      );
       return {
         conditionId: conditionId,
       };
