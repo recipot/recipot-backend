@@ -8,6 +8,7 @@ import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.ent
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { User } from '@/database/entity/user.entity';
+import { UserDailyConditions } from '@/database/entity/user-daily-conditions.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { SocialLoginService } from '../social-login/social-login.service';
@@ -96,6 +97,10 @@ describe('UserService', () => {
         {
           provide: getRepositoryToken(UserRecentRecipes),
           useValue: mockUserRecentRecipesRepository,
+        },
+        {
+          provide: getRepositoryToken(UserDailyConditions),
+          useValue: {},
         },
         {
           provide: getRepositoryToken(CommonCode),

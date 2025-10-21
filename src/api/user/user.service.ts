@@ -35,6 +35,7 @@ import {
   TimeSlot,
   UserDailyConditions,
 } from '@/database/entity/user-daily-conditions.entity';
+import { GetUserConditionResponseDto } from './dto/get-user-condition.dto';
 
 @Injectable()
 export class UserService {
@@ -488,6 +489,41 @@ export class UserService {
       };
     } catch (error) {
       this.logger.error('사용자 컨디션 저장 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * 유저의 컨디션을 조회
+   */
+  async getUserCondition(userId: number): Promise<GetUserConditionResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
+      const cacheKey = `user:${userId}:daily_condition`;
+      const cachedData = await this.cacheService.get(cacheKey);
+      if (!cachedData) {
+        this.logger.log(`User ${userId} condition not found in cache`);
+        return {
+          conditionId: null,
+        };
+      }
+      const parsedData = JSON.parse(cachedData);
+      this.logger.log(
+        `User ${userId} condition retrieved from cache: conditionId=${parsedData.conditionId}`,
+      );
+      return {
+        conditionId: parsedData.conditionId,
+      };
+    } catch (error) {
+      this.logger.error('사용자 컨디션 조회 중 에러 발생', error);
       if (error instanceof CustomException) {
         throw error;
       }

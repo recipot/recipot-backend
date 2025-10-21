@@ -36,6 +36,7 @@ import {
   SaveUserConditionDto,
   SaveUserConditionResponseDto,
 } from './dto/save-user-condition.dto';
+import { GetUserConditionResponseDto } from './dto/get-user-condition.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -135,6 +136,32 @@ export class UserController {
   ): Promise<SaveUserConditionResponseDto> {
     const userId = req.user.sub;
     return await this.userService.saveUserCondition(userId, conditionDto);
+  }
+
+  @Get('/conditions/daily')
+  @ApiOperation({
+    summary: '컨디션 조회',
+    description:
+      '사용자가 저장한 일일 컨디션을 조회합니다. 캐시에서 조회하며, 없으면 null을 반환합니다.',
+  })
+  @ApiSuccessResponse('컨디션 조회 성공', {
+    type: 'object',
+    properties: {
+      conditionId: {
+        type: 'number',
+        example: 1,
+        nullable: true,
+        description: '저장된 컨디션 ID (없으면 null)',
+      },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getUserCondition(
+    @Request() req: any,
+  ): Promise<GetUserConditionResponseDto> {
+    const userId = req.user.sub;
+    return await this.userService.getUserCondition(userId);
   }
 
   /**
