@@ -32,6 +32,11 @@ import {
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import {
+  SaveUserConditionDto,
+  SaveUserConditionResponseDto,
+} from './dto/save-user-condition.dto';
+import { GetUserConditionResponseDto } from './dto/get-user-condition.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -111,6 +116,52 @@ export class UserController {
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
     const userId = req.user.sub;
     return await this.userService.saveUserIngredientsSurvey(userId, surveyDto);
+  }
+
+  /**
+   * @description 사용자의 컨디션을 저장합니다.
+   */
+  @Post('/conditions/daily')
+  @ApiOperation({
+    summary: '컨디션 저장',
+    description:
+      '사용자가 선택한 컨디션을 저장합니다. 추천 단계 진행 여부에 따라 캐시 또는 DB에 저장합니다.',
+  })
+  @ApiSuccessResponse('컨디션 저장 성공', SaveUserConditionResponseDto)
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async saveUserCondition(
+    @Request() req: any,
+    @Body() conditionDto: SaveUserConditionDto,
+  ): Promise<SaveUserConditionResponseDto> {
+    const userId = req.user.sub;
+    return await this.userService.saveUserCondition(userId, conditionDto);
+  }
+
+  @Get('/conditions/daily')
+  @ApiOperation({
+    summary: '컨디션 조회',
+    description:
+      '사용자가 저장한 일일 컨디션을 조회합니다. 캐시에서 조회하며, 없으면 null을 반환합니다.',
+  })
+  @ApiSuccessResponse('컨디션 조회 성공', {
+    type: 'object',
+    properties: {
+      conditionId: {
+        type: 'number',
+        example: 1,
+        nullable: true,
+        description: '저장된 컨디션 ID (없으면 null)',
+      },
+    },
+  })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async getUserCondition(
+    @Request() req: any,
+  ): Promise<GetUserConditionResponseDto> {
+    const userId = req.user.sub;
+    return await this.userService.getUserCondition(userId);
   }
 
   /**

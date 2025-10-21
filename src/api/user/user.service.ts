@@ -27,6 +27,15 @@ import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import {
+  SaveUserConditionDto,
+  SaveUserConditionResponseDto,
+} from './dto/save-user-condition.dto';
+import {
+  TimeSlot,
+  UserDailyConditions,
+} from '@/database/entity/user-daily-conditions.entity';
+import { GetUserConditionResponseDto } from './dto/get-user-condition.dto';
 
 @Injectable()
 export class UserService {
@@ -44,6 +53,8 @@ export class UserService {
     private readonly recipeRepository: Repository<Recipe>,
     @InjectRepository(UserRecentRecipes)
     private readonly userRecentRecipesRepository: Repository<UserRecentRecipes>,
+    @InjectRepository(UserDailyConditions)
+    private readonly userDailyConditionsRepository: Repository<UserDailyConditions>,
     private readonly userRecipeBookmarkCustomRepository: UserRecipeBookmarkCustomRepository,
     private readonly userRecentRecipesCustomRepository: UserRecentRecipesCustomRepository,
     @InjectRepository(CommonCode)
@@ -425,5 +436,118 @@ export class UserService {
       totalCount: completedRecipes.length,
       completedRecipeIds,
     };
+  }
+
+  /**
+   * 유저의 컨디션을 저장
+   */
+  async saveUserCondition(
+    userId: number,
+    dto: SaveUserConditionDto,
+  ): Promise<SaveUserConditionResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
+      const { conditionId, isRecommendationStarted } = dto;
+      const cacheKey = `user:${userId}:daily_condition`;
+      const ttl = 24 * 60 * 60 * 1000; // 24시간 (밀리초)
+      const cachedData = {
+        conditionId,
+        savedAt: new Date().toISOString(),
+      };
+      await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
+      this.logger.log(
+        `User ${userId} condition saved to cache: conditionId=${conditionId}`,
+      );
+      if (isRecommendationStarted) {
+        let timeSlot: TimeSlot;
+        const currentHour = new Date().getHours();
+        if (currentHour >= 5 && currentHour < 12) {
+          timeSlot = TimeSlot.MORNING;
+        } else if (currentHour >= 12 && currentHour < 18) {
+          timeSlot = TimeSlot.LUNCH;
+        } else {
+          timeSlot = TimeSlot.DINNER;
+        }
+        const userDailyCondition = this.userDailyConditionsRepository.create({
+          userId,
+          conditionId,
+          date: new Date(),
+          timeSlot,
+        });
+        await this.userDailyConditionsRepository.save(userDailyCondition);
+        this.logger.log(
+          `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+        );
+      }
+      return {
+        conditionId: conditionId,
+      };
+    } catch (error) {
+      this.logger.error('사용자 컨디션 저장 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * 유저의 컨디션을 조회
+   */
+  async getUserCondition(userId: number): Promise<GetUserConditionResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      }
+      const cacheKey = `user:${userId}:daily_condition`;
+      const cachedData = await this.cacheService.get(cacheKey);
+      if (!cachedData) {
+        this.logger.log(`User ${userId} condition not found in cache`);
+        return {
+          conditionId: null,
+        };
+      }
+      let parsedData: { conditionId: number };
+      try {
+        parsedData = JSON.parse(cachedData);
+      } catch {
+        this.logger.warn(
+          `User ${userId} has corrupted cache data, clearing cache`,
+        );
+        await this.cacheService.del(cacheKey);
+        return {
+          conditionId: null,
+        };
+      }
+      if (!parsedData || typeof parsedData.conditionId !== 'number') {
+        this.logger.warn(
+          `User ${userId} has invalid cache data format: ${JSON.stringify(parsedData)}`,
+        );
+        await this.cacheService.del(cacheKey);
+        return {
+          conditionId: null,
+        };
+      }
+      this.logger.log(
+        `User ${userId} condition retrieved from cache: conditionId=${parsedData.conditionId}`,
+      );
+      return {
+        conditionId: parsedData.conditionId,
+      };
+    } catch (error) {
+      this.logger.error('사용자 컨디션 조회 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
   }
 }
