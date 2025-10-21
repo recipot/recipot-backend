@@ -17,6 +17,7 @@ import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookm
 import { UserService } from '@/api/user/user.service';
 import { UserRecipeArchiveController } from './user-recipe-archive.controller';
 import { UserRecipeArchiveService } from './user-recipe-archive.service';
+import { UserDailyConditions } from '@/database/entity/user-daily-conditions.entity';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { UserRecipeArchiveService } from './user-recipe-archive.service';
       UserCompletedRecipe,
       Recipe,
       SocialLogin,
+      UserDailyConditions,
     ]),
     SocialLoginModule,
   ],

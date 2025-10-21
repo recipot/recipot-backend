@@ -32,6 +32,10 @@ import {
 } from './dto/save-user-ingredients-survey.dto';
 import { UserService } from './user.service';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import {
+  SaveUserConditionDto,
+  SaveUserConditionResponseDto,
+} from './dto/save-user-condition.dto';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -111,6 +115,26 @@ export class UserController {
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
     const userId = req.user.sub;
     return await this.userService.saveUserIngredientsSurvey(userId, surveyDto);
+  }
+
+  /**
+   * @description 사용자의 컨디션을 저장합니다.
+   */
+  @Post('/conditions/daily')
+  @ApiOperation({
+    summary: '컨디션 저장',
+    description:
+      '사용자가 선택한 컨디션을 저장합니다. 추천 단계 진행 여부에 따라 캐시 또는 DB에 저장합니다.',
+  })
+  @ApiSuccessResponse('컨디션 저장 성공', SaveUserConditionResponseDto)
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async saveUserCondition(
+    @Request() req: any,
+    @Body() conditionDto: SaveUserConditionDto,
+  ): Promise<SaveUserConditionResponseDto> {
+    const userId = req.user.sub;
+    return await this.userService.saveUserCondition(userId, conditionDto);
   }
 
   /**
