@@ -1,16 +1,11 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
+import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
+import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
-import {
-  ApiOkResponse,
-  ApiOperation,
-  ApiQuery,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { LoginService } from './login.service';
-import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
-import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
 
 @ApiTags('로그인')
 @Controller({ path: 'login', version: '1' })
@@ -64,10 +59,7 @@ export class LoginController {
   @Public()
   @Get('google')
   @ApiOperation({ summary: '구글 로그인 URL 생성' })
-  @ApiOkResponse({
-    description: '구글 로그인 URL 생성 성공',
-    type: GoogleLoginResponseDto,
-  })
+  @ApiSuccessResponse('구글 로그인 URL 생성 성공', GoogleLoginResponseDto)
   generateGoogleLoginUrl(): GoogleLoginResponseDto {
     const loginUrl = this.loginService.generateGoogleLoginUrl();
     return { loginUrl };
@@ -84,10 +76,7 @@ export class LoginController {
     required: true,
     description: '구글에서 받은 인가 코드',
   })
-  @ApiOkResponse({
-    description: '구글 로그인 성공',
-    type: LoginCallbackResponseDto,
-  })
+  @ApiSuccessResponse('구글 로그인 성공', LoginCallbackResponseDto)
   async googleLoginCallback(
     @Query('code') code: string,
   ): Promise<LoginCallbackResponseDto> {
