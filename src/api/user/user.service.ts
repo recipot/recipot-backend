@@ -515,7 +515,27 @@ export class UserService {
           conditionId: null,
         };
       }
-      const parsedData = JSON.parse(cachedData);
+      let parsedData: { conditionId: number };
+      try {
+        parsedData = JSON.parse(cachedData);
+      } catch {
+        this.logger.warn(
+          `User ${userId} has corrupted cache data, clearing cache`,
+        );
+        await this.cacheService.del(cacheKey);
+        return {
+          conditionId: null,
+        };
+      }
+      if (!parsedData || typeof parsedData.conditionId !== 'number') {
+        this.logger.warn(
+          `User ${userId} has invalid cache data format: ${JSON.stringify(parsedData)}`,
+        );
+        await this.cacheService.del(cacheKey);
+        return {
+          conditionId: null,
+        };
+      }
       this.logger.log(
         `User ${userId} condition retrieved from cache: conditionId=${parsedData.conditionId}`,
       );
