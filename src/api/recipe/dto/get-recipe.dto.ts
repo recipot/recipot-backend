@@ -209,4 +209,11 @@ export class GetRecipeResponseDto {
     isArray: true,
   })
   healthPoints: RecipeHealthPointDto[];
+
+  @ApiProperty({
+    description: '사용자의 북마크 여부',
+    example: true,
+    type: 'boolean',
+  })
+  isBookmarked: boolean;
 }

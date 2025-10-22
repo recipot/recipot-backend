@@ -334,8 +334,7 @@ export class RecipeController {
           },
         },
       },
-      is_bookmarked: { type: 'boolean', example: true },
-      is_completed: { type: 'boolean', example: false },
+      isBookmarked: { type: 'boolean', example: true },
     },
   })
   @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
