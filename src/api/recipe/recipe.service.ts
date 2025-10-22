@@ -22,6 +22,7 @@ import {
   GetRecipeResponseDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 
 interface RecipeIngredientDetail {
   ingredientId: number;
@@ -57,6 +58,8 @@ export class RecipeService {
     private readonly toolRepository: Repository<Tool>,
     @InjectRepository(RecipeRecommendationCondition)
     private readonly recipeRecommendationConditionRepository: Repository<RecipeRecommendationCondition>,
+    @InjectRepository(UserRecipeBookmark)
+    private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
   ) {}
@@ -203,6 +206,7 @@ export class RecipeService {
         recipeTools,
         steps,
         healthPoints,
+        userBookmark,
       ] = await Promise.all([
         this.recipeImageRepository.find({ where: { recipeId } }),
         this.recipeIngredientRepository.find({ where: { recipeId } }),
@@ -210,6 +214,9 @@ export class RecipeService {
         this.recipeToolRepository.find({ where: { recipeId } }),
         this.recipeStepRepository.find({ where: { recipeId } }),
         this.recipeHealthPointRepository.find({ where: { recipeId } }),
+        this.userRecipeBookmarkRepository.findOne({
+          where: { userId, recipeId },
+        }),
       ]);
 
       const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
@@ -285,6 +292,7 @@ export class RecipeService {
         healthPoints: healthPoints.map((healthPoint) => ({
           content: healthPoint.content,
         })),
+        isBookmarked: !!userBookmark,
       };
     } catch (error) {
       this.logger.error('레시피 조회 중 에러 발생', error);
