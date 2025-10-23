@@ -372,6 +372,9 @@ export class UserService {
     user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
     await this.userRepository.save(user);
 
+    // 완료 이력 기록
+    await this.logCompletionHistory(userId, recipeId);
+
     return true;
   }
 
