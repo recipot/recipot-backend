@@ -145,7 +145,9 @@ describe('UserController (E2E)', () => {
         expect(completedRecipe).toHaveProperty('isCompleted');
         expect(completedRecipe).toHaveProperty('isReviewed');
         expect(completedRecipe).toHaveProperty('createdAt');
+        expect(completedRecipe).toHaveProperty('isBookmarked');
         expect(completedRecipe.isCompleted).toBe(true);
+        expect(typeof completedRecipe.isBookmarked).toBe('boolean');
         expect(Array.isArray(completedRecipe.recipeImages)).toBe(true);
       }
     });
@@ -155,6 +157,58 @@ describe('UserController (E2E)', () => {
         app,
         'get',
         '/v1/users/recipes/completed?page=1&limit=2',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(response.body.data.page).toBe(1);
+      expect(response.body.data.limit).toBe(2);
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+      expect(response.body.data.items.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('최근 본 레시피 조회 플로우', () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 최근 본 레시피 목록 조회 - /users/recipes/recent (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/users/recipes/recent',
+      );
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body.data).toHaveProperty('items');
+      expect(response.body.data).toHaveProperty('total');
+      expect(response.body.data).toHaveProperty('page');
+      expect(response.body.data).toHaveProperty('limit');
+      expect(response.body.data).toHaveProperty('totalPages');
+      expect(Array.isArray(response.body.data.items)).toBe(true);
+
+      // 최근 본 레시피 데이터 구조 검증
+      if (response.body.data.items.length > 0) {
+        const recentRecipe = response.body.data.items[0];
+        expect(recentRecipe).toHaveProperty('id');
+        expect(recentRecipe).toHaveProperty('userId');
+        expect(recentRecipe).toHaveProperty('recipeId');
+        expect(recentRecipe).toHaveProperty('recipeTitle');
+        expect(recentRecipe).toHaveProperty('recipeDescription');
+        expect(recentRecipe).toHaveProperty('recipeImages');
+        expect(recentRecipe).toHaveProperty('createdAt');
+        expect(recentRecipe).toHaveProperty('isBookmarked');
+        expect(typeof recentRecipe.isBookmarked).toBe('boolean');
+        expect(Array.isArray(recentRecipe.recipeImages)).toBe(true);
+      }
+    });
+
+    it(`${TEST_TAGS.AUTHENTICATED} 최근 본 레시피 목록 조회 (페이지네이션) - /users/recipes/recent?page=1&limit=2 (GET)`, async () => {
+      const response = await authenticatedRequest(
+        app,
+        'get',
+        '/v1/users/recipes/recent?page=1&limit=2',
       );
 
       expect(response.status).toBe(HttpStatus.OK);

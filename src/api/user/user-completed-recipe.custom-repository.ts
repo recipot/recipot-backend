@@ -31,10 +31,16 @@ export class UserCompletedRecipeCustomRepository extends Repository<any> {
         'recipe.title as recipe_title',
         'recipe.description as recipe_description',
         'image.image_url as recipe_image',
+        'CASE WHEN bookmark.id IS NOT NULL THEN 1 ELSE 0 END as is_bookmarked',
       ])
       .from('user_completed_recipes', 'completed')
       .leftJoin('recipes', 'recipe', 'completed.recipe_id = recipe.id')
       .leftJoin('recipe_images', 'image', 'recipe.id = image.recipe_id')
+      .leftJoin(
+        'user_recipe_bookmarks',
+        'bookmark',
+        'completed.user_id = bookmark.user_id AND completed.recipe_id = bookmark.recipe_id',
+      )
       .where('completed.user_id = :userId', { userId })
       .andWhere('completed.is_completed = :isCompleted', { isCompleted: true })
       .orderBy('completed.created_at', 'DESC');
@@ -54,6 +60,7 @@ export class UserCompletedRecipeCustomRepository extends Repository<any> {
           isCompleted: row.completed_is_completed,
           isReviewed: row.completed_is_reviewed,
           createdAt: row.completed_created_at,
+          isBookmarked: Boolean(row.is_bookmarked),
         });
       } else {
         const existing = map.get(row.completed_id)!;

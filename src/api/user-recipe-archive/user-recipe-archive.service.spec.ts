@@ -177,6 +177,7 @@ describe('UserRecipeArchiveService', () => {
             isCompleted: true,
             isReviewed: false,
             createdAt: new Date('2024-01-01T00:00:00.000Z'),
+            isBookmarked: true,
           },
         ],
         total: 1,
@@ -257,6 +258,62 @@ describe('UserRecipeArchiveService', () => {
         userId,
         recipeId,
       );
+    });
+  });
+
+  describe('getRecentRecipes', () => {
+    const userId = 1;
+    const query = { page: 1, limit: 10 };
+
+    it('성공적으로 최근 본 레시피 목록을 조회해야 함', async () => {
+      // Given
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      const mockRecentRecipes = {
+        items: [
+          {
+            id: 1,
+            userId: 1,
+            recipeId: 1,
+            recipeTitle: '최근 본 김치찌개',
+            recipeDescription: '매콤하고 시원한 김치찌개',
+            recipeImages: ['https://example.com/kimchi-recent.jpg'],
+            createdAt: new Date('2024-01-01T00:00:00.000Z'),
+            isBookmarked: false,
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      };
+      mockUserRecentRecipesCustomRepository.findRecentRecipesWithRecipeByUserIdPaginated.mockResolvedValue(
+        mockRecentRecipes,
+      );
+
+      // When
+      const result = await service.getRecentRecipes(userId, query);
+
+      // Then
+      expect(result).toEqual(mockRecentRecipes);
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+      expect(
+        mockUserRecentRecipesCustomRepository.findRecentRecipesWithRecipeByUserIdPaginated,
+      ).toHaveBeenCalledWith(userId, 1, 10);
+    });
+
+    it('사용자가 존재하지 않으면 USER_NOT_FOUND 예외를 발생시켜야 함', async () => {
+      // Given
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      // When & Then
+      await expect(service.getRecentRecipes(userId, query)).rejects.toThrow(
+        new CustomException(ERROR_CODES.USER_NOT_FOUND),
+      );
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
     });
   });
 
