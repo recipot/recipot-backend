@@ -1,51 +1,52 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   Min,
 } from 'class-validator';
 
-export class GetRecipeRecommendationRequestDto {
+export class RecipeRecommendRequestDto {
   @ApiProperty({
     description: '컨디션 ID',
     example: 1,
   })
+  @IsInt()
   @IsNotEmpty()
-  @IsNumber()
   conditionId: number;
 
   @ApiProperty({
-    description: '보유 재료 ID 배열',
+    description: '사용자가 보유한 재료 ID 목록',
     example: [1, 2, 3],
     type: [Number],
   })
   @IsArray()
-  @IsNumber({}, { each: true })
+  @IsInt({ each: true })
   @ArrayNotEmpty()
   pantryIds: number[];
 
   @ApiProperty({
-    description: '페이지 번호 (1부터 시작)',
+    description: '페이지 번호 (기본값: 1)',
     example: 1,
-    default: 1,
     required: false,
   })
-  @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @IsOptional()
+  @Type(() => Number)
   page?: number = 1;
 
   @ApiProperty({
-    description: '페이지당 아이템 수',
-    example: 3,
-    default: 3,
+    description: '페이지 크기 (기본값: 10)',
+    example: 10,
     required: false,
   })
-  @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
-  pageSize?: number = 3;
+  @IsOptional()
+  @Type(() => Number)
+  pageSize?: number = 10;
 }

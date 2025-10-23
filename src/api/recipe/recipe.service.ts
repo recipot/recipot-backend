@@ -12,6 +12,7 @@ import { RecipeTool } from '@/database/entity/recipe-tool.entity';
 import { Recipe } from '@/database/entity/recipe.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
+import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -22,7 +23,6 @@ import {
   GetRecipeResponseDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
-import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 
 interface RecipeIngredientDetail {
   ingredientId: number;

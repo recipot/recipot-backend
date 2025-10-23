@@ -1,3 +1,4 @@
+import { CacheLockService } from '@/common/cache/cache-lock.service';
 import { RECOMMENDATION_CONFIG } from '@/common/constants/recipe.constants';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { CommonCode } from '@/database/entity/common-code.entity';
@@ -25,7 +26,6 @@ import {
   RecomputeParams,
 } from '../interfaces/recommendation.interface';
 import { cacheKey, lockKey } from '../utils/cache-key.util';
-import { CacheLockService } from './cache-lock.service';
 
 @Injectable()
 export class RecipeRecommendationService {

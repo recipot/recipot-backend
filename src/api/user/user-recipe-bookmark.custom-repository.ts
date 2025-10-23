@@ -87,4 +87,17 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
     const result = await queryBuilder.getRawOne();
     return parseInt(result.count) > 0;
   }
+
+  /**
+   * 사용자의 북마크 개수를 조회합니다.
+   */
+  async countByUserId(userId: number): Promise<number> {
+    const queryBuilder = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('user_recipe_bookmarks', 'bookmark')
+      .where('bookmark.user_id = :userId', { userId });
+    const result = await queryBuilder.getRawOne();
+    return parseInt(result.count);
+  }
 }

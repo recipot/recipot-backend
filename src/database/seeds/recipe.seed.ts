@@ -1,14 +1,14 @@
 import { DataSource } from 'typeorm';
-import { Ingredient } from '../entity/ingredient.entity';
-import { RecipeHealthPoint } from '../entity/recipe-health-point.entity';
 import { Recipe } from '../entity/recipe.entity';
+import { Ingredient } from '../entity/ingredient.entity';
 import { Seasoning } from '../entity/seasoning.entity';
 import { Tool } from '../entity/tool.entity';
 import { RecipeImage } from '../entity/recipe-image.entity';
 import { RecipeIngredient } from '../entity/recipe-ingredient.entity';
 import { RecipeSeasoning } from '../entity/recipe-seasoning.entity';
-import { RecipeStep } from '../entity/recipe-step.entity';
 import { RecipeTool } from '../entity/recipe-tool.entity';
+import { RecipeStep } from '../entity/recipe-step.entity';
+import { RecipeHealthPoint } from '../entity/recipe-health-point.entity';
 
 export class RecipeSeed {
   constructor(private dataSource: DataSource) {}

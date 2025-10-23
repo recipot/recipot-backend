@@ -1,3 +1,4 @@
+import { CacheLockService } from '@/common/cache/cache-lock.service';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
@@ -12,7 +13,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GetRecipeRecommendationRequestDto } from '../dto/get-recipe-recommendation-request.dto';
-import { CacheLockService } from './cache-lock.service';
 import { RecipeRecommendationService } from './recipe-recommendation.service';
 
 type MockType<T> = {

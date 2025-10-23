@@ -31,7 +31,7 @@ export const ERROR_CODES = {
   // 유효성 검사 오류
   VALIDATION_ERROR: { code: 'E6001', message: '입력값이 유효하지 않습니다.' },
   INVALID_FORMAT: { code: 'E6003', message: '입력값 형식이 올바르지 않습니다.' },
-  INVALID_REQUEST_DATA: { code: 'E6004', message: '요청 데이터가 올바르지 않습니다.' },
+  INVALID_REQUEST_DATA: { code: 'E6004', message: '요청 데이터가 유효하지 않습니다.' },
 
   // 파일 업로드 오류
   FILE_UPLOAD_FAILED: { code: 'E7003', message: '파일 업로드 중 오류가 발생했습니다.' },
@@ -68,6 +68,8 @@ export const ERROR_CODES = {
   RECIPE_CREATE_FAILED: { code: 'E13001', message: '레시피 생성에 실패했습니다.' },
   RECIPE_NOT_FOUND: { code: 'E13002', message: '레시피를 찾을 수 없습니다.' },
   RECIPE_GET_FAILED: { code: 'E13003', message: '레시피 조회에 실패했습니다.' },
+  RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS: { code: 'E13004', message: '이미 존재하는 레시피 추천 조건입니다.' },
+  RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND: { code: 'E13005', message: '레시피 추천 조건을 찾을 수 없습니다.' },
 
   // 컨디션 관련 오류
   CONDITION_ALREADY_EXISTS: { code: 'E14001', message: '이미 존재하는 컨디션입니다.' },
@@ -81,24 +83,10 @@ export const ERROR_CODES = {
   // 건강 설문 오류
   HEALTH_SURVEY_NOT_ELIGIBLE: { code: 'E16001', message: '현재는 건강 설문을 작성할 수 없습니다.' },
 
-  // 레시피 추천 컨디션 관련 오류
-  RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS: {
-    code: 'E17001',
-    message: '이미 존재하는 레시피 추천 컨디션입니다.',
-  },
-  RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND: {
-    code: 'E17002',
-    message: '레시피 추천 컨디션을 찾을 수 없습니다.',
-  },
   // 계량 가이드 오류
-  MEASUREMENT_GUIDE_ALREADY_EXISTS: { 
-    code: 'E18001', 
-    message: '이미 존재하는 계량 가이드입니다.' 
-  },
-  MEASUREMENT_GUIDE_NOT_FOUND: { 
-    code: 'E18002', 
-    message: '계량 가이드를 찾을 수 없습니다.' 
-  },
+  MEASUREMENT_GUIDE_ALREADY_EXISTS: { code: 'E17001', message: '이미 존재하는 계량 가이드입니다.' },
+  MEASUREMENT_GUIDE_NOT_FOUND: { code: 'E17002', message: '계량 가이드를 찾을 수 없습니다.' },
+
   // 로그아웃 관련
   LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
   REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
