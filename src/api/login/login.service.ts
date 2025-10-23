@@ -116,6 +116,8 @@ export class LoginService {
 
     return {
       userId: user.id,
+      accessToken,
+      refreshToken,
     };
   }
 

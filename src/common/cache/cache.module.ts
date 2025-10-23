@@ -2,6 +2,7 @@ import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
 import { Global, Module } from '@nestjs/common';
 import { redisStore } from 'cache-manager-redis-yet';
 
+import { CacheLockService } from '@/api/recipe/services/cache-lock.service';
 import { CacheService } from '@/common/cache/cache.service';
 import { ConfigService } from '@/config/config.service';
 
@@ -22,7 +23,7 @@ import { ConfigService } from '@/config/config.service';
       },
     }),
   ],
-  providers: [CacheService],
-  exports: [CacheService, NestCacheModule], // CACHE_MANAGER 토큰도 함께 export
+  providers: [CacheService, CacheLockService],
+  exports: [CacheService, CacheLockService],
 })
 export class CacheModule {}

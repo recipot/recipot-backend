@@ -21,7 +21,6 @@ import { CommonCodeModule } from '../common-code/common-code.module';
 import { RecipeRecommendationConditionService } from './recipe-recommend.service';
 import { RecipeController } from './recipe.controller';
 import { RecipeService } from './recipe.service';
-import { CacheLockService } from './services/cache-lock.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 @Module({
@@ -34,13 +33,13 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
       RecipeTool,
       RecipeStep,
       RecipeHealthPoint,
+      RecipeRecommendationCondition,
       Ingredient,
       Seasoning,
       Tool,
-      CommonCode,
-      Condition,
-      RecipeRecommendationCondition,
       UserRecipeBookmark,
+      Condition,
+      CommonCode,
       UserRecipeRecommendation,
       UserUnavailableIngredient,
     ]),
@@ -51,7 +50,6 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
   providers: [
     RecipeService,
     RecipeRecommendationConditionService,
-    CacheLockService,
     RecipeRecommendationService,
   ],
   exports: [RecipeService],

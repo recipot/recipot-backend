@@ -28,4 +28,10 @@ export class UserDto {
     required: false,
   })
   platform?: string;
+
+  @ApiProperty({ description: '생성일시', example: '2024-01-01T00:00:00.000Z' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '수정일시', example: '2024-01-01T00:00:00.000Z' })
+  updatedAt: Date;
 }

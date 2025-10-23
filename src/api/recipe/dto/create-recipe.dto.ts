@@ -5,7 +5,6 @@ import {
   IsBoolean,
   IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
@@ -110,16 +109,6 @@ export class CreateRecipeHealthPointDto {
   content: string;
 }
 
-export class CreateRecipeImageDto {
-  @ApiProperty({
-    description: '레시피 이미지 주소',
-    example: 'https://example.com/recipe.jpg',
-  })
-  @IsString()
-  @IsNotEmpty()
-  imageUrl: string;
-}
-
 export class CreateRecipeConditionWeightDto {
   @ApiProperty({
     description: '컨디션 ID',
@@ -130,12 +119,30 @@ export class CreateRecipeConditionWeightDto {
   conditionId: number;
 
   @ApiProperty({
-    description: '가중치 (높을수록 더 적합)',
-    example: 1.5,
+    description: '가중치',
+    example: 0.8,
   })
-  @IsNumber()
+  @IsInt()
+  @IsNotEmpty()
+  weight: number;
+
+  @ApiProperty({
+    description: '우선순위 점수',
+    example: 85,
+  })
+  @IsInt()
   @IsNotEmpty()
   priorityScore: number;
+}
+
+export class CreateRecipeImageDto {
+  @ApiProperty({
+    description: '레시피 이미지 주소',
+    example: 'https://example.com/recipe.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  imageUrl: string;
 }
 
 export class CreateRecipeDto {
@@ -238,7 +245,7 @@ export class CreateRecipeDto {
   healthPoints?: CreateRecipeHealthPointDto[];
 
   @ApiProperty({
-    description: '컨디션별 가중치들',
+    description: '레시피 컨디션 가중치들',
     type: [CreateRecipeConditionWeightDto],
   })
   @IsArray()

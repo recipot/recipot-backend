@@ -64,4 +64,17 @@ export class UserRecentRecipesCustomRepository extends Repository<any> {
 
     return { items, total, page, limit, totalPages };
   }
+
+  /**
+   * 사용자의 최근 레시피 개수를 조회합니다.
+   */
+  async countByUserId(userId: number): Promise<number> {
+    const queryBuilder = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('user_recent_recipes', 'recent')
+      .where('recent.user_id = :userId', { userId });
+    const result = await queryBuilder.getRawOne();
+    return parseInt(result.count);
+  }
 }

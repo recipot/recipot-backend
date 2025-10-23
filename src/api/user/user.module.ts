@@ -15,6 +15,9 @@ import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custo
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { UserDailyConditions } from '@/database/entity/user-daily-conditions.entity';
+import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+import { UserRecipeCompletionHistory } from '@/database/entity/user-recipe-completion-history.entity';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { UserDailyConditions } from '@/database/entity/user-daily-conditions.ent
       UserRecentRecipes,
       UserCompletedRecipe,
       Recipe,
+      Ingredient,
+      IngredientCategory,
+      UserRecipeCompletionHistory,
       SocialLogin,
       UserDailyConditions,
     ]),
@@ -38,6 +44,6 @@ import { UserDailyConditions } from '@/database/entity/user-daily-conditions.ent
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
   ],
-  exports: [UserService],
+  exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}

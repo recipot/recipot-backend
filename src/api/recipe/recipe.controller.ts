@@ -52,6 +52,7 @@ export class RecipeController {
   @Post('admin')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 레시피 생성',
     description:
@@ -226,7 +227,37 @@ export class RecipeController {
     return await this.recipeService.createRecipe(createRecipeDto);
   }
 
+  // 레시피 추천 API
+  @Post('recommendations')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '레시피 추천',
+    description:
+      '컨디션과 보유 재료를 기반으로 레시피를 추천합니다. Redis 캐싱을 통해 성능을 최적화합니다.',
+  })
+  @ApiBody({
+    description: '레시피 추천 요청 데이터',
+    type: GetRecipeRecommendationRequestDto,
+  })
+  @ApiSuccessResponse('레시피 추천 성공', {
+    type: GetRecipeRecommendationResponseDto,
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  async getRecipeRecommendations(
+    @Body() dto: GetRecipeRecommendationRequestDto,
+    @Request() req: any,
+  ): Promise<GetRecipeRecommendationResponseDto> {
+    const userId = req.user?.sub;
+    return await this.recipeRecommendationService.getRecipeRecommendationsWithCache(
+      dto,
+      userId,
+    );
+  }
+
   @Get(':id')
+  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '레시피 상세 조회',
     description:
@@ -345,33 +376,6 @@ export class RecipeController {
   ): Promise<GetRecipeResponseDto> {
     const userId = req.user.sub;
     return await this.recipeService.getRecipe(userId, recipeId);
-  }
-
-  // 레시피 추천 API
-  @Post('recommendations')
-  @ApiOperation({
-    summary: '레시피 추천',
-    description:
-      '컨디션과 보유 재료를 기반으로 레시피를 추천합니다. Redis 캐싱을 통해 성능을 최적화합니다.',
-  })
-  @ApiBody({
-    description: '레시피 추천 요청 데이터',
-    type: GetRecipeRecommendationRequestDto,
-  })
-  @ApiSuccessResponse('레시피 추천 성공', {
-    type: GetRecipeRecommendationResponseDto,
-  })
-  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
-  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
-  async getRecipeRecommendations(
-    @Body() dto: GetRecipeRecommendationRequestDto,
-    @Request() req: any,
-  ): Promise<GetRecipeRecommendationResponseDto> {
-    const userId = req.user?.sub;
-    return await this.recipeRecommendationService.getRecipeRecommendationsWithCache(
-      dto,
-      userId,
-    );
   }
 
   // 레시피 추천 관련 엔드포인트들
@@ -524,13 +528,21 @@ export class RecipeController {
   }
 
   @Post('recommendations/admin/cache/invalidate')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 추천 캐시 무효화',
     description: '레시피 추천 캐시를 무효화합니다.',
   })
-  @ApiSuccessResponse('캐시 무효화 성공')
+  @ApiSuccessResponse('캐시 무효화 성공', {
+    type: 'object',
+    properties: {
+      message: { type: 'string', example: '캐시가 무효화되었습니다.' },
+    },
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
   async invalidateRecommendationCache(): Promise<{ message: string }> {
     await this.recipeRecommendationService.invalidateAllCache();
     return { message: '추천 캐시가 무효화되었습니다.' };

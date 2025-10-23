@@ -14,10 +14,10 @@ import { User } from '@/database/entity/user.entity';
 import { UserCompletedRecipeCustomRepository } from '@/api/user/user-completed-recipe.custom-repository';
 import { UserRecentRecipesCustomRepository } from '@/api/user/user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from '@/api/user/user-recipe-bookmark.custom-repository';
-import { UserService } from '@/api/user/user.service';
+import { UserModule } from '@/api/user/user.module';
+import { UserDailyConditions } from '@/database/entity/user-daily-conditions.entity';
 import { UserRecipeArchiveController } from './user-recipe-archive.controller';
 import { UserRecipeArchiveService } from './user-recipe-archive.service';
-import { UserDailyConditions } from '@/database/entity/user-daily-conditions.entity';
 
 @Module({
   imports: [
@@ -32,12 +32,13 @@ import { UserDailyConditions } from '@/database/entity/user-daily-conditions.ent
       SocialLogin,
       UserDailyConditions,
     ]),
+    UserModule,
     SocialLoginModule,
   ],
   controllers: [UserRecipeArchiveController],
   providers: [
     UserRecipeArchiveService,
-    UserService,
+    // UserService,
     UserRecipeBookmarkCustomRepository,
     UserRecentRecipesCustomRepository,
     UserCompletedRecipeCustomRepository,
