@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayNotEmpty,
   IsArray,
   IsNotEmpty,
   IsNumber,
@@ -23,6 +24,7 @@ export class GetRecipeRecommendationRequestDto {
   })
   @IsArray()
   @IsNumber({}, { each: true })
+  @ArrayNotEmpty()
   pantryIds: number[];
 
   @ApiProperty({

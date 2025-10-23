@@ -2,20 +2,20 @@ import { AuthService } from '@/api/auth/auth.service';
 import { SocialLoginService } from '@/api/social-login/social-login.service';
 import { UserDto } from '@/api/user/dto/user.dto';
 import { UserService } from '@/api/user/user.service';
-import {
-  KAKAO_API,
-  KAKAO_API_URLS,
-} from '@/common/constants/kakao-api.constants';
-import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
-import { Response } from 'express';
-import * as qs from 'qs';
 import { ERROR_CODES } from '@/common/constants/error-codes';
-import { CustomException } from '@/common/exceptions/custom-exception';
 import {
   GOOGLE_API,
   GOOGLE_API_URLS,
 } from '@/common/constants/google-api.constants';
+import {
+  KAKAO_API,
+  KAKAO_API_URLS,
+} from '@/common/constants/kakao-api.constants';
+import { CustomException } from '@/common/exceptions/custom-exception';
+import { Injectable, Logger } from '@nestjs/common';
+import axios from 'axios';
+import { Response } from 'express';
+import * as qs from 'qs';
 
 @Injectable()
 export class LoginService {
@@ -116,8 +116,6 @@ export class LoginService {
 
     return {
       userId: user.id,
-      accessToken,
-      refreshToken,
     };
   }
 

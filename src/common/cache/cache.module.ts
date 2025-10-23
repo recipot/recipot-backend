@@ -2,7 +2,7 @@ import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
 import { Global, Module } from '@nestjs/common';
 import { redisStore } from 'cache-manager-redis-yet';
 
-import { CacheLockService } from '@/api/recipe/services/cache-lock.service';
+import { CacheLockService } from '@/common/cache/cache-lock.service';
 import { CacheService } from '@/common/cache/cache.service';
 import { ConfigService } from '@/config/config.service';
 

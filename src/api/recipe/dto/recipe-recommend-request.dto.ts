@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsNotEmpty, IsOptional, Min } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class RecipeRecommendRequestDto {
   @ApiProperty({
@@ -18,7 +25,7 @@ export class RecipeRecommendRequestDto {
   })
   @IsArray()
   @IsInt({ each: true })
-  @IsNotEmpty()
+  @ArrayNotEmpty()
   pantryIds: number[];
 
   @ApiProperty({

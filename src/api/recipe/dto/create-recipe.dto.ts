@@ -5,7 +5,7 @@ import {
   IsBoolean,
   IsInt,
   IsNotEmpty,
-  IsOptional,
+  IsNumber,
   IsString,
   IsUrl,
   ValidateNested,
@@ -122,7 +122,7 @@ export class CreateRecipeConditionWeightDto {
     description: '가중치',
     example: 0.8,
   })
-  @IsInt()
+  @IsNumber()
   @IsNotEmpty()
   weight: number;
 

@@ -1,6 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('user_recipe_completion_history')
+@Index('IDX_urc_user_id_completed_at', ['userId', 'completedAt'])
+@Index('IDX_urc_user_id_recipe_id_completed_at', [
+  'userId',
+  'recipeId',
+  'completedAt',
+])
 export class UserRecipeCompletionHistory {
   @PrimaryGeneratedColumn()
   id: number;
