@@ -27,4 +27,10 @@ export class RecentRecipeWithRecipeDto {
     example: '2024-01-01T00:00:00.000Z',
   })
   createdAt: Date;
+
+  @ApiProperty({
+    description: '북마크 여부',
+    example: true,
+  })
+  isBookmarked: boolean;
 }

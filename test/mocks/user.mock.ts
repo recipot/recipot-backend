@@ -42,6 +42,7 @@ const mockUserRecipeArchiveService = {
         recipeDescription: '매콤하고 시원한 김치찌개',
         recipeImages: ['https://example.com/kimchi.jpg'],
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        isBookmarked: true,
       },
       {
         id: 2,
@@ -51,6 +52,7 @@ const mockUserRecipeArchiveService = {
         recipeDescription: '집에서 쉽게 만들 수 있는 계란볶음밥',
         recipeImages: ['https://example.com/egg-rice.jpg'],
         createdAt: new Date('2024-01-02T00:00:00.000Z'),
+        isBookmarked: true,
       },
       {
         id: 3,
@@ -60,6 +62,7 @@ const mockUserRecipeArchiveService = {
         recipeDescription: '구수하고 부드러운 된장찌개',
         recipeImages: ['https://example.com/doenjang.jpg'],
         createdAt: new Date('2024-01-03T00:00:00.000Z'),
+        isBookmarked: true,
       },
     ];
 
@@ -120,6 +123,7 @@ const mockUserRecipeArchiveService = {
         isCompleted: true,
         isReviewed: false,
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        isBookmarked: true,
       },
       {
         id: 2,
@@ -131,6 +135,7 @@ const mockUserRecipeArchiveService = {
         isCompleted: true,
         isReviewed: true,
         createdAt: new Date('2024-01-02T00:00:00.000Z'),
+        isBookmarked: false,
       },
       {
         id: 3,
@@ -142,6 +147,7 @@ const mockUserRecipeArchiveService = {
         isCompleted: true,
         isReviewed: false,
         createdAt: new Date('2024-01-03T00:00:00.000Z'),
+        isBookmarked: true,
       },
     ];
 
@@ -151,6 +157,60 @@ const mockUserRecipeArchiveService = {
     const startIndex = (pageNum - 1) * limitNum;
     const endIndex = startIndex + limitNum;
     const items = mockCompletedRecipes.slice(startIndex, endIndex);
+
+    return {
+      items,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+    };
+  },
+  getRecentRecipes: async (_userId: number, query: any) => {
+    // Mock 데이터: 페이지네이션 응답 구조와 동일하게
+    const { page = 1, limit = 10 } = query;
+    const pageNum = parseInt(page.toString(), 10);
+    const limitNum = parseInt(limit.toString(), 10);
+
+    const mockRecentRecipes = [
+      {
+        id: 1,
+        userId: _userId,
+        recipeId: 1,
+        recipeTitle: '최근 본 김치찌개',
+        recipeDescription: '매콤하고 시원한 김치찌개',
+        recipeImages: ['https://example.com/kimchi-recent.jpg'],
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        isBookmarked: false,
+      },
+      {
+        id: 2,
+        userId: _userId,
+        recipeId: 2,
+        recipeTitle: '최근 본 계란볶음밥',
+        recipeDescription: '집에서 쉽게 만들 수 있는 계란볶음밥',
+        recipeImages: ['https://example.com/egg-rice-recent.jpg'],
+        createdAt: new Date('2024-01-02T00:00:00.000Z'),
+        isBookmarked: true,
+      },
+      {
+        id: 3,
+        userId: _userId,
+        recipeId: 3,
+        recipeTitle: '최근 본 된장찌개',
+        recipeDescription: '구수하고 부드러운 된장찌개',
+        recipeImages: ['https://example.com/doenjang-recent.jpg'],
+        createdAt: new Date('2024-01-03T00:00:00.000Z'),
+        isBookmarked: false,
+      },
+    ];
+
+    // 페이지네이션 계산
+    const total = mockRecentRecipes.length;
+    const totalPages = Math.ceil(total / limitNum);
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const items = mockRecentRecipes.slice(startIndex, endIndex);
 
     return {
       items,
