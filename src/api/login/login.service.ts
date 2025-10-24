@@ -96,12 +96,14 @@ export class LoginService {
 
     if (res) {
       const isProduction = process.env.NODE_ENV === 'production';
+      const domain = process.env.BASE_DOMAIN;
 
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
+        domain: isProduction ? domain : undefined,
         expires: new Date(accessExpiresAt as unknown as string),
       });
 
@@ -110,6 +112,7 @@ export class LoginService {
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
+        domain: isProduction ? domain : undefined,
         expires: new Date(refreshExpiresAt as unknown as string),
       });
     }
