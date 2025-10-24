@@ -33,6 +33,14 @@ export class User extends CommonEntity {
   recipeCompleteCount: number;
 
   @Column({
+    type: 'int',
+    default: 1,
+    name: 'level',
+    comment: '사용자 레벨 (0~2: L1, 3~6: L2, 7~15: L3, 16+: L4)',
+  })
+  level: number;
+
+  @Column({
     type: 'boolean',
     default: true,
     name: 'is_first_entry',
