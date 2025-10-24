@@ -73,6 +73,7 @@ describe('UserService', () => {
     nickname: '테스트유저',
     recipeCompleteCount: 0,
     isFirstEntry: false,
+    level: 1,
     role: UserRole.GENERAL,
     profileImageUrl: null,
     createdAt: new Date(),

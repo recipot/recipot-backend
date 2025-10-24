@@ -15,6 +15,6 @@ module.exports = class Migration20251024214154 {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn('users', 'user_level');
+    await queryRunner.dropColumn('users', 'level');
   }
 };
