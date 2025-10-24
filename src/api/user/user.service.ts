@@ -370,6 +370,17 @@ export class UserService {
 
     // 사용자 완료 횟수 증가
     user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
+
+    // 레벨 계산: 0~2: 1, 3~6: 2, 7~15: 3, 16+: 4
+    user.level =
+      user.recipeCompleteCount >= 16
+        ? 4
+        : user.recipeCompleteCount >= 7
+          ? 3
+          : user.recipeCompleteCount >= 3
+            ? 2
+            : 1;
+
     await this.userRepository.save(user);
 
     // 완료 이력 기록
