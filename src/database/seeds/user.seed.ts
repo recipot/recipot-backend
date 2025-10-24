@@ -21,7 +21,7 @@ export class UserSeed {
       profileImageUrl: 'https://example.com/profile1.jpg',
       nickname: '카카오유저',
       recipeCompleteCount: 0,
-      isFirstEntry: false,
+      isFirstEntry: true,
       role: UserRole.GENERAL,
     };
 
@@ -30,7 +30,7 @@ export class UserSeed {
       profileImageUrl: 'https://example.com/profile2.jpg',
       nickname: '구글유저',
       recipeCompleteCount: 0,
-      isFirstEntry: false,
+      isFirstEntry: true,
       role: UserRole.GENERAL,
     };
 

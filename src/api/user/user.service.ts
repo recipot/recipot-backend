@@ -642,6 +642,28 @@ export class UserService {
   }
 
   /**
+   * 온보딩 완료 여부 업데이트
+   */
+  async completeOnboarding(userId: number): Promise<boolean> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+    }
+    if (!user.isFirstEntry) {
+      this.logger.log(
+        `User ${userId} already completed onboarding (isFirstEntry: false)`,
+      );
+      return true;
+    }
+    user.isFirstEntry = false;
+    await this.userRepository.save(user);
+    this.logger.log(`User ${userId} onboarding marked as complete`);
+    return true;
+  }
+
+  /**
    * 유저의 컨디션을 조회
    */
   async getUserCondition(userId: number): Promise<GetUserConditionResponseDto> {

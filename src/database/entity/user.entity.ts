@@ -34,7 +34,7 @@ export class User extends CommonEntity {
 
   @Column({
     type: 'boolean',
-    default: false,
+    default: true,
     name: 'is_first_entry',
     comment: '최초 진입 여부',
   })
