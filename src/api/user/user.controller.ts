@@ -166,6 +166,20 @@ export class UserController {
     return await this.userService.getUserCondition(userId);
   }
 
+  @Post('/onboarding/complete')
+  @ApiOperation({
+    summary: '온보딩 완료',
+    description:
+      '사용자의 온보딩을 완료합니다. isFirstEntry 플래그를 false로 변경합니다.',
+  })
+  @ApiSuccessResponse('온보딩 완료 성공', { type: 'boolean', example: true })
+  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
+  async completeOnboarding(@Request() req: any): Promise<boolean> {
+    const userId = req.user.sub;
+    return await this.userService.completeOnboarding(userId);
+  }
+
   /**
    * @description 인증된 사용자의 프로필을 조회한다.
    */
