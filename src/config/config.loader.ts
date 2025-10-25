@@ -1,4 +1,20 @@
 export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
+  // 프로덕션 환경에서 BASE_DOMAIN 필수 검증
+  if (env.NODE_ENV === 'production' && !env.BASE_DOMAIN) {
+    throw new Error(
+      'BASE_DOMAIN environment variable is required in production environment',
+    );
+  }
+
+  if (
+    env.BASE_DOMAIN &&
+    !/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(env.BASE_DOMAIN)
+  ) {
+    throw new Error(
+      'BASE_DOMAIN must be a valid domain format (e.g., example.com or .example.com)',
+    );
+  }
+
   return {
     jwt: {
       algorithm: env.JWT_ALGORITHM,
@@ -51,5 +67,7 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     frontendUrl: {
       urls: env.FRONTEND_URL,
     },
+
+    baseDomain: env.BASE_DOMAIN,
   };
 };
