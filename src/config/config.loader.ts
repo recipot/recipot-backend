@@ -8,7 +8,9 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
 
   if (
     env.BASE_DOMAIN &&
-    !/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(env.BASE_DOMAIN)
+    !/^\.?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(
+      env.BASE_DOMAIN,
+    )
   ) {
     throw new Error(
       'BASE_DOMAIN must be a valid domain format (e.g., example.com or .example.com)',
