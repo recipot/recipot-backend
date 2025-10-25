@@ -458,18 +458,19 @@ export class RecipeRecommendationService {
       const ingredients = allIngredients.filter(
         (ri) => ri.recipeId === recipe.id,
       );
-      const essentialIngredients = ingredients.filter(
-        (ri) => !ri.isAlternative,
-      );
+      // TODO 1차 개발에서 필수 재료 필터링 제외
+      // const essentialIngredients = ingredients.filter(
+      //   (ri) => !ri.isAlternative,
+      // );
 
-      if (essentialIngredients.length === 0) {
-        this.logger.debug(`레시피 ${recipe.id} 필수 재료 없음, 스킵`);
+      if (ingredients.length === 0) {
+        this.logger.debug(`레시피 ${recipe.id} 재료 없음, 스킵`);
         continue;
       }
 
       const score = this.computeRecipeScore(
         recipe,
-        essentialIngredients,
+        ingredients,
         pantryIds,
         unavailableIds,
         condition.priorityScore,

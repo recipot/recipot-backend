@@ -16,6 +16,9 @@ export class UserDto {
   @ApiProperty({ description: '레시피 완료 횟수', example: 0 })
   recipeCompleteCount: number;
 
+  @ApiProperty({ description: '사용자 레벨', example: 1 })
+  level: number;
+
   @ApiProperty({ description: '최초 진입 여부', example: true })
   isFirstEntry: boolean;
 
