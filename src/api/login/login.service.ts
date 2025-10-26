@@ -14,7 +14,6 @@ import {
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import { Response } from 'express';
 import * as qs from 'qs';
 
 @Injectable()
@@ -44,7 +43,7 @@ export class LoginService {
   /**
    * 카카오 로그인을 처리합니다.
    */
-  async processKakaoLogin(code: string, res?: Response) {
+  async processKakaoLogin(code: string) {
     // 1. 인가 코드로 액세스 토큰 요청
     const tokenResponse = await this.getKakaoAccessToken(code);
 
@@ -94,31 +93,12 @@ export class LoginService {
     const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
       await this.authService.generateSocialLoginTokens(user.id, user.role);
 
-    if (res) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      const domain = process.env.BASE_DOMAIN;
-
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        path: '/',
-        domain: isProduction ? domain : undefined,
-        expires: new Date(accessExpiresAt as unknown as string),
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        path: '/',
-        domain: isProduction ? domain : undefined,
-        expires: new Date(refreshExpiresAt as unknown as string),
-      });
-    }
-
     return {
       userId: user.id,
+      accessToken,
+      accessExpiresAt,
+      refreshToken,
+      refreshExpiresAt,
     };
   }
 

@@ -2,9 +2,8 @@ import { Public } from '@/api/auth/decorators/auth.decorators';
 import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
 import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
 import { LoginService } from './login.service';
 
 @ApiTags('로그인')
@@ -43,13 +42,8 @@ export class LoginController {
       userId: { type: 'number', example: 1 },
     },
   })
-  async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
-    const result = await this.loginService.processKakaoLogin(code, res);
-
-    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
-    redirectUrl.searchParams.set('userId', String(result.userId));
-
-    return res.redirect(302, redirectUrl.toString());
+  async kakaoLoginCallback(@Query('code') code: string) {
+    return await this.loginService.processKakaoLogin(code);
   }
 
   // ApiSuccessResponse 사용 시 Swagger 번들에서
