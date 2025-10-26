@@ -15,6 +15,7 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as qs from 'qs';
+import { LoginCallbackResponseDto } from './dto/login-callback-response.dto';
 
 @Injectable()
 export class LoginService {
@@ -43,7 +44,7 @@ export class LoginService {
   /**
    * 카카오 로그인을 처리합니다.
    */
-  async processKakaoLogin(code: string) {
+  async processKakaoLogin(code: string): Promise<LoginCallbackResponseDto> {
     // 1. 인가 코드로 액세스 토큰 요청
     const tokenResponse = await this.getKakaoAccessToken(code);
 

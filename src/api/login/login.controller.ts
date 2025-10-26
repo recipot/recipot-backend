@@ -36,13 +36,10 @@ export class LoginController {
     required: true,
     description: '카카오에서 받은 인가 코드',
   })
-  @ApiSuccessResponse('카카오 로그인 성공', {
-    type: 'object',
-    properties: {
-      userId: { type: 'number', example: 1 },
-    },
-  })
-  async kakaoLoginCallback(@Query('code') code: string) {
+  @ApiSuccessResponse('카카오 로그인 성공', LoginCallbackResponseDto)
+  async kakaoLoginCallback(
+    @Query('code') code: string,
+  ): Promise<LoginCallbackResponseDto> {
     return await this.loginService.processKakaoLogin(code);
   }
 
