@@ -42,6 +42,7 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
+import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 
 @Injectable()
 export class UserService {
@@ -495,31 +496,41 @@ export class UserService {
     userId: number,
     dto: SaveUnavailableIngredientsDto,
   ): Promise<SaveUnavailableIngredientsResponseDto> {
-    // Verify user exists
+    // 1) Verify user exists
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
 
-    // Deduplicate & coerce to positive integers
+    // 2) Deduplicate & coerce to positive integers
     const ids = Array.from(new Set(dto.ingredientIds ?? []))
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
 
-    // Delete all for this user
-    await this.userRepository.query(
-      'DELETE FROM user_unavailable_ingredients WHERE user_id = ?',
-      [userId],
-    );
+    // 3) Atomic replace inside a transaction
+    await this.userRepository.manager.transaction(async (m) => {
+      // delete old rows
+      await m
+        .createQueryBuilder()
+        .delete()
+        .from(UserUnavailableIngredient) // entity
+        .where('user_id = :userId', { userId }) // raw column name is fine here
+        .execute();
 
-    if (ids.length > 0) {
-      // Build VALUES (?, ?), (?, ?), ... repeating userId for each row
-      const values = ids.map(() => '(?, ?)').join(', ');
-      const params = ids.flatMap((id) => [userId, id]);
-
-      await this.userRepository.query(
-        `INSERT INTO user_unavailable_ingredients (user_id, ingredient_id) VALUES ${values}`,
-        params,
-      );
-    }
+      // bulk insert new rows (if any)
+      if (ids.length > 0) {
+        await m
+          .createQueryBuilder()
+          .insert()
+          .into(UserUnavailableIngredient) // entity
+          .values(
+            ids.map((ingredientId) => ({
+              userId,
+              ingredientId,
+            })),
+          )
+          .orIgnore() // MySQL/MariaDB duplicate-safe (requires UNIQUE(user_id, ingredient_id))
+          .execute();
+      }
+    });
 
     return { savedCount: ids.length };
   }
