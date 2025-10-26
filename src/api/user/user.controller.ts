@@ -26,18 +26,17 @@ import { ApiSuccessResponse } from '@/common/decorators/api-success-response.dec
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { GetBookmarksRequestDto } from './dto/get-bookmarks-request.dto';
 import { GetBookmarksResponseDto } from './dto/get-bookmarks-response.dto';
-// moved to UserRecipeArchiveController
 import {
   SaveUserIngredientsSurveyDto,
   SaveUserIngredientsSurveyResponseDto,
 } from './dto/save-user-ingredients-survey.dto';
-import { UserService } from './user.service';
 import {
   SaveUnavailableIngredientsDto,
   SaveUnavailableIngredientsResponseDto,
 } from '@/api/user/dto/save-unavailable-ingredients.dto';
 import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetPendingReviewsResponseDto } from './dto/get-pending-reviews.dto';
+import { UserService } from './user.service';
 
 @Controller({ path: 'users', version: '1' })
 @ApiTags('User')
@@ -69,7 +68,7 @@ export class UserController {
     @Query() query: GetBookmarksRequestDto,
   ): Promise<GetBookmarksResponseDto> {
     const userId = req.user.sub;
-    return await this.userService.getBookmarks(userId, query);
+    return this.userService.getBookmarks(userId, query);
   }
 
   /**
@@ -89,13 +88,8 @@ export class UserController {
     @Body() createBookmarkDto: CreateBookmarkDto,
   ): Promise<boolean> {
     const userId = req.user.sub;
-    return await this.userService.createBookmark(userId, createBookmarkDto);
+    return this.userService.createBookmark(userId, createBookmarkDto);
   }
-
-  /**
-   * @description 레시피 북마크를 해제합니다.
-   */
-  // moved to UserRecipeArchiveController
 
   /**
    * @description 사용자의 보유 재료 설문을 저장합니다.
@@ -116,7 +110,7 @@ export class UserController {
     @Body() surveyDto: SaveUserIngredientsSurveyDto,
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
     const userId = req.user.sub;
-    return await this.userService.saveUserIngredientsSurvey(userId, surveyDto);
+    return this.userService.saveUserIngredientsSurvey(userId, surveyDto);
   }
 
   /**
@@ -138,13 +132,13 @@ export class UserController {
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getMyProfile(@Request() req: any) {
-    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
-    return await this.userService.findById(userId);
+    return this.userService.findById(userId);
   }
 
   /**
    * @description 인증된 사용자의 프로필을 업데이트한다.
+   * (placeholder)
    */
   @Get('/profile/update')
   @ApiOperation({
@@ -155,11 +149,10 @@ export class UserController {
   @ApiSuccessResponse('프로필 업데이트 성공')
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   async updateMyProfile(@Request() req: any) {
-    // JWT 가드를 통해 인증된 사용자 정보는 req.user에 자동으로 설정됨
     const userId = req.user.sub;
     return {
       message: '프로필 업데이트 기능은 추후 구현 예정',
-      userId: userId,
+      userId,
       user: req.user,
     };
   }
@@ -194,11 +187,11 @@ export class UserController {
   async getPendingReviews(
     @Request() req: any,
   ): Promise<GetPendingReviewsResponseDto> {
-    return await this.userService.getPendingReviews(req.user.sub);
+    return this.userService.getPendingReviews(req.user.sub);
   }
 
   /**
-   * @description 유저를 상세조회한다.
+   * @description 유저를 상세조회한다. (공개)
    */
   @Get(':id')
   @Public()
@@ -213,9 +206,12 @@ export class UserController {
   })
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async getUser(@Param('id', ParseIntPipe) id: number) {
-    return await this.userService.findById(id);
+    return this.userService.findById(id);
   }
 
+  /**
+   * @description 못 먹는 음식 저장(교체)
+   */
   @Post('ingredients/unavailable')
   @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
   @ApiOkResponse({
@@ -228,17 +224,7 @@ export class UserController {
   ): Promise<SaveUnavailableIngredientsResponseDto> {
     const userId = req.user?.sub;
     return this.userService.saveUnavailableIngredients(userId, body);
-  // @Get('/recipes/completed/count')
-  // @ApiOperation({ summary: 'Get completed recipe count for the current user' })
-  // @ApiOkResponse({ schema: { example: { count: 7 } } })
-  // @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
-  // @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
-  // async getCompletedCount(@Request() req: any) {
-  //   const userId = req.user.sub;
-  //   const count = await this.userService.getCompletedCount(userId);
-  //   return { count };
-  // }
-  //
+  }
 
   /**
    * @description Returns total number of recipe completions for the authenticated user.
