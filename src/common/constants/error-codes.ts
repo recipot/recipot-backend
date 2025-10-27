@@ -91,4 +91,8 @@ export const ERROR_CODES = {
   LOGOUT_FAILED: { code: 'E2101', message: '로그아웃 처리 중 오류가 발생했습니다.' },
   REFRESH_REVOKE_FAILED: { code: 'E2102', message: '리프레시 토큰을 무효화하지 못했습니다.' },
   ACCESS_BLACKLIST_FAILED: { code: 'E2103', message: '액세스 토큰 블랙리스트 처리에 실패했습니다.' },
+
+  // 로그인 세션 관련
+  LOGIN_SESSION_NOT_FOUND: { code: 'E2104', message: '로그인 세션을 찾을 수 없습니다. 다시 로그인해주세요.' },
+  LOGIN_SESSION_EXPIRED: { code: 'E2105', message: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.' },
 };

@@ -2,8 +2,9 @@ import { Public } from '@/api/auth/decorators/auth.decorators';
 import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
 import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res, Param } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { LoginService } from './login.service';
 
 @ApiTags('로그인')
@@ -36,11 +37,30 @@ export class LoginController {
     required: true,
     description: '카카오에서 받은 인가 코드',
   })
-  @ApiSuccessResponse('카카오 로그인 성공', LoginCallbackResponseDto)
+  @ApiSuccessResponse('카카오 로그인 성공')
   async kakaoLoginCallback(
     @Query('code') code: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const result = await this.loginService.processKakaoLogin(code);
+
+    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
+    redirectUrl.searchParams.set('userId', String(result.userId));
+
+    return res.redirect(302, redirectUrl.toString());
+  }
+
+  @Get('session/:userId')
+  @Public()
+  @ApiOperation({
+    summary: '로그인 세션 조회',
+    description: '캐시된 토큰 정보를 조회합니다. (1회용)',
+  })
+  @ApiSuccessResponse('로그인 세션 조회 성공', LoginCallbackResponseDto)
+  async getLoginSession(
+    @Param('userId') userId: string,
   ): Promise<LoginCallbackResponseDto> {
-    return await this.loginService.processKakaoLogin(code);
+    return await this.loginService.retrieveLoginSession(parseInt(userId));
   }
 
   // ApiSuccessResponse 사용 시 Swagger 번들에서

@@ -12,6 +12,7 @@ import {
   KAKAO_API_URLS,
 } from '@/common/constants/kakao-api.constants';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { CacheService } from '@/common/cache/cache.service';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as qs from 'qs';
@@ -25,6 +26,7 @@ export class LoginService {
     private readonly authService: AuthService,
     private readonly socialLoginService: SocialLoginService,
     private readonly userService: UserService,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**
@@ -94,13 +96,63 @@ export class LoginService {
     const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
       await this.authService.generateSocialLoginTokens(user.id, user.role);
 
-    return {
+    const tokenData: LoginCallbackResponseDto = {
       userId: user.id,
       accessToken,
       accessExpiresAt,
       refreshToken,
       refreshExpiresAt,
     };
+
+    // 5. 토큰을 캐시에 저장 (유저 ID 기반, 5분 TTL)
+    await this.cacheLoginSession(user.id, tokenData, 300);
+
+    return tokenData;
+  }
+
+  /**
+   * 로그인 토큰을 캐시에 저장합니다. (유저 ID 기반)
+   */
+  private async cacheLoginSession(
+    userId: number,
+    tokenData: LoginCallbackResponseDto,
+    ttlSeconds: number,
+  ): Promise<void> {
+    const cacheKey = `login:session:${userId}`;
+
+    await this.cacheService.set(
+      cacheKey,
+      JSON.stringify(tokenData),
+      ttlSeconds * 1000,
+    );
+
+    this.logger.debug(
+      `Login session cached for userId: ${userId} (TTL: ${ttlSeconds}s)`,
+    );
+  }
+
+  /**
+   * 캐시된 로그인 토큰을 조회합니다. (1회용 - 조회 후 삭제)
+   */
+  async retrieveLoginSession(
+    userId: number,
+  ): Promise<LoginCallbackResponseDto> {
+    const cacheKey = `login:session:${userId}`;
+
+    const cachedData = await this.cacheService.get(cacheKey);
+
+    if (!cachedData) {
+      throw new CustomException(ERROR_CODES.LOGIN_SESSION_NOT_FOUND);
+    }
+
+    // 조회 후 즉시 삭제 (1회용)
+    await this.cacheService.del(cacheKey);
+
+    this.logger.debug(
+      `Login session retrieved and deleted for userId: ${userId}`,
+    );
+
+    return JSON.parse(cachedData) as LoginCallbackResponseDto;
   }
 
   /**
