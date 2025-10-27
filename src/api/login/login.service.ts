@@ -15,6 +15,7 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { CacheService } from '@/common/cache/cache.service';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import { v4 as uuid } from 'uuid';
 import * as qs from 'qs';
 import { LoginCallbackResponseDto } from './dto/login-callback-response.dto';
 
@@ -46,7 +47,7 @@ export class LoginService {
   /**
    * 카카오 로그인을 처리합니다.
    */
-  async processKakaoLogin(code: string): Promise<LoginCallbackResponseDto> {
+  async processKakaoLogin(code: string): Promise<string> {
     // 1. 인가 코드로 액세스 토큰 요청
     const tokenResponse = await this.getKakaoAccessToken(code);
 
@@ -104,21 +105,22 @@ export class LoginService {
       refreshExpiresAt,
     };
 
-    // 5. 토큰을 캐시에 저장 (유저 ID 기반, 5분 TTL)
-    await this.cacheLoginSession(user.id, tokenData, 300);
+    // 5. 세션 키 생성 (순수 UUID) 및 캐시 저장 (10초 TTL)
+    const sessionKey = uuid();
+    await this.cacheLoginSession(sessionKey, tokenData, 10);
 
-    return tokenData;
+    return sessionKey;
   }
 
   /**
-   * 로그인 토큰을 캐시에 저장합니다. (유저 ID 기반)
+   * 로그인 토큰을 캐시에 저장합니다. (세션 키 기반)
    */
   private async cacheLoginSession(
-    userId: number,
+    sessionKey: string,
     tokenData: LoginCallbackResponseDto,
     ttlSeconds: number,
   ): Promise<void> {
-    const cacheKey = `login:session:${userId}`;
+    const cacheKey = `login:session:${sessionKey}`;
 
     await this.cacheService.set(
       cacheKey,
@@ -127,7 +129,7 @@ export class LoginService {
     );
 
     this.logger.debug(
-      `Login session cached for userId: ${userId} (TTL: ${ttlSeconds}s)`,
+      `Login session cached: ${sessionKey} (TTL: ${ttlSeconds}s)`,
     );
   }
 
@@ -135,9 +137,9 @@ export class LoginService {
    * 캐시된 로그인 토큰을 조회합니다. (1회용 - 조회 후 삭제)
    */
   async retrieveLoginSession(
-    userId: number,
+    sessionKey: string,
   ): Promise<LoginCallbackResponseDto> {
-    const cacheKey = `login:session:${userId}`;
+    const cacheKey = `login:session:${sessionKey}`;
 
     const cachedData = await this.cacheService.get(cacheKey);
 
@@ -148,9 +150,7 @@ export class LoginService {
     // 조회 후 즉시 삭제 (1회용)
     await this.cacheService.del(cacheKey);
 
-    this.logger.debug(
-      `Login session retrieved and deleted for userId: ${userId}`,
-    );
+    this.logger.debug(`Login session retrieved and deleted: ${sessionKey}`);
 
     return JSON.parse(cachedData) as LoginCallbackResponseDto;
   }

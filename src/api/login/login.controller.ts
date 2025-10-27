@@ -42,15 +42,15 @@ export class LoginController {
     @Query('code') code: string,
     @Res() res: Response,
   ): Promise<void> {
-    const result = await this.loginService.processKakaoLogin(code);
+    const sessionKey = await this.loginService.processKakaoLogin(code);
 
     const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
-    redirectUrl.searchParams.set('userId', String(result.userId));
+    redirectUrl.searchParams.set('sessionKey', sessionKey);
 
     return res.redirect(302, redirectUrl.toString());
   }
 
-  @Get('session/:userId')
+  @Get('session/:sessionKey')
   @Public()
   @ApiOperation({
     summary: '로그인 세션 조회',
@@ -58,9 +58,9 @@ export class LoginController {
   })
   @ApiSuccessResponse('로그인 세션 조회 성공', LoginCallbackResponseDto)
   async getLoginSession(
-    @Param('userId') userId: string,
+    @Param('sessionKey') sessionKey: string,
   ): Promise<LoginCallbackResponseDto> {
-    return await this.loginService.retrieveLoginSession(parseInt(userId));
+    return await this.loginService.retrieveLoginSession(sessionKey);
   }
 
   // ApiSuccessResponse 사용 시 Swagger 번들에서
