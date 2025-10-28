@@ -52,9 +52,6 @@ export class LoginController {
     return res.redirect(302, redirectUrl.toString());
   }
 
-  // ApiSuccessResponse 사용 시 Swagger 번들에서
-  //    'swagger_1 is not defined' 런타임 오류가 발생하여
-  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
   @Public()
   @Public()
   @Get('google')
@@ -65,9 +62,6 @@ export class LoginController {
     return { loginUrl };
   }
 
-  // ApiSuccessResponse 사용 시 Swagger 번들에서
-  //    'swagger_1 is not defined' 런타임 오류가 발생하여
-  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
   @Public()
   @Get('google/callback')
   @ApiOperation({ summary: '구글 로그인 콜백 처리' })

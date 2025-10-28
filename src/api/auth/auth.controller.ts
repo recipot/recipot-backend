@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Req,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -18,8 +19,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { Public } from './decorators/auth.decorators';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
+import { Public } from './decorators/auth.decorators';
 import { JwtToken } from './dto/jwt-token.dto';
 import { RefreshTokenRequestDto } from './dto/refresh-token-request.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token-response.dto';
@@ -217,8 +219,16 @@ export class AuthController {
     },
   })
   @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
-  async generateDebugToken(@Body() body: { userId: number; role: string }) {
-    return await this.authService.generateDebugToken(body.userId, body.role);
+  async generateDebugToken(
+    @Body() body: { userId: number; role: string },
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.generateDebugToken(
+      body.userId,
+      body.role,
+      res,
+    );
+    return res.json(result);
   }
 
   @Post('logout')

@@ -8,8 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
-import { secondsToJwtFormat } from '@/common/utils/time.util';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { secondsToJwtFormat } from '@/common/utils/time.util';
 
 @Injectable()
 export class AuthService {
@@ -358,6 +358,7 @@ export class AuthService {
   public async generateDebugToken(
     userId: number,
     role: string,
+    res?: any,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -370,6 +371,30 @@ export class AuthService {
     // 토큰 만료 시간 계산
     const accessTokenInfo = await this.getTokenExpiration(accessToken);
     const refreshTokenInfo = await this.getTokenExpiration(refreshToken);
+
+    // 쿠키에 토큰 저장 (BFF 패턴)
+    if (res) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const domain = process.env.BASE_DOMAIN;
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(accessTokenInfo.expiresAt),
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(refreshTokenInfo.expiresAt),
+      });
+    }
 
     return {
       accessToken,
