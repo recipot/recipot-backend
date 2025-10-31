@@ -5,13 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="877a34dc-a287-45b7-af8a-51998ab368f4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/api/login/dto/google-login.response.dto.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/common/constants/google-api.constants.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/login/login.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/login/login.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/login/login.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/login/login.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/common/constants/error-codes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/constants/error-codes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/common/swagger.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/swagger.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/user/user.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/user/user.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,7 +24,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "git-widget-placeholder": "feature/add-new-google-login",
+    "git-widget-placeholder": "feature/save-unavailable-ingredients",
     "node.js.selected.package.tslint": "(autodetect)",
     "prettierjs.PrettierConfiguration.Package": "/Users/sangwonlee/Projects/recipot-add-google-login/recipot-backend/node_modules/prettier",
     "ts.external.directory.path": "/Users/sangwonlee/Projects/recipot-add-google-login/recipot-backend/node_modules/typescript/lib"
