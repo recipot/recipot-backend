@@ -50,7 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       }
 
       // Redis에서 토큰 유효성 확인
-      const token = this.extractTokenFromRequest(request);
+      const token = JwtStrategy.extractJwtFromCookieOrHeader(request);
       if (!token) {
         throw new UnauthorizedException(
           ERROR_CODES.AUTH_TOKEN_NOT_PROVIDED.message,
@@ -72,24 +72,5 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         ERROR_CODES.AUTH_TOKEN_INFO_FAILED.message,
       );
     }
-  }
-
-  /**
-   * 요청에서 JWT 토큰을 추출합니다.
-   * 쿠키를 먼저 확인하고, 없으면 Authorization 헤더를 확인합니다.
-   */
-  private extractTokenFromRequest(request: Request): string | null {
-    // 1. 쿠키에서 먼저 확인
-    if (request.cookies && request.cookies.accessToken) {
-      return request.cookies.accessToken;
-    }
-
-    // 2. Authorization 헤더에서 확인
-    const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-
-    return null;
   }
 }

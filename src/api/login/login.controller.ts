@@ -51,8 +51,8 @@ export class LoginController {
     return res.redirect(302, redirectUrl.toString());
   }
 
-  @Public()
   @Get('google')
+  @Public()
   @ApiOperation({ summary: '구글 로그인 URL 생성' })
   @ApiSuccessResponse('구글 로그인 URL 생성 성공', GoogleLoginResponseDto)
   generateGoogleLoginUrl(): GoogleLoginResponseDto {

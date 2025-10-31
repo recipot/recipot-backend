@@ -139,8 +139,6 @@ export class AuthService {
         );
       }
 
-      await this.removeRefreshTokenFromRedis(userId);
-
       // 새로운 토큰 쌍 생성
       const newAccessToken = await this.generateAccessToken(userId, userRole);
       const newRefreshToken = await this.generateRefreshToken(userId);
