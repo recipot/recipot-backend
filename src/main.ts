@@ -5,6 +5,7 @@ import { setupSwagger } from '@/common/swagger';
 import { ConfigService } from '@/config/config.service';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { JwtGuard } from './api/auth/guards/auth.guard';
 import { AppModule } from './app.module';
@@ -18,6 +19,8 @@ async function bootstrap() {
   initializeTransactionalContext();
 
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
 
   const loggerFactory = app.get(LoggerFactoryService);
   const logger = loggerFactory.create(bootstrap.name);

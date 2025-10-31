@@ -14,7 +14,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly authService: AuthService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (request: Request) => request?.cookies?.accessToken ?? null,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_ACCESS_SECRET,
       passReqToCallback: true,
@@ -56,10 +59,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   private extractTokenFromRequest(request: Request): string | null {
+    const cookieToken = request.cookies?.accessToken;
+    if (cookieToken) {
+      return cookieToken;
+    }
+
     const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
+    if (authHeader?.startsWith('Bearer ')) {
       return authHeader.split(' ')[1];
     }
+
     return null;
   }
 }
