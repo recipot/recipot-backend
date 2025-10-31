@@ -32,6 +32,7 @@ export const ERROR_CODES = {
   VALIDATION_ERROR: { code: 'E6001', message: '입력값이 유효하지 않습니다.' },
   INVALID_FORMAT: { code: 'E6003', message: '입력값 형식이 올바르지 않습니다.' },
   INVALID_REQUEST_DATA: { code: 'E6004', message: '요청 데이터가 유효하지 않습니다.' },
+  INVALID_PLATFORM: { code: 'E6005', message: '지원하지 않는 플랫폼입니다.' },
 
   // 파일 업로드 오류
   FILE_UPLOAD_FAILED: { code: 'E7003', message: '파일 업로드 중 오류가 발생했습니다.' },

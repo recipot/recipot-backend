@@ -24,7 +24,6 @@ import { AuthService } from './auth.service';
 import { Public } from './decorators/auth.decorators';
 import { JwtToken } from './dto/jwt-token.dto';
 import { RefreshTokenRequestDto } from './dto/refresh-token-request.dto';
-import { RefreshTokenResponseDto } from './dto/refresh-token-response.dto';
 import { TokenVerificationRequestDto } from './dto/token-verification-request.dto';
 import { TokenVerificationResponseDto } from './dto/token-verification-response.dto';
 
@@ -96,8 +95,14 @@ export class AuthController {
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REFRESH_TOKEN_EXPIRED)
   async refreshToken(
     @Body() body: RefreshTokenRequestDto,
-  ): Promise<RefreshTokenResponseDto> {
-    return await this.authService.refreshAccessToken(body.refreshToken);
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.authService.refreshAccessTokenWithCookie(
+      body.refreshToken,
+      req,
+      res,
+    );
   }
 
   @Get('info/:userId')
@@ -221,14 +226,13 @@ export class AuthController {
   @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
   async generateDebugToken(
     @Body() body: { userId: number; role: string },
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.generateDebugToken(
+    return await this.authService.generateDebugToken(
       body.userId,
       body.role,
       res,
     );
-    return res.json(result);
   }
 
   @Post('logout')

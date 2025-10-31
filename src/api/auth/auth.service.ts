@@ -139,12 +139,11 @@ export class AuthService {
         );
       }
 
+      await this.removeRefreshTokenFromRedis(userId);
+
       // 새로운 토큰 쌍 생성
       const newAccessToken = await this.generateAccessToken(userId, userRole);
       const newRefreshToken = await this.generateRefreshToken(userId);
-
-      // 기존 Refresh Token 제거
-      await this.removeRefreshTokenFromRedis(userId);
 
       // 토큰 만료시간 조회
       const accessTokenInfo = await this.getTokenExpiration(newAccessToken);
@@ -169,6 +168,74 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  /**
+   * 쿠키 기반 Refresh Token 처리 (BFF 패턴)
+   * Request에서 refreshToken을 추출하고, Response에 새 토큰을 쿠키로 설정
+   */
+  public async refreshAccessTokenWithCookie(
+    refreshTokenFromBody: string | undefined,
+    req: any,
+    res: any,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    accessExpiresAt: string;
+    refreshExpiresAt: string;
+  }> {
+    // 1. 쿠키에서 먼저 확인, 없으면 Body에서 확인 (BFF 패턴 지원)
+    const refreshToken = req.cookies?.refreshToken || refreshTokenFromBody;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException(
+        ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN.message,
+      );
+    }
+
+    // 2. 토큰 갱신
+    const result = await this.refreshAccessToken(refreshToken);
+
+    // 3. 쿠키 기반 클라이언트를 위해 새 토큰을 쿠키에도 설정
+    if (req.cookies?.refreshToken) {
+      this.setTokenCookies(res, result);
+    }
+
+    return result;
+  }
+
+  /**
+   * Response에 토큰 쿠키 설정 (BFF 패턴)
+   */
+  private setTokenCookies(
+    res: any,
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      accessExpiresAt: string;
+      refreshExpiresAt: string;
+    },
+  ): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = process.env.BASE_DOMAIN;
+
+    res.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      domain: isProduction ? domain : undefined,
+      expires: new Date(tokens.accessExpiresAt),
+    });
+
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      domain: isProduction ? domain : undefined,
+      expires: new Date(tokens.refreshExpiresAt),
+    });
   }
 
   /**

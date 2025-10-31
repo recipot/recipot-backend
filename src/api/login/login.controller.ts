@@ -22,8 +22,8 @@ export class LoginController {
     type: 'string',
     example: 'https://kauth.kakao.com/oauth/authorize?...',
   })
-  generateKakaoLoginUrl(): string {
-    return this.loginService.generateKakaoLoginUrl();
+  async generateKakaoLoginUrl(): Promise<string> {
+    return await this.loginService.generateKakaoLoginUrl();
   }
 
   @Get('kakao/callback')
@@ -44,15 +44,13 @@ export class LoginController {
     },
   })
   async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
-    const result = await this.loginService.processKakaoLogin(code, res);
+    await this.loginService.processKakaoLogin(code, res);
 
+    // 웹 전용: 쿠키에 토큰이 설정된 상태에서 프론트 콜백으로 리다이렉트
     const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
-    redirectUrl.searchParams.set('userId', String(result.userId));
-
     return res.redirect(302, redirectUrl.toString());
   }
 
-  @Public()
   @Public()
   @Get('google')
   @ApiOperation({ summary: '구글 로그인 URL 생성' })
