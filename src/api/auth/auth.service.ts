@@ -8,8 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
-import { secondsToJwtFormat } from '@/common/utils/time.util';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { secondsToJwtFormat } from '@/common/utils/time.util';
 
 @Injectable()
 export class AuthService {
@@ -143,9 +143,6 @@ export class AuthService {
       const newAccessToken = await this.generateAccessToken(userId, userRole);
       const newRefreshToken = await this.generateRefreshToken(userId);
 
-      // 기존 Refresh Token 제거
-      await this.removeRefreshTokenFromRedis(userId);
-
       // 토큰 만료시간 조회
       const accessTokenInfo = await this.getTokenExpiration(newAccessToken);
       const refreshTokenInfo = await this.getTokenExpiration(newRefreshToken);
@@ -169,6 +166,74 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  /**
+   * 쿠키 기반 Refresh Token 처리 (BFF 패턴)
+   * Request에서 refreshToken을 추출하고, Response에 새 토큰을 쿠키로 설정
+   */
+  public async refreshAccessTokenWithCookie(
+    refreshTokenFromBody: string | undefined,
+    req: any,
+    res: any,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    accessExpiresAt: string;
+    refreshExpiresAt: string;
+  }> {
+    // 1. 쿠키에서 먼저 확인, 없으면 Body에서 확인 (BFF 패턴 지원)
+    const refreshToken = req.cookies?.refreshToken || refreshTokenFromBody;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException(
+        ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN.message,
+      );
+    }
+
+    // 2. 토큰 갱신
+    const result = await this.refreshAccessToken(refreshToken);
+
+    // 3. 쿠키 기반 클라이언트를 위해 새 토큰을 쿠키에도 설정
+    if (req.cookies?.refreshToken) {
+      this.setTokenCookies(res, result);
+    }
+
+    return result;
+  }
+
+  /**
+   * Response에 토큰 쿠키 설정 (BFF 패턴)
+   */
+  private setTokenCookies(
+    res: any,
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      accessExpiresAt: string;
+      refreshExpiresAt: string;
+    },
+  ): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = process.env.BASE_DOMAIN;
+
+    res.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      domain: isProduction ? domain : undefined,
+      expires: new Date(tokens.accessExpiresAt),
+    });
+
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      domain: isProduction ? domain : undefined,
+      expires: new Date(tokens.refreshExpiresAt),
+    });
   }
 
   /**
@@ -358,6 +423,7 @@ export class AuthService {
   public async generateDebugToken(
     userId: number,
     role: string,
+    res?: any,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -370,6 +436,30 @@ export class AuthService {
     // 토큰 만료 시간 계산
     const accessTokenInfo = await this.getTokenExpiration(accessToken);
     const refreshTokenInfo = await this.getTokenExpiration(refreshToken);
+
+    // 쿠키에 토큰 저장 (BFF 패턴)
+    if (res) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const domain = process.env.BASE_DOMAIN;
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(accessTokenInfo.expiresAt),
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(refreshTokenInfo.expiresAt),
+      });
+    }
 
     return {
       accessToken,

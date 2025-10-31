@@ -30,14 +30,13 @@ export class LoginService {
   /**
    * 카카오 로그인 URL을 생성합니다.
    */
-  generateKakaoLoginUrl(): string {
+  async generateKakaoLoginUrl(): Promise<string> {
     const params = new URLSearchParams({
       client_id: process.env.KAKAO_CLIENT_ID,
       redirect_uri: process.env.KAKAO_REDIRECT_URI,
       response_type: KAKAO_API.RESPONSE_TYPE,
       scope: KAKAO_API.SCOPE,
     });
-
     return `${KAKAO_API_URLS.AUTH_URL}?${params.toString()}`;
   }
 

@@ -22,8 +22,8 @@ export class LoginController {
     type: 'string',
     example: 'https://kauth.kakao.com/oauth/authorize?...',
   })
-  generateKakaoLoginUrl(): string {
-    return this.loginService.generateKakaoLoginUrl();
+  async generateKakaoLoginUrl(): Promise<string> {
+    return await this.loginService.generateKakaoLoginUrl();
   }
 
   @Get('kakao/callback')
@@ -44,20 +44,15 @@ export class LoginController {
     },
   })
   async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
-    const result = await this.loginService.processKakaoLogin(code, res);
+    await this.loginService.processKakaoLogin(code, res);
 
+    // 웹 전용: 쿠키에 토큰이 설정된 상태에서 프론트 콜백으로 리다이렉트
     const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
-    redirectUrl.searchParams.set('userId', String(result.userId));
-
     return res.redirect(302, redirectUrl.toString());
   }
 
-  // ApiSuccessResponse 사용 시 Swagger 번들에서
-  //    'swagger_1 is not defined' 런타임 오류가 발생하여
-  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
-  @Public()
-  @Public()
   @Get('google')
+  @Public()
   @ApiOperation({ summary: '구글 로그인 URL 생성' })
   @ApiSuccessResponse('구글 로그인 URL 생성 성공', GoogleLoginResponseDto)
   generateGoogleLoginUrl(): GoogleLoginResponseDto {
@@ -65,9 +60,6 @@ export class LoginController {
     return { loginUrl };
   }
 
-  // ApiSuccessResponse 사용 시 Swagger 번들에서
-  //    'swagger_1 is not defined' 런타임 오류가 발생하여
-  //    구글 엔드포인트만 표준 @ApiOkResponse로 표기합니다.
   @Public()
   @Get('google/callback')
   @ApiOperation({ summary: '구글 로그인 콜백 처리' })

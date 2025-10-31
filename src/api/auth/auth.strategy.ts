@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ConfigService } from '@/config/config.service';
@@ -14,11 +14,30 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly authService: AuthService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: JwtStrategy.extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_ACCESS_SECRET,
       passReqToCallback: true,
     });
+  }
+
+  /**
+   * 쿠키에서 먼저 JWT를 추출하고, 없으면 Authorization 헤더에서 추출합니다.
+   * BFF 패턴: 브라우저는 쿠키, 모바일/API는 Authorization 헤더 사용
+   */
+  private static extractJwtFromCookieOrHeader(request: Request): string | null {
+    // 1. 쿠키에서 먼저 확인
+    if (request.cookies && request.cookies.accessToken) {
+      return request.cookies.accessToken;
+    }
+
+    // 2. Authorization 헤더에서 확인
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+
+    return null;
   }
 
   async validate(request: Request, payload: any) {
@@ -31,7 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       }
 
       // Redis에서 토큰 유효성 확인
-      const token = this.extractTokenFromRequest(request);
+      const token = JwtStrategy.extractJwtFromCookieOrHeader(request);
       if (!token) {
         throw new UnauthorizedException(
           ERROR_CODES.AUTH_TOKEN_NOT_PROVIDED.message,
@@ -53,13 +72,5 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         ERROR_CODES.AUTH_TOKEN_INFO_FAILED.message,
       );
     }
-  }
-
-  private extractTokenFromRequest(request: Request): string | null {
-    const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
-      return authHeader.split(' ')[1];
-    }
-    return null;
   }
 }
