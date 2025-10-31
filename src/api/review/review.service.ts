@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
@@ -44,7 +44,10 @@ export class UserRecipeReviewService {
   ): Promise<UserRecipeReview> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+      throw new CustomException(
+        ERROR_CODES.USER_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const completedRecipe = await this.userCompletedRecipeRepository.findOne({
@@ -54,11 +57,17 @@ export class UserRecipeReviewService {
       },
     });
     if (!completedRecipe || !completedRecipe.isCompleted) {
-      throw new CustomException(ERROR_CODES.REVIEW_NOT_ALLOWED);
+      throw new CustomException(
+        ERROR_CODES.REVIEW_NOT_ALLOWED,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     if (completedRecipe.isReviewed) {
-      throw new CustomException(ERROR_CODES.REVIEW_ALREADY_EXISTS);
+      throw new CustomException(
+        ERROR_CODES.REVIEW_ALREADY_EXISTS,
+        HttpStatus.CONFLICT,
+      );
     }
 
     const alreadyReviewed = await this.userRecipeReviewRepository.exists({
@@ -67,7 +76,10 @@ export class UserRecipeReviewService {
       },
     });
     if (alreadyReviewed) {
-      throw new CustomException(ERROR_CODES.REVIEW_ALREADY_EXISTS);
+      throw new CustomException(
+        ERROR_CODES.REVIEW_ALREADY_EXISTS,
+        HttpStatus.CONFLICT,
+      );
     }
 
     const review = this.userRecipeReviewRepository.create({
@@ -114,7 +126,10 @@ export class UserRecipeReviewService {
     });
 
     if (!recipe) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+      throw new CustomException(
+        ERROR_CODES.RECIPE_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const completionCount = await this.userCompletedRecipeRepository.count({
