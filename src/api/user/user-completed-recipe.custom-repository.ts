@@ -26,7 +26,7 @@ export class UserCompletedRecipeCustomRepository extends Repository<any> {
         'completed.user_id as completed_user_id',
         'completed.recipe_id as completed_recipe_id',
         'completed.is_completed as completed_is_completed',
-        'completed.is_reviewed as completed_is_reviewed',
+        'COALESCE(completed.review_count, 0) as completed_review_count',
         'completed.created_at as completed_created_at',
         'recipe.title as recipe_title',
         'recipe.description as recipe_description',
@@ -58,7 +58,7 @@ export class UserCompletedRecipeCustomRepository extends Repository<any> {
           recipeDescription: row.recipe_description,
           recipeImages: row.recipe_image ? [row.recipe_image] : [],
           isCompleted: row.completed_is_completed,
-          isReviewed: row.completed_is_reviewed,
+          isReviewed: (row.completed_review_count ?? 0) > 0, // Deprecated: reviewCount > 0으로 계산
           createdAt: row.completed_created_at,
           isBookmarked: Boolean(row.is_bookmarked),
         });

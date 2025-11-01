@@ -29,8 +29,9 @@ export class CompletedRecipeWithRecipeDto {
   isCompleted: boolean;
 
   @ApiProperty({
-    description: '후기 작성 여부',
+    description: '후기 작성 여부 (Deprecated: reviewCount > 0으로 확인 가능)',
     example: false,
+    deprecated: true,
   })
   isReviewed: boolean;
 

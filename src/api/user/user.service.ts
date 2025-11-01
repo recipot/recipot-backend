@@ -18,7 +18,7 @@ import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entit
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ERROR_CODES } from '../../common/constants/error-codes';
 import { CustomException } from '../../common/exceptions/custom-exception';
 import { SocialLoginService } from '../social-login/social-login.service';
@@ -586,17 +586,20 @@ export class UserService {
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
-    const completedRecipes = await this.userCompletedRecipeRepository.find({
-      where: {
-        userId,
-        isCompleted: true,
-        isReviewed: false,
-        updatedAt: LessThan(twentyFourHoursAgo),
-      },
-      order: {
-        updatedAt: 'DESC',
-      },
-    });
+    // reviewCount가 0인 경우(후기 미작성)만 조회
+    // isReviewed 필드는 deprecated되었으므로 reviewCount로 대체
+    const completedRecipes = await this.userCompletedRecipeRepository
+      .createQueryBuilder('completed')
+      .where('completed.user_id = :userId', { userId })
+      .andWhere('completed.is_completed = :isCompleted', { isCompleted: true })
+      .andWhere(
+        '(completed.review_count = 0 OR completed.review_count IS NULL)',
+      )
+      .andWhere('completed.updated_at < :twentyFourHoursAgo', {
+        twentyFourHoursAgo,
+      })
+      .orderBy('completed.updated_at', 'DESC')
+      .getMany();
 
     const completedRecipeIds = completedRecipes.map((recipe) => recipe.id);
 

@@ -27,11 +27,15 @@ export class UserCompletedRecipe extends CommonEntity {
   })
   isCompleted: boolean;
 
+  /**
+   * @deprecated Use reviewCount instead. This field is no longer updated.
+   * Will be removed in a future migration.
+   */
   @Column({
     type: 'boolean',
     default: false,
     name: 'is_reviewed',
-    comment: '후기 작성 여부',
+    comment: '후기 작성 여부 (Deprecated: reviewCount 사용 권장)',
   })
   isReviewed: boolean;
 
