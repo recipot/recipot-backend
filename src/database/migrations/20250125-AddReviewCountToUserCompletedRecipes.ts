@@ -18,4 +18,3 @@ module.exports = class Migration20250125000000 {
     await queryRunner.dropColumn('user_completed_recipes', 'review_count');
   }
 };
-
