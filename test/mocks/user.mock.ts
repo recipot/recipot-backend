@@ -395,6 +395,15 @@ const mockUserService = {
   },
 };
 
+/**
+ * 테스트 격리를 위해 Mock 상태를 초기화하는 함수
+ * 각 E2E 테스트 파일의 afterAll에서 호출해야 합니다.
+ */
+export function resetUserMocks() {
+  cookingStartCountMap.clear();
+  userServiceCookingStartCountMap.clear();
+}
+
 @Module({
   controllers: [UserController, UserRecipeArchiveController],
   providers: [

@@ -6,6 +6,8 @@ import {
   TEST_TAGS,
 } from '../helpers/auth.helper';
 import { MockAppModule } from '../mocks/app.mock';
+import { resetReviewMocks } from '../mocks/review.mock';
+import { resetUserMocks } from '../mocks/user.mock';
 
 describe('UserController (E2E)', () => {
   let app: INestApplication;
@@ -30,6 +32,9 @@ describe('UserController (E2E)', () => {
   });
 
   afterAll(async () => {
+    // 테스트 격리를 위해 Mock 상태 초기화
+    resetUserMocks();
+    resetReviewMocks();
     await app.close();
   });
 
