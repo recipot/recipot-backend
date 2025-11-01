@@ -347,11 +347,11 @@ export class UserService {
 
     // 기존 요리 시작 기록 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
-      where: { id: completedRecipeId },
+      where: { id: completedRecipeId, userId },
     });
 
     if (!existing) {
-      // 요리 시작 기록이 없는 경우 오류 반환
+      // 요리 시작 기록이 없거나 해당 사용자의 것이 아닌 경우 오류 반환
       throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
     }
 
