@@ -5,6 +5,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MockAuthModule } from './auth.mock';
 import { MockDatabaseModule } from './database.mock';
 import { MockRecipeModule } from './recipe.mock';
+import { MockReviewModule } from './review.mock';
 import { MockUserModule } from './user.mock';
 
 @Module({
@@ -16,6 +17,7 @@ import { MockUserModule } from './user.mock';
     MockAuthModule,
     MockRecipeModule,
     MockUserModule,
+    MockReviewModule,
   ],
   providers: [
     {

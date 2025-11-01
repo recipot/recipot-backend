@@ -322,15 +322,16 @@ describe('UserRecipeArchiveService', () => {
     const userId = 1;
     const recipeId = 1;
 
-    it('UserService의 startRecipeCooking 메서드를 호출해야 함', async () => {
+    it('UserService의 startRecipeCooking 메서드를 호출하고 completedRecipeId를 반환해야 함', async () => {
       // Given
-      mockUserService.startRecipeCooking.mockResolvedValue(true);
+      const mockResult = { completedRecipeId: 123 };
+      mockUserService.startRecipeCooking.mockResolvedValue(mockResult);
 
       // When
       const result = await service.startRecipeCooking(userId, recipeId);
 
       // Then
-      expect(result).toBe(true);
+      expect(result).toEqual({ completedRecipeId: 123 });
       expect(mockUserService.startRecipeCooking).toHaveBeenCalledWith(
         userId,
         recipeId,

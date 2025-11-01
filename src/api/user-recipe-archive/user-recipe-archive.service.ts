@@ -140,12 +140,18 @@ export class UserRecipeArchiveService {
     );
   }
 
-  async startRecipeCooking(userId: number, recipeId: number): Promise<boolean> {
+  async startRecipeCooking(
+    userId: number,
+    recipeId: number,
+  ): Promise<{ completedRecipeId: number }> {
     return this.userService.startRecipeCooking(userId, recipeId);
   }
 
-  async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
-    return this.userService.completeRecipe(userId, recipeId);
+  async completeRecipe(
+    userId: number,
+    completedRecipeId: number,
+  ): Promise<boolean> {
+    return this.userService.completeRecipe(userId, completedRecipeId);
   }
 
   async getCompletedRecipes(
