@@ -112,8 +112,14 @@ export class UserRecipeArchiveController {
   @Post(':recipeId/start')
   @ApiOperation({ summary: '레시피 요리 시작 (바로 해먹기)' })
   @ApiSuccessResponse('레시피 요리 시작 성공', {
-    type: 'boolean',
-    example: true,
+    type: 'object',
+    properties: {
+      completedRecipeId: {
+        type: 'number',
+        example: 123,
+        description: '생성된 UserCompletedRecipe의 id',
+      },
+    },
   })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
@@ -121,12 +127,12 @@ export class UserRecipeArchiveController {
   async startRecipeCooking(
     @Request() req: any,
     @Param('recipeId', ParseIntPipe) recipeId: number,
-  ): Promise<boolean> {
+  ): Promise<{ completedRecipeId: number }> {
     const userId = req.user.sub;
     return this.archiveService.startRecipeCooking(userId, recipeId);
   }
 
-  @Post(':recipeId/complete')
+  @Post(':completedRecipeId/complete')
   @ApiOperation({ summary: '레시피 완료' })
   @ApiSuccessResponse('레시피 완료 성공', { type: 'boolean', example: true })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
@@ -134,10 +140,10 @@ export class UserRecipeArchiveController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
   async completeRecipe(
     @Request() req: any,
-    @Param('recipeId', ParseIntPipe) recipeId: number,
+    @Param('completedRecipeId', ParseIntPipe) completedRecipeId: number,
   ): Promise<boolean> {
     const userId = req.user.sub;
-    return await this.archiveService.completeRecipe(userId, recipeId);
+    return await this.archiveService.completeRecipe(userId, completedRecipeId);
   }
 
   @Get('completed')

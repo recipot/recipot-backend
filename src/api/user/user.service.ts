@@ -15,6 +15,7 @@ import {
 } from '@/database/entity/user-daily-conditions.entity';
 import { UserRecentRecipes } from '@/database/entity/user-recent-recipes.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
+import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { User } from '@/database/entity/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -42,7 +43,6 @@ import { UserDto } from './dto/user.dto';
 import { UserRole } from './enums/role.enum';
 import { UserRecentRecipesCustomRepository } from './user-recent-recipes.custom-repository';
 import { UserRecipeBookmarkCustomRepository } from './user-recipe-bookmark.custom-repository';
-import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 
 @Injectable()
 export class UserService {
@@ -332,7 +332,10 @@ export class UserService {
   /**
    * 사용자가 레시피를 완료합니다.
    */
-  async completeRecipe(userId: number, recipeId: number): Promise<boolean> {
+  async completeRecipe(
+    userId: number,
+    completedRecipeId: number,
+  ): Promise<boolean> {
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -342,33 +345,19 @@ export class UserService {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
     }
 
-    // 레시피 존재 여부 확인
-    const recipe = await this.recipeRepository.findOne({
-      where: { id: recipeId },
-    });
-
-    if (!recipe) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-    }
-
     // 기존 요리 시작 기록 확인
     const existing = await this.userCompletedRecipeRepository.findOne({
-      where: { userId, recipeId },
+      where: { id: completedRecipeId },
     });
 
-    if (existing) {
-      // 이미 완료된 레시피인지 확인
-      if (existing.isCompleted) {
-        return true; // 이미 완료된 경우 true 반환
-      }
-
-      // 요리 시작 기록을 완료로 업데이트
-      existing.isCompleted = true;
-      await this.userCompletedRecipeRepository.save(existing);
-    } else {
+    if (!existing) {
       // 요리 시작 기록이 없는 경우 오류 반환
       throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED);
     }
+
+    // 요리 시작 기록을 완료로 업데이트
+    existing.isCompleted = true;
+    await this.userCompletedRecipeRepository.save(existing);
 
     // 사용자 완료 횟수 증가
     user.recipeCompleteCount = (user.recipeCompleteCount || 0) + 1;
@@ -386,7 +375,7 @@ export class UserService {
     await this.userRepository.save(user);
 
     // 완료 이력 기록
-    await this.logCompletionHistory(userId, recipeId);
+    await this.logCompletionHistory(userId, existing.recipeId);
 
     return true;
   }
@@ -394,7 +383,10 @@ export class UserService {
   /**
    * 사용자가 레시피 요리를 시작합니다.
    */
-  async startRecipeCooking(userId: number, recipeId: number): Promise<boolean> {
+  async startRecipeCooking(
+    userId: number,
+    recipeId: number,
+  ): Promise<{ completedRecipeId: number }> {
     // 사용자 존재 여부 확인
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -413,15 +405,15 @@ export class UserService {
       throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
 
-    // 이미 요리를 시작했는지 확인
-    const existing = await this.userCompletedRecipeRepository.findOne({
-      where: { userId, recipeId },
-    });
+    // 한 사용자가 요리 여러 번 시작 가능
+    // const existing = await this.userCompletedRecipeRepository.findOne({
+    //   where: { userId, recipeId },
+    // });
 
-    if (existing) {
-      // 이미 요리를 시작했다면 기존 레코드 반환
-      return true;
-    }
+    // if (existing) {
+    //   // 이미 요리를 시작했다면 기존 레코드 반환
+    //   return true;
+    // }
 
     // 요리 시작 기록 생성 (isCompleted: false)
     const entity = this.userCompletedRecipeRepository.create({
@@ -432,7 +424,7 @@ export class UserService {
     });
     await this.userCompletedRecipeRepository.save(entity);
 
-    return true;
+    return { completedRecipeId: entity.id };
   }
 
   private async getUnavailableIngredients(

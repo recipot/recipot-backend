@@ -8,6 +8,9 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { Module } from '@nestjs/common';
 import { MockJwtGuard } from './auth.mock';
 
+// recipeId별로 호출 횟수를 추적하여 다른 completedRecipeId 반환
+const cookingStartCountMap = new Map<number, number>();
+
 const mockUserRecipeArchiveService = {
   createBookmark: async (_userId: number, createBookmarkDto: any) => {
     // 테스트 시나리오에 따라 다른 응답 반환
@@ -81,13 +84,13 @@ const mockUserRecipeArchiveService = {
       totalPages,
     };
   },
-  completeRecipe: async (userId: number, recipeId: number) => {
+  completeRecipe: async (userId: number, completedRecipeId: number) => {
     // 테스트 시나리오에 따라 다른 응답 반환
     if (userId === 99999) {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
     }
-    if (recipeId === 99999) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND); // 존재하지 않는 레시피 ID
+    if (completedRecipeId === 99999) {
+      throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED); // 존재하지 않는 완료 레시피 ID
     }
 
     // 성공적인 완료
@@ -103,8 +106,15 @@ const mockUserRecipeArchiveService = {
       throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND, 404);
     }
 
+    // recipeId별 호출 횟수 증가하여 다른 completedRecipeId 반환
+    const callCount = (cookingStartCountMap.get(recipeId) || 0) + 1;
+    cookingStartCountMap.set(recipeId, callCount);
+
+    // 첫 번째 호출: 100, 두 번째: 101, 세 번째: 102 등의 ID 반환
+    const completedRecipeId = 100 + callCount - 1;
+
     // 성공적인 요리 시작
-    return true;
+    return { completedRecipeId };
   },
   getCompletedRecipes: async (_userId: number, query: any) => {
     // Mock 데이터: 페이지네이션 응답 구조와 동일하게
@@ -222,7 +232,30 @@ const mockUserRecipeArchiveService = {
   },
 };
 
+// recipeId별로 호출 횟수를 추적하여 다른 completedRecipeId 반환 (UserService용)
+const userServiceCookingStartCountMap = new Map<number, number>();
+
 const mockUserService = {
+  startRecipeCooking: async (userId: number, recipeId: number) => {
+    // 테스트 시나리오에 따라 다른 응답 반환
+    if (userId === 99999) {
+      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
+    }
+    if (recipeId === 99999) {
+      // 테스트에서 404를 기대하므로 NOT_FOUND 상태 코드로 예외 발생
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND, 404);
+    }
+
+    // recipeId별 호출 횟수 증가하여 다른 completedRecipeId 반환
+    const callCount = (userServiceCookingStartCountMap.get(recipeId) || 0) + 1;
+    userServiceCookingStartCountMap.set(recipeId, callCount);
+
+    // 첫 번째 호출: 100, 두 번째: 101, 세 번째: 102 등의 ID 반환
+    const completedRecipeId = 100 + callCount - 1;
+
+    // 성공적인 요리 시작
+    return { completedRecipeId };
+  },
   createBookmark: async (_userId: number, createBookmarkDto: any) => {
     // 테스트 시나리오에 따라 다른 응답 반환
     if (createBookmarkDto.recipeId === 99999) {
@@ -348,29 +381,16 @@ const mockUserService = {
       },
     ];
   },
-  completeRecipe: async (userId: number, recipeId: number) => {
+  completeRecipe: async (userId: number, completedRecipeId: number) => {
     // 테스트 시나리오에 따라 다른 응답 반환
     if (userId === 99999) {
       throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
     }
-    if (recipeId === 99999) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND); // 존재하지 않는 레시피 ID
+    if (completedRecipeId === 99999) {
+      throw new CustomException(ERROR_CODES.RECIPE_COOKING_NOT_STARTED); // 존재하지 않는 완료 레시피 ID
     }
 
     // 성공적인 완료
-    return true;
-  },
-  startRecipeCooking: async (userId: number, recipeId: number) => {
-    // 테스트 시나리오에 따라 다른 응답 반환
-    if (userId === 99999) {
-      throw new CustomException(ERROR_CODES.USER_NOT_FOUND); // 존재하지 않는 사용자 ID
-    }
-    if (recipeId === 99999) {
-      // 테스트에서 404를 기대하므로 NOT_FOUND 상태 코드로 예외 발생
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND, 404);
-    }
-
-    // 성공적인 요리 시작
     return true;
   },
 };
