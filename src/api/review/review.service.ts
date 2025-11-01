@@ -63,25 +63,24 @@ export class UserRecipeReviewService {
       );
     }
 
-    // 후기 중복 체크 제거, 한 사용자가 여러 번 후기를 등록할 수 있도록 수정
-    // if (completedRecipe.isReviewed) {
-    //   throw new CustomException(
-    //     ERROR_CODES.REVIEW_ALREADY_EXISTS,
-    //     HttpStatus.CONFLICT,
-    //   );
-    // }
+    if (completedRecipe.isReviewed) {
+      throw new CustomException(
+        ERROR_CODES.REVIEW_ALREADY_EXISTS,
+        HttpStatus.CONFLICT,
+      );
+    }
 
-    // const alreadyReviewed = await this.userRecipeReviewRepository.exists({
-    //   where: {
-    //     userCompletedRecipeId: completedRecipe.id,
-    //   },
-    // });
-    // if (alreadyReviewed) {
-    //   throw new CustomException(
-    //     ERROR_CODES.REVIEW_ALREADY_EXISTS,
-    //     HttpStatus.CONFLICT,
-    //   );
-    // }
+    const alreadyReviewed = await this.userRecipeReviewRepository.exists({
+      where: {
+        userCompletedRecipeId: completedRecipe.id,
+      },
+    });
+    if (alreadyReviewed) {
+      throw new CustomException(
+        ERROR_CODES.REVIEW_ALREADY_EXISTS,
+        HttpStatus.CONFLICT,
+      );
+    }
 
     const review = this.userRecipeReviewRepository.create({
       userId,
