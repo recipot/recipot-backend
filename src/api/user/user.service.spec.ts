@@ -213,7 +213,7 @@ describe('UserService', () => {
         where: { id: userId },
       });
       expect(mockUserCompletedRecipeRepository.findOne).toHaveBeenCalledWith({
-        where: { id: completedRecipeId },
+        where: { id: completedRecipeId, userId },
       });
       expect(mockUserCompletedRecipeRepository.save).toHaveBeenCalled();
       expect(mockUserRepository.save).toHaveBeenCalled();
@@ -269,6 +269,19 @@ describe('UserService', () => {
 
     it('요리 시작 기록이 없으면 RECIPE_COOKING_NOT_STARTED 예외', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserCompletedRecipeRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.completeRecipe(userId, completedRecipeId),
+      ).rejects.toThrow(CustomException);
+      await expect(
+        service.completeRecipe(userId, completedRecipeId),
+      ).rejects.toThrow(ERROR_CODES.RECIPE_COOKING_NOT_STARTED.message);
+    });
+
+    it('다른 사용자의 completedRecipeId로 완료하려고 하면 RECIPE_COOKING_NOT_STARTED 예외', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      // userId가 다르기 때문에 findOne이 null을 반환해야 함 (다른 사용자의 레코드)
       mockUserCompletedRecipeRepository.findOne.mockResolvedValue(null);
 
       await expect(
