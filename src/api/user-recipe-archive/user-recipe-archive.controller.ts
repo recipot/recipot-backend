@@ -116,9 +116,12 @@ export class UserRecipeArchiveController {
     properties: {
       completedRecipeId: {
         type: 'number',
-        example: 123,
+        example: 8,
         description: '생성된 UserCompletedRecipe의 id',
       },
+    },
+    example: {
+      completedRecipeId: 8,
     },
   })
   @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
