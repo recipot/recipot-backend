@@ -34,4 +34,12 @@ export class UserCompletedRecipe extends CommonEntity {
     comment: '후기 작성 여부',
   })
   isReviewed: boolean;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    name: 'review_count',
+    comment: '후기 작성 횟수',
+  })
+  reviewCount: number;
 }

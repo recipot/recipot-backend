@@ -63,24 +63,8 @@ export class UserRecipeReviewService {
       );
     }
 
-    if (completedRecipe.isReviewed) {
-      throw new CustomException(
-        ERROR_CODES.REVIEW_ALREADY_EXISTS,
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    const alreadyReviewed = await this.userRecipeReviewRepository.exists({
-      where: {
-        userCompletedRecipeId: completedRecipe.id,
-      },
-    });
-    if (alreadyReviewed) {
-      throw new CustomException(
-        ERROR_CODES.REVIEW_ALREADY_EXISTS,
-        HttpStatus.CONFLICT,
-      );
-    }
+    // 후기 중복 체크 제거: 여러 번 작성 가능하도록 수정
+    // 기존: isReviewed 플래그와 userCompletedRecipeId 기준 중복 체크가 있었음
 
     const review = this.userRecipeReviewRepository.create({
       userId,
@@ -93,9 +77,12 @@ export class UserRecipeReviewService {
 
     const savedReview = await this.userRecipeReviewRepository.save(review);
 
-    await this.userCompletedRecipeRepository.update(completedRecipe.id, {
-      isReviewed: true,
-    });
+    // 후기 작성 횟수 증가
+    await this.userCompletedRecipeRepository.increment(
+      { id: completedRecipe.id },
+      'reviewCount',
+      1,
+    );
 
     return savedReview;
   }
@@ -173,11 +160,15 @@ export class UserRecipeReviewService {
       EXPERIENCE_CODE_GROUP,
     );
 
+    // 후기 작성 횟수 조회 (completedRecipe에서 직접 가져옴)
+    const reviewCount = completedRecipe.reviewCount ?? 0;
+
     return {
       completionCount,
       completionMessage: `${completionCount}번째 해먹기 완료!`,
       recipeName: recipe.title,
       recipeImageUrl: representativeImage?.imageUrl ?? null,
+      reviewCount,
       tasteOptions,
       difficultyOptions,
       experienceOptions,

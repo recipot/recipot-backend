@@ -32,7 +32,8 @@ export class ReviewController {
   @Post()
   @ApiOperation({
     summary: '레시피 후기 작성',
-    description: '인증된 사용자가 레시피 후기를 등록합니다.',
+    description:
+      '인증된 사용자가 레시피 후기를 등록합니다. 같은 레시피에 대해 여러 번 작성할 수 있습니다.',
   })
   @ApiSuccessResponse('레시피 후기 작성 성공', {
     type: 'object',
@@ -52,7 +53,6 @@ export class ReviewController {
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.RECIPE_NOT_FOUND)
   @ApiErrorResponse(HttpStatus.BAD_REQUEST, ERROR_CODES.REVIEW_NOT_ALLOWED)
-  @ApiErrorResponse(HttpStatus.CONFLICT, ERROR_CODES.REVIEW_ALREADY_EXISTS)
   async createReview(
     @Request() req: any,
     @Body() createDto: CreateUserRecipeReviewDto,

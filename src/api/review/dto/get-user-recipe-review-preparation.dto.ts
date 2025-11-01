@@ -25,6 +25,12 @@ export class GetUserRecipeReviewPreparationResponseDto {
   @ApiProperty({ description: '횟수 안내 문구', example: '3번째 해먹기 완료!' })
   completionMessage: string;
 
+  @ApiProperty({
+    description: '해당 완료 레시피에 작성한 후기 횟수',
+    example: 2,
+  })
+  reviewCount: number;
+
   @ApiProperty({ description: '레시피 이름', example: '새우 땅콩버터 버거' })
   recipeName: string;
 
