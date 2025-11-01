@@ -10,6 +10,9 @@ import { MockJwtGuard } from './auth.mock';
 // completedRecipeId별로 호출 횟수를 추적
 const reviewCallCountMap = new Map<number, number>();
 
+// 전역적으로 단조 증가하는 리뷰 ID 카운터
+let reviewIdSequence = 1;
+
 const mockUserRecipeReviewService = {
   createReview: async (userId: number, createDto: any) => {
     // 사용자 검증
@@ -25,7 +28,7 @@ const mockUserRecipeReviewService = {
 
     // Mock 리뷰 생성
     const review: UserRecipeReview = {
-      id: callCount, // 호출 횟수를 ID로 사용
+      id: reviewIdSequence++, // 전역적으로 단조 증가하는 ID
       userId,
       userCompletedRecipeId: completedRecipeId,
       tasteCode: createDto.tasteCode ?? null,
@@ -72,6 +75,7 @@ const mockUserRecipeReviewService = {
  */
 export function resetReviewMocks() {
   reviewCallCountMap.clear();
+  reviewIdSequence = 1;
 }
 
 @Module({
