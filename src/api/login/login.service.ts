@@ -26,20 +26,11 @@ export class LoginService {
     private readonly userService: UserService,
   ) {}
 
-  /** 카카오 로그인 URL 생성 (환경변수 누락 시 즉시 실패) */
+  /** 카카오 로그인 URL 생성 */
   generateKakaoLoginUrl(): string {
-    const clientId = process.env.KAKAO_CLIENT_ID;
-    const redirectUri = process.env.KAKAO_REDIRECT_URI;
-    if (!clientId || !redirectUri) {
-      this.logger.error(
-        'Kakao OAuth config is missing clientId or redirectUri',
-      );
-      throw new CustomException(ERROR_CODES.KAKAO_CONFIG_ERROR);
-    }
-
     const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
+      client_id: process.env.KAKAO_CLIENT_ID!,
+      redirect_uri: process.env.KAKAO_REDIRECT_URI!,
       response_type: KAKAO_API.RESPONSE_TYPE,
       scope: KAKAO_API.SCOPE,
     });
@@ -82,7 +73,7 @@ export class LoginService {
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(jwt.accessExpiresAt as unknown as string),
+        expires: new Date(jwt.accessExpiresAt),
       });
 
       res.cookie('refreshToken', jwt.refreshToken, {
@@ -91,7 +82,7 @@ export class LoginService {
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(jwt.refreshExpiresAt as unknown as string),
+        expires: new Date(jwt.refreshExpiresAt),
       });
     }
 
@@ -100,24 +91,14 @@ export class LoginService {
     };
   }
 
-  /** code → Kakao tokens (환경변수 누락 시 즉시 실패) */
+  /** code → Kakao tokens */
   private async exchangeKakaoCodeForTokens(code: string) {
-    const clientId = process.env.KAKAO_CLIENT_ID;
-    const clientSecret = process.env.KAKAO_CLIENT_SECRET;
-    const redirectUri = process.env.KAKAO_REDIRECT_URI;
-    if (!clientId || !clientSecret || !redirectUri) {
-      this.logger.error(
-        'Kakao OAuth config is missing clientId/clientSecret/redirectUri',
-      );
-      throw new CustomException(ERROR_CODES.KAKAO_CONFIG_ERROR);
-    }
-
     try {
       const tokenParams = qs.stringify({
         grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
+        client_id: process.env.KAKAO_CLIENT_ID!,
+        client_secret: process.env.KAKAO_CLIENT_SECRET!,
+        redirect_uri: process.env.KAKAO_REDIRECT_URI!,
         code: code,
       });
 
@@ -169,21 +150,13 @@ export class LoginService {
     }
   }
 
-  /** 구글 로그인 URL 생성 (환경변수 누락 시 즉시 실패) */
+  /** 구글 로그인 URL 생성 */
   generateGoogleLoginUrl(): string {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-    if (!clientId || !redirectUri) {
-      this.logger.error(
-        'Google OAuth config is missing clientId or redirectUri',
-      );
-      throw new CustomException(ERROR_CODES.GOOGLE_CONFIG_ERROR);
-    }
     const scope = process.env.GOOGLE_SCOPE || GOOGLE_API.DEFAULTS.SCOPE;
 
     const query = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
       response_type: GOOGLE_API.RESPONSE_TYPE,
       scope,
       access_type: GOOGLE_API.DEFAULTS.ACCESS_TYPE,
@@ -229,7 +202,7 @@ export class LoginService {
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(jwt.accessExpiresAt as unknown as string),
+        expires: new Date(jwt.accessExpiresAt),
       });
 
       res.cookie('refreshToken', jwt.refreshToken, {
@@ -238,7 +211,7 @@ export class LoginService {
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(jwt.refreshExpiresAt as unknown as string),
+        expires: new Date(jwt.refreshExpiresAt),
       });
     }
 
@@ -247,25 +220,15 @@ export class LoginService {
     };
   }
 
-  /** code → Google tokens (환경변수 누락 시 즉시 실패) */
+  /** code → Google tokens */
   private async exchangeGoogleCodeForTokens(code: string) {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-    if (!clientId || !clientSecret || !redirectUri) {
-      this.logger.error(
-        'Google OAuth config is missing clientId/clientSecret/redirectUri',
-      );
-      throw new CustomException(ERROR_CODES.GOOGLE_CONFIG_ERROR);
-    }
-
     try {
       const payload = qs.stringify({
         code,
         grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
       });
 
       const { data } = await axios.post(GOOGLE_API_URLS.TOKEN_URL, payload, {
