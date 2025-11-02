@@ -3,6 +3,7 @@ import { EXCEL_COLUMNS } from '@/common/constants/excel-columns.constants';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { Condition } from '@/database/entity/condition.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { DIVISION } from '../constants/file-import.constants';
 import { RecipeError } from '../types/file-import.types';
@@ -206,6 +207,42 @@ export class FileImportValidator {
       if (existingSeasoning) {
         return `양념 "${name}"이 이미 존재합니다.`;
       }
+    }
+
+    return null; // 모든 검증 통과
+  }
+
+  /**
+   * 레시피 이미지 행 데이터의 필수 필드를 검증합니다.
+   *
+   * @param row 엑셀 행 데이터
+   * @param rowNumber 행 번호 (에러 메시지용)
+   * @param recipe 레시피 엔티티 (존재 여부 확인용, null이면 레시피를 찾을 수 없음)
+   * @returns 검증 결과 (통과 시 null, 실패 시 RecipeError 반환)
+   */
+  static validateRecipeImageRequiredFields(
+    row: Record<string, any>,
+    rowNumber: number,
+    recipe: Recipe | null,
+  ): RecipeError | null {
+    // 레시피 ID 검증
+    const recipeIdText = row[EXCEL_COLUMNS.RECIPE_IMAGE.ID] || '';
+    if (!recipeIdText || !String(recipeIdText).trim()) {
+      return {
+        row: rowNumber,
+        title: '',
+        error: '레시피 ID가 없거나 유효하지 않습니다.',
+      };
+    }
+
+    // 레시피 존재 여부 검증
+    if (!recipe) {
+      const recipeId = parseInt(String(recipeIdText).trim(), 10);
+      return {
+        row: rowNumber,
+        title: `레시피 ID: ${recipeId}`,
+        error: `레시피 ID ${recipeId}를 찾을 수 없습니다.`,
+      };
     }
 
     return null; // 모든 검증 통과

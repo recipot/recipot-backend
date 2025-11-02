@@ -23,4 +23,10 @@ export const EXCEL_COLUMNS = {
     SEASONINGS: '양념',
     // step 컬럼은 동적으로 처리: {숫자}step 요약, {숫자}step, {숫자}step 이미지 형식 (예: 1step 요약, 1step, 1step 이미지, 2step 요약, 2step, 2step 이미지, ...)
   },
+  // 레시피 이미지 업데이트 엑셀 컬럼명
+  RECIPE_IMAGE: {
+    ID: '레시피 ID',
+    IMAGES: '레시피 이미지',
+    // step 이미지 컬럼은 동적으로 처리: {숫자}step 이미지 형식 (예: 1step 이미지, 2step 이미지, ...)
+  },
 } as const;

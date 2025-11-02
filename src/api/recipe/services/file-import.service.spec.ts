@@ -10,6 +10,9 @@ import { Condition } from '@/database/entity/condition.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
+import { RecipeStep } from '@/database/entity/recipe-step.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
 
@@ -121,6 +124,18 @@ describe('FileImportService', () => {
         },
         {
           provide: getRepositoryToken(CommonCode),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(Recipe),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(RecipeImage),
+          useFactory: createRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(RecipeStep),
           useFactory: createRepositoryMock,
         },
         {
