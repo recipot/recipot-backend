@@ -1,6 +1,5 @@
 import { AuthService } from '@/api/auth/auth.service';
 import { SocialLoginService } from '@/api/social-login/social-login.service';
-import { UserDto } from '@/api/user/dto/user.dto';
 import { UserService } from '@/api/user/user.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import {
@@ -27,92 +26,72 @@ export class LoginService {
     private readonly userService: UserService,
   ) {}
 
-  /**
-   * 카카오 로그인 URL을 생성합니다.
-   */
-  async generateKakaoLoginUrl(): Promise<string> {
+  /** 카카오 로그인 URL 생성 (환경변수 누락 시 즉시 실패) */
+  generateKakaoLoginUrl(): string {
+    const clientId = process.env.KAKAO_CLIENT_ID;
+    const redirectUri = process.env.KAKAO_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+      this.logger.error(
+        'Kakao OAuth config is missing clientId or redirectUri',
+      );
+      throw new CustomException(ERROR_CODES.KAKAO_CONFIG_ERROR);
+    }
+
     const params = new URLSearchParams({
-      client_id: process.env.KAKAO_CLIENT_ID,
-      redirect_uri: process.env.KAKAO_REDIRECT_URI,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: KAKAO_API.RESPONSE_TYPE,
       scope: KAKAO_API.SCOPE,
     });
     return `${KAKAO_API_URLS.AUTH_URL}?${params.toString()}`;
   }
 
-  /**
-   * 카카오 로그인을 처리합니다.
-   */
-  async processKakaoLogin(code: string, res?: Response) {
-    // 1. 인가 코드로 액세스 토큰 요청
-    const tokenResponse = await this.getKakaoAccessToken(code);
-
-    // 2. 액세스 토큰으로 사용자 정보 조회
-    const kakaoUserInfo = await this.getKakaoUserInfo(
-      tokenResponse.access_token,
-    );
-
-    // 3. 기존 소셜 로그인 정보 확인
-    const existingSocialLogin =
-      await this.socialLoginService.findBySidAndPlatform(
-        kakaoUserInfo.id.toString(),
-        // TODO 공통코드 처리
-        'kakao',
-      );
-
-    let user: UserDto;
-
-    if (existingSocialLogin) {
-      // 기존 사용자: 기존 유저 정보 조회
-      user = await this.userService.findById(existingSocialLogin.userId);
-      if (!user) {
-        throw new Error('User not found');
-      }
-    } else {
-      // 신규 사용자: 유저 생성
-      const newUser = await this.userService.createUser(
-        kakaoUserInfo.kakao_account?.email,
-      );
-
-      // 소셜 로그인 정보 생성
-      await this.socialLoginService.createSocialLogin(
-        newUser.id,
-        kakaoUserInfo.id.toString(),
-        // TODO 공통코드 처리
-        'kakao',
-      );
-
-      // newUser를 userDto로 변환
-      user = await this.userService.findById(newUser.id);
-      if (!user) {
-        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-      }
+  /** 카카오 콜백 처리 */
+  async handleKakaoCallback(code: string, res?: Response) {
+    // 1) code → tokens
+    const tokenResponse = await this.exchangeKakaoCodeForTokens(code);
+    const accessToken = tokenResponse.access_token;
+    if (!accessToken) {
+      throw new CustomException(ERROR_CODES.KAKAO_TOKEN_FAILED);
     }
 
-    // 4. JWT 토큰 생성 (Access Token + Refresh Token)
-    const { accessToken, refreshToken, accessExpiresAt, refreshExpiresAt } =
-      await this.authService.generateSocialLoginTokens(user.id, user.role);
+    // 2) get profile
+    const profile = await this.fetchKakaoProfile(accessToken);
+    const sid = profile?.id?.toString();
+    if (!sid) {
+      throw new CustomException(ERROR_CODES.KAKAO_USER_INFO_FAILED);
+    }
 
+    // 3) find or create user
+    const user = await this.findOrCreateKakaoUser(sid, profile);
+
+    // 4) issue app JWTs (role required)
+    const jwt = await this.authService.generateSocialLoginTokens(
+      user.id,
+      user.role,
+    );
+
+    // 5) 쿠키에 토큰 저장
     if (res) {
       const isProduction = process.env.NODE_ENV === 'production';
       const domain = process.env.BASE_DOMAIN;
 
-      res.cookie('accessToken', accessToken, {
+      res.cookie('accessToken', jwt.accessToken, {
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(accessExpiresAt as unknown as string),
+        expires: new Date(jwt.accessExpiresAt as unknown as string),
       });
 
-      res.cookie('refreshToken', refreshToken, {
+      res.cookie('refreshToken', jwt.refreshToken, {
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         domain: isProduction ? domain : undefined,
-        expires: new Date(refreshExpiresAt as unknown as string),
+        expires: new Date(jwt.refreshExpiresAt as unknown as string),
       });
     }
 
@@ -121,51 +100,73 @@ export class LoginService {
     };
   }
 
-  /**
-   * 카카오 인가 코드로 액세스 토큰을 요청합니다.
-   */
-  async getKakaoAccessToken(code: string): Promise<any> {
-    const tokenParams = qs.stringify({
-      grant_type: 'authorization_code',
-      client_id: process.env.KAKAO_CLIENT_ID,
-      client_secret: process.env.KAKAO_CLIENT_SECRET,
-      redirect_uri: process.env.KAKAO_REDIRECT_URI,
-      code: code,
-    });
-
-    const response = await axios.post<any>(
-      KAKAO_API_URLS.TOKEN_URL,
-      tokenParams,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      },
-    );
-
-    if (!response || !response.data) {
-      throw new CustomException(ERROR_CODES.AUTH_TOKEN_EXPIRED);
+  /** code → Kakao tokens (환경변수 누락 시 즉시 실패) */
+  private async exchangeKakaoCodeForTokens(code: string) {
+    const clientId = process.env.KAKAO_CLIENT_ID;
+    const clientSecret = process.env.KAKAO_CLIENT_SECRET;
+    const redirectUri = process.env.KAKAO_REDIRECT_URI;
+    if (!clientId || !clientSecret || !redirectUri) {
+      this.logger.error(
+        'Kakao OAuth config is missing clientId/clientSecret/redirectUri',
+      );
+      throw new CustomException(ERROR_CODES.KAKAO_CONFIG_ERROR);
     }
 
-    return response.data;
+    try {
+      const tokenParams = qs.stringify({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code: code,
+      });
+
+      const response = await axios.post<any>(
+        KAKAO_API_URLS.TOKEN_URL,
+        tokenParams,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+
+      if (!response || !response.data) {
+        throw new CustomException(ERROR_CODES.KAKAO_TOKEN_FAILED);
+      }
+
+      return response.data;
+    } catch (e: any) {
+      this.logger.error(
+        'Kakao token fetch failed',
+        e?.response?.data || e?.message,
+      );
+      throw new CustomException(ERROR_CODES.KAKAO_TOKEN_FAILED);
+    }
   }
 
-  /**
-   * 카카오 액세스 토큰으로 사용자 정보를 조회합니다.
-   */
-  async getKakaoUserInfo(accessToken: string): Promise<any> {
-    const response = await axios.get<any>(KAKAO_API_URLS.USER_ME_URL, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+  /** accessToken → Kakao profile */
+  private async fetchKakaoProfile(accessToken: string) {
+    try {
+      const response = await axios.get<any>(KAKAO_API_URLS.USER_ME_URL, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
 
-    if (!response || !response.data) {
+      if (!response || !response.data) {
+        throw new CustomException(ERROR_CODES.KAKAO_USER_INFO_FAILED);
+      }
+
+      return response.data;
+    } catch (e: any) {
+      this.logger.error(
+        'Kakao profile fetch failed',
+        e?.response?.data || e?.message,
+      );
       throw new CustomException(ERROR_CODES.KAKAO_USER_INFO_FAILED);
     }
-
-    return response.data;
   }
 
   /** 구글 로그인 URL 생성 (환경변수 누락 시 즉시 실패) */
@@ -304,6 +305,33 @@ export class LoginService {
   }
 
   /** 소셜 연결 조회 후 사용자 생성/반환 */
+  private async findOrCreateKakaoUser(sid: string, profile: any) {
+    const linked = await this.socialLoginService.findBySidAndPlatform(
+      sid,
+      'kakao',
+    );
+
+    if (linked) {
+      const user = await this.userService.findById(linked.userId);
+      if (!user) {
+        throw new CustomException(ERROR_CODES.KAKAO_AUTH_FAILED);
+      }
+      return user;
+    }
+
+    const email = profile?.kakao_account?.email;
+    if (!email) {
+      this.logger.error('Kakao profile missing email');
+      throw new CustomException(ERROR_CODES.KAKAO_EMAIL_REQUIRED);
+    }
+
+    const user = await this.userService.createUser(email);
+
+    await this.socialLoginService.createSocialLogin(user.id, sid, 'kakao');
+    return user;
+  }
+
+  /** 소셜 연결 조회 후 사용자 생성/반환 */
   private async findOrCreateGoogleUser(sid: string, profile: any) {
     const linked = await this.socialLoginService.findBySidAndPlatform(
       sid,
@@ -318,7 +346,12 @@ export class LoginService {
       return user;
     }
 
-    const email = profile?.email ?? `google_${sid}@placeholder.local`;
+    const email = profile?.email;
+    if (!email) {
+      this.logger.error('Google profile missing email');
+      throw new CustomException(ERROR_CODES.GOOGLE_EMAIL_REQUIRED);
+    }
+
     const user = await this.userService.createUser(email);
 
     await this.socialLoginService.createSocialLogin(user.id, sid, 'google');

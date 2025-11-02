@@ -21,8 +21,8 @@ export class LoginController {
     type: 'string',
     example: 'https://kauth.kakao.com/oauth/authorize?...',
   })
-  async generateKakaoLoginUrl(): Promise<string> {
-    return await this.loginService.generateKakaoLoginUrl();
+  generateKakaoLoginUrl(): string {
+    return this.loginService.generateKakaoLoginUrl();
   }
 
   @Get('kakao/callback')
@@ -43,7 +43,7 @@ export class LoginController {
     },
   })
   async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
-    const { userId } = await this.loginService.processKakaoLogin(code, res);
+    const { userId } = await this.loginService.handleKakaoCallback(code, res);
 
     const redirectUrl = this.loginService.buildLoginCallbackUrl(userId);
     return res.redirect(302, redirectUrl);
