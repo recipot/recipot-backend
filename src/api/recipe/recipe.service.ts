@@ -301,6 +301,10 @@ export class RecipeService {
       };
     } catch (error) {
       this.logger.error('레시피 조회 중 에러 발생', error);
+      // CustomException인 경우 그대로 전파 (예: INGREDIENT_HEALTH_INFO_NOT_FOUND)
+      if (error instanceof CustomException) {
+        throw error;
+      }
       throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
     }
   }
@@ -331,45 +335,37 @@ export class RecipeService {
   private async getRandomHealthPoint(
     ingredientIds: number[],
   ): Promise<RecipeHealthPointDto> {
-    try {
-      if (ingredientIds.length === 0) {
-        throw new CustomException(
-          ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // 레시피 재료의 건강정보 조회
-      const ingredientHealthInfos =
-        await this.ingredientHealthInfoRepository.find({
-          where: {
-            ingredientId: In(ingredientIds),
-          },
-        });
-
-      if (ingredientHealthInfos.length === 0) {
-        throw new CustomException(
-          ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // 랜덤 선택 (0 ~ length-1)
-      const randomIndex = Math.floor(
-        Math.random() * ingredientHealthInfos.length,
-      );
-      const selectedHealthInfo = ingredientHealthInfos[randomIndex];
-
-      return {
-        content: selectedHealthInfo.content,
-      };
-    } catch (error) {
-      this.logger.error('Failed to get random health point', error);
+    if (ingredientIds.length === 0) {
       throw new CustomException(
         ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
         HttpStatus.NOT_FOUND,
       );
     }
+
+    // 레시피 재료의 건강정보 조회
+    const ingredientHealthInfos =
+      await this.ingredientHealthInfoRepository.find({
+        where: {
+          ingredientId: In(ingredientIds),
+        },
+      });
+
+    if (ingredientHealthInfos.length === 0) {
+      throw new CustomException(
+        ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // 랜덤 선택 (0 ~ length-1)
+    const randomIndex = Math.floor(
+      Math.random() * ingredientHealthInfos.length,
+    );
+    const selectedHealthInfo = ingredientHealthInfos[randomIndex];
+
+    return {
+      content: selectedHealthInfo.content,
+    };
   }
 
   private mapIngredientsWithOwnership(

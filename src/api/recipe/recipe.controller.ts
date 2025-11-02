@@ -361,15 +361,12 @@ export class RecipeController {
           },
         },
       },
-      healthPoints: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            content: {
-              type: 'string',
-              example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
-            },
+      healthPoint: {
+        type: 'object',
+        properties: {
+          content: {
+            type: 'string',
+            example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
           },
         },
       },
