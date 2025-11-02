@@ -973,14 +973,23 @@ export class FileImportService {
                 String(value).trim() !== '',
             );
 
-            if (hasAnyData) {
-              // 데이터는 있지만 레시피 ID가 없는 경우 로그
-              this.logger.warn(
-                `행 ${rowNumber}: 레시피 ID가 없거나 유효하지 않아 스킵합니다.`,
-              );
-            } else {
+            if (!hasAnyData) {
               // 완전히 빈 행인 경우 조용히 스킵
               this.logger.log(`행 ${rowNumber}: 빈 행으로 스킵합니다.`);
+              continue;
+            }
+
+            // 데이터는 있지만 레시피 ID가 없는 경우 에러로 집계
+            const validationError =
+              FileImportValidator.validateRecipeImageRequiredFields(
+                row,
+                rowNumber,
+                null,
+              );
+            if (validationError) {
+              errors.push(validationError);
+              skippedRows.push({ row, rowNumber });
+              skippedRecipeCount++;
             }
             continue;
           }
@@ -1097,11 +1106,11 @@ export class FileImportService {
 
   /**
    * 레시피 이미지를 업데이트합니다.
-   * 기존 레시피 이미지는 삭제하고 새로운 이미지를 추가합니다. (쉼표로 구분된 여러 개의 이미지 등록 가능)
+   * 레시피 본문 이미지가 제공된 경우에만 기존 이미지를 삭제하고 새로운 이미지를 추가합니다.
    * Step 이미지는 해당 step의 이미지만 업데이트합니다. (각 step마다 하나의 이미지만 등록 가능)
    *
    * @param recipeId 레시피 ID
-   * @param recipeImageUrls 레시피 이미지 URL 배열 (쉼표로 구분된 여러 개의 이미지)
+   * @param recipeImageUrls 레시피 이미지 URL 배열 (쉼표로 구분된 여러 개의 이미지, 빈 배열이면 본문 이미지는 업데이트하지 않음)
    * @param stepImageMap Step 번호와 이미지 URL 맵 (각 step마다 하나의 이미지만)
    */
   @Transactional()
@@ -1110,11 +1119,12 @@ export class FileImportService {
     recipeImageUrls: Array<{ imageUrl: string }>,
     stepImageMap: Map<number, string>,
   ): Promise<void> {
-    // 기존 레시피 이미지 삭제
-    await this.recipeImageRepository.delete({ recipeId });
-
-    // 새로운 레시피 이미지 추가
+    // 레시피 본문 이미지 업데이트 (이미지가 제공된 경우에만)
     if (recipeImageUrls.length > 0) {
+      // 기존 레시피 이미지 삭제
+      await this.recipeImageRepository.delete({ recipeId });
+
+      // 새로운 레시피 이미지 추가
       const recipeImages = recipeImageUrls.map((imageDto) =>
         this.recipeImageRepository.create({
           recipeId,
