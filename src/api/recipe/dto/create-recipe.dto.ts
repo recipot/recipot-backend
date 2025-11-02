@@ -77,11 +77,12 @@ export class CreateRecipeStepDto {
   @ApiProperty({
     description: '요리 예시 이미지 주소',
     example: 'https://example.com/step1.jpg',
+    required: false,
   })
   @IsString()
   @IsUrl()
-  @IsNotEmpty()
-  imageUrl: string;
+  @IsOptional()
+  imageUrl?: string;
 
   @ApiProperty({
     description: '요약',
@@ -118,22 +119,6 @@ export class CreateRecipeConditionWeightDto {
   @IsInt()
   @IsNotEmpty()
   conditionId: number;
-
-  @ApiProperty({
-    description: '가중치',
-    example: 0.8,
-  })
-  @IsNumber()
-  @IsNotEmpty()
-  weight: number;
-
-  @ApiProperty({
-    description: '우선순위 점수',
-    example: 85,
-  })
-  @IsInt()
-  @IsNotEmpty()
-  priorityScore: number;
 }
 
 export class CreateRecipeImageDto {
@@ -164,28 +149,12 @@ export class CreateRecipeDto {
   description: string;
 
   @ApiProperty({
-    description: '소요 시간 (공통코드)',
-    example: 'R01004',
+    description: '소요 시간 (분)',
+    example: 30,
   })
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
-  duration: string;
-
-  @ApiProperty({
-    description: '조리 난이도 (공통코드)',
-    example: 'R01001',
-  })
-  @IsString()
-  @IsNotEmpty()
-  level: string;
-
-  @ApiProperty({
-    description: '조리 방식 (공통코드)',
-    example: 'R02001',
-  })
-  @IsString()
-  @IsNotEmpty()
-  method: string;
+  duration: number;
 
   @ApiProperty({
     description: '레시피 이미지들',
@@ -246,12 +215,12 @@ export class CreateRecipeDto {
   healthPoints?: CreateRecipeHealthPointDto[];
 
   @ApiProperty({
-    description: '레시피 컨디션 가중치들',
-    type: [CreateRecipeConditionWeightDto],
+    description:
+      '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
+    example: 1,
+    required: false,
   })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateRecipeConditionWeightDto)
+  @IsInt()
   @IsOptional()
-  conditionWeights?: CreateRecipeConditionWeightDto[];
+  conditionId?: number;
 }

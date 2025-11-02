@@ -21,11 +21,11 @@ export class RecipeStep extends CommonEntity {
 
   @Column({
     type: 'varchar',
-    nullable: false,
+    nullable: true,
     name: 'image_url',
     comment: '요리 예시 이미지 주소',
   })
-  imageUrl: string;
+  imageUrl: string | null;
 
   @Column({
     type: 'text',
