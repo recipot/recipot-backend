@@ -1,6 +1,5 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
-import { LoginCallbackResponseDto } from '@/api/login/dto/login-callback-response.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -22,8 +21,8 @@ export class LoginController {
     type: 'string',
     example: 'https://kauth.kakao.com/oauth/authorize?...',
   })
-  async generateKakaoLoginUrl(): Promise<string> {
-    return await this.loginService.generateKakaoLoginUrl();
+  generateKakaoLoginUrl(): string {
+    return this.loginService.generateKakaoLoginUrl();
   }
 
   @Get('kakao/callback')
@@ -44,11 +43,10 @@ export class LoginController {
     },
   })
   async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
-    await this.loginService.processKakaoLogin(code, res);
+    const { userId } = await this.loginService.handleKakaoCallback(code, res);
 
-    // 웹 전용: 쿠키에 토큰이 설정된 상태에서 프론트 콜백으로 리다이렉트
-    const redirectUrl = new URL(process.env.FRONTEND_LOGIN_CALLBACK_URL);
-    return res.redirect(302, redirectUrl.toString());
+    const redirectUrl = this.loginService.buildLoginCallbackUrl(userId);
+    return res.redirect(302, redirectUrl);
   }
 
   @Get('google')
@@ -68,10 +66,16 @@ export class LoginController {
     required: true,
     description: '구글에서 받은 인가 코드',
   })
-  @ApiSuccessResponse('구글 로그인 성공', LoginCallbackResponseDto)
-  async googleLoginCallback(
-    @Query('code') code: string,
-  ): Promise<LoginCallbackResponseDto> {
-    return await this.loginService.handleGoogleCallback(code);
+  @ApiSuccessResponse('구글 로그인 성공', {
+    type: 'object',
+    properties: {
+      userId: { type: 'number', example: 1 },
+    },
+  })
+  async googleLoginCallback(@Query('code') code: string, @Res() res: Response) {
+    const { userId } = await this.loginService.handleGoogleCallback(code, res);
+
+    const redirectUrl = this.loginService.buildLoginCallbackUrl(userId);
+    return res.redirect(302, redirectUrl);
   }
 }

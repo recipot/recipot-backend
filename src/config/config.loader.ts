@@ -17,6 +17,20 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     );
   }
 
+  // 카카오 OAuth 환경변수 검증
+  if (!env.KAKAO_CLIENT_ID || !env.KAKAO_REDIRECT_URI) {
+    throw new Error(
+      'KAKAO_CLIENT_ID and KAKAO_REDIRECT_URI environment variables are required',
+    );
+  }
+
+  // 구글 OAuth 환경변수 검증
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI) {
+    throw new Error(
+      'GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI environment variables are required',
+    );
+  }
+
   return {
     jwt: {
       algorithm: env.JWT_ALGORITHM,
@@ -71,5 +85,18 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     },
 
     baseDomain: env.BASE_DOMAIN,
+
+    kakao: {
+      clientId: env.KAKAO_CLIENT_ID,
+      clientSecret: env.KAKAO_CLIENT_SECRET,
+      redirectUri: env.KAKAO_REDIRECT_URI,
+    },
+
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      redirectUri: env.GOOGLE_REDIRECT_URI,
+      scope: env.GOOGLE_SCOPE,
+    },
   };
 };
