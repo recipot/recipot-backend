@@ -119,14 +119,6 @@ export class CreateRecipeConditionWeightDto {
   @IsInt()
   @IsNotEmpty()
   conditionId: number;
-
-  @ApiProperty({
-    description: '우선순위 점수 (가중치)',
-    example: 1.0,
-  })
-  @IsNumber()
-  @IsNotEmpty()
-  priorityScore: number;
 }
 
 export class CreateRecipeImageDto {
@@ -223,26 +215,12 @@ export class CreateRecipeDto {
   healthPoints?: CreateRecipeHealthPointDto[];
 
   @ApiProperty({
-    description: '레시피 컨디션 가중치',
-    type: [CreateRecipeConditionWeightDto],
-    example: [
-      {
-        conditionId: 1,
-        priorityScore: 1,
-      },
-      {
-        conditionId: 2,
-        priorityScore: 0.5,
-      },
-      {
-        conditionId: 3,
-        priorityScore: 0.5,
-      },
-    ],
+    description:
+      '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
+    example: 1,
+    required: false,
   })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateRecipeConditionWeightDto)
+  @IsInt()
   @IsOptional()
-  conditionWeights?: CreateRecipeConditionWeightDto[];
+  conditionId?: number;
 }

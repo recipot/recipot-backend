@@ -1,6 +1,7 @@
 import { CacheService } from '@/common/cache/cache.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { Condition } from '@/database/entity/condition.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
@@ -60,6 +61,8 @@ export class RecipeService {
     private readonly recipeRecommendationConditionRepository: Repository<RecipeRecommendationCondition>,
     @InjectRepository(UserRecipeBookmark)
     private readonly userRecipeBookmarkRepository: Repository<UserRecipeBookmark>,
+    @InjectRepository(Condition)
+    private readonly conditionRepository: Repository<Condition>,
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
   ) {}
@@ -150,18 +153,23 @@ export class RecipeService {
       }
 
       // 컨디션별 가중치 저장
-      if (
-        createRecipeDto.conditionWeights &&
-        createRecipeDto.conditionWeights.length > 0
-      ) {
-        const recipeRecommendationConditions =
-          createRecipeDto.conditionWeights.map((conditionWeight) =>
-            this.recipeRecommendationConditionRepository.create({
-              recipeId: savedRecipe.id,
-              conditionId: conditionWeight.conditionId,
-              priorityScore: conditionWeight.priorityScore,
-            }),
-          );
+      if (createRecipeDto.conditionId) {
+        // 모든 컨디션 조회
+        const allConditions = await this.conditionRepository.find({
+          order: { id: 'ASC' },
+        });
+
+        // 모든 컨디션에 대해 가중치 설정
+        // 지정된 컨디션은 1.0, 나머지는 0.5
+        const recipeRecommendationConditions = allConditions.map((condition) =>
+          this.recipeRecommendationConditionRepository.create({
+            recipeId: savedRecipe.id,
+            conditionId: condition.id,
+            priorityScore:
+              condition.id === createRecipeDto.conditionId ? 1.0 : 0.5,
+          }),
+        );
+
         await this.recipeRecommendationConditionRepository.save(
           recipeRecommendationConditions,
         );

@@ -1,5 +1,4 @@
 import { EXCEL_COLUMNS } from '@/common/constants/excel-columns.constants';
-import { RESTRICTED_VALUE } from '../constants/file-import.constants';
 import { IngredientOrSeasoningItem } from '../types/file-import.types';
 
 /**
@@ -70,12 +69,10 @@ export class IngredientSeasoningParserUtil {
    */
   static parseRestrictedIngredientValue(row: Record<string, any>): boolean {
     const restrictedValue = row[EXCEL_COLUMNS.INGREDIENT.IS_RESTRICTED]?.trim();
-    // 제한 재료 여부 판단: "O", "o" 또는 값이 있으면 true
-    return (
-      restrictedValue === RESTRICTED_VALUE.YES ||
-      restrictedValue === RESTRICTED_VALUE.YES_LOWERCASE ||
-      !!restrictedValue
-    );
+    // 제한 재료 여부 판단: "o", "y", "true"만 true로 처리
+    // "X"나 다른 값은 false로 처리하여 안전 재료로 분류
+    const normalized = restrictedValue?.toLowerCase();
+    return normalized === 'o' || normalized === 'y' || normalized === 'true';
   }
 
   /**

@@ -234,13 +234,15 @@ export class FileImportService {
     // 에러 정보를 행 번호로 매핑하여 빠른 조회 가능하도록 함
     const errorMap = new Map<number, string>();
     errors.forEach((err) => {
-      errorMap.set(err.row, err.error);
+      if (err && err.row !== undefined) {
+        errorMap.set(err.row, err.error);
+      }
     });
 
     // 첫 번째 row에서 모든 컬럼명 수집 (step 컬럼 포함)
     // 이를 통해 동적으로 생성된 step 컬럼들도 포함시킬 수 있음
     const allColumns = new Set<string>();
-    if (skippedRows.length > 0) {
+    if (skippedRows.length > 0 && skippedRows[0]?.row) {
       Object.keys(skippedRows[0].row).forEach((key) => {
         allColumns.add(key);
       });
@@ -283,26 +285,28 @@ export class FileImportService {
       });
 
     // 스킵 이유를 포함한 데이터 준비
-    const data = skippedRows.map((item) => {
-      const row = item.row;
-      const rowNumber = item.rowNumber;
-      // 해당 행 번호의 에러 메시지 가져오기 (없으면 빈 문자열)
-      const error = errorMap.get(rowNumber) || '';
+    const data = skippedRows
+      .filter((item) => item && item.row) // 유효하지 않은 항목 필터링
+      .map((item) => {
+        const row = item.row;
+        const rowNumber = item.rowNumber;
+        // 해당 행 번호의 에러 메시지 가져오기 (없으면 빈 문자열)
+        const error = errorMap.get(rowNumber) || '';
 
-      const rowData: Record<string, any> = {};
-      // 기본 컬럼 추가
-      for (const col of baseColumns) {
-        rowData[col] = row[col] || '';
-      }
-      // step 컬럼 추가
-      for (const col of stepColumns) {
-        rowData[col] = row[col] || '';
-      }
-      // 스킵 이유 추가
-      rowData[EXCEL_SHEET_NAME.SKIP_REASON_COLUMN] = error;
+        const rowData: Record<string, any> = {};
+        // 기본 컬럼 추가
+        for (const col of baseColumns) {
+          rowData[col] = row[col] || '';
+        }
+        // step 컬럼 추가
+        for (const col of stepColumns) {
+          rowData[col] = row[col] || '';
+        }
+        // 스킵 이유 추가
+        rowData[EXCEL_SHEET_NAME.SKIP_REASON_COLUMN] = error;
 
-      return rowData;
-    });
+        return rowData;
+      });
 
     // 엑셀 파일 생성
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -528,12 +532,7 @@ export class FileImportService {
               recipeSeasonings.length > 0 ? recipeSeasonings : undefined, // 레시피 양념 목록
             tools: recipeTools.length > 0 ? recipeTools : undefined, // 레시피 조리도구 목록
             steps, // 조리과정 단계 목록
-            conditionWeights: [
-              {
-                conditionId: condition.id, // 컨디션 ID
-                priorityScore: 1.0, // 우선순위 점수 (기본값: 1.0)
-              },
-            ],
+            conditionId: condition.id, // 컨디션 ID
           };
 
           // 레시피 생성
@@ -543,15 +542,16 @@ export class FileImportService {
         } catch (error) {
           // 에러 발생 시 처리
           // 중복 에러 추가 방지 (같은 행, 같은 에러 메시지가 이미 있는지 확인)
+          const errorMessage = error?.message || '알 수 없는 오류';
           if (
             !errors.some(
-              (e) => e.row === rowNumber && e.error === error.message,
+              (e) => e && e.row === rowNumber && e.error === errorMessage,
             )
           ) {
             errors.push({
               row: rowNumber,
               title: row[EXCEL_COLUMNS.RECIPE.TITLE] || '(제목 없음)',
-              error: error.message || '알 수 없는 오류',
+              error: errorMessage,
             });
           }
           skippedRows.push({ row, rowNumber });
@@ -568,9 +568,15 @@ export class FileImportService {
       let skippedExcelBuffer: Buffer | null = null;
       let skippedFileName: string | null = null;
 
+      // undefined 값 제거
+      const validErrors = errors.filter((err) => err != null);
+
       if (skippedRows.length > 0) {
         // 스킵된 레시피 데이터를 엑셀 파일로 변환
-        skippedExcelBuffer = this.createSkippedRecipeExcel(skippedRows, errors);
+        skippedExcelBuffer = this.createSkippedRecipeExcel(
+          skippedRows,
+          validErrors,
+        );
         // 타임스탬프를 포함한 파일명 생성 (ISO 형식에서 파일명으로 사용 불가능한 문자 제거)
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         skippedFileName = `skipped_recipes_${timestamp}.xlsx`;
@@ -580,7 +586,7 @@ export class FileImportService {
       return {
         createdRecipeCount,
         skippedRecipeCount,
-        errors,
+        errors: validErrors,
         skippedExcelBuffer,
         skippedFileName,
       };
