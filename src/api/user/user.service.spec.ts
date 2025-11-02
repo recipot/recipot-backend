@@ -49,17 +49,26 @@ describe('UserService', () => {
   };
 
   // NEW: minimal Ingredient repository mock to satisfy DI
+  const createQueryBuilderMock = {
+    innerJoin: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    offset: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+    getMany: jest.fn().mockResolvedValue([]),
+  };
+
   const mockIngredientRepository = {
-    createQueryBuilder: jest.fn(() => ({
-      innerJoin: jest.fn().mockReturnThis(),
-      leftJoin: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      offset: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn().mockResolvedValue([]),
-      getCount: jest.fn().mockResolvedValue(0),
-    })),
+    createQueryBuilder: jest.fn(() => createQueryBuilderMock),
+  };
+
+  const mockCommonRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
   };
 
   const mockSocialLoginService = {
@@ -119,7 +128,7 @@ describe('UserService', () => {
         },
         {
           provide: getRepositoryToken(CommonCode),
-          useValue: { findOne: jest.fn() },
+          useValue: mockCommonRepository,
         },
         // NEW: provide Ingredient repository for DI
         {
@@ -452,6 +461,211 @@ describe('UserService', () => {
       // create가 3번 호출되었는지 확인
       expect(mockUserCompletedRecipeRepository.create).toHaveBeenCalledTimes(3);
       expect(mockUserCompletedRecipeRepository.save).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('generateRandomNickname', () => {
+    const mockNicknameAdjectives: CommonCode[] = [
+      {
+        id: 1,
+        groupCode: 'U02',
+        groupCodeName: 'NICKNAME_ADJ',
+        code: 'U02001',
+        codeName: '발랄한',
+        groupName: '닉네임 형용사',
+        depth: 1,
+        orderNum: 1,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CommonCode,
+      {
+        id: 2,
+        groupCode: 'U02',
+        groupCodeName: 'NICKNAME_ADJ',
+        code: 'U02002',
+        codeName: '유쾌한',
+        groupName: '닉네임 형용사',
+        depth: 1,
+        orderNum: 2,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CommonCode,
+      {
+        id: 3,
+        groupCode: 'U02',
+        groupCodeName: 'NICKNAME_ADJ',
+        code: 'U02003',
+        codeName: '시크한',
+        groupName: '닉네임 형용사',
+        depth: 1,
+        orderNum: 3,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CommonCode,
+    ];
+
+    const mockIngredients: Ingredient[] = [
+      {
+        id: 1,
+        ingredientCategoryId: 1,
+        name: '고등어',
+        isRestrictedIngredient: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Ingredient,
+      {
+        id: 2,
+        ingredientCategoryId: 1,
+        name: '게',
+        isRestrictedIngredient: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Ingredient,
+      {
+        id: 3,
+        ingredientCategoryId: 1,
+        name: '시금치',
+        isRestrictedIngredient: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Ingredient,
+    ];
+
+    beforeEach(() => {
+      mockCommonRepository.find.mockResolvedValue(mockNicknameAdjectives);
+      createQueryBuilderMock.getMany.mockResolvedValue(mockIngredients);
+    });
+
+    it('랜덤 닉네임을 정상적으로 생성해야 한다', async () => {
+      const nickname = await (service as any).generateRandomNickname();
+
+      expect(nickname).toBeDefined();
+      expect(typeof nickname).toBe('string');
+      expect(nickname.length).toBeGreaterThan(0);
+      // 형용사로 시작하고 재료 이름이 포함되어야 함
+      expect(
+        mockNicknameAdjectives.some((adj) => nickname.startsWith(adj.codeName)),
+      ).toBe(true);
+      expect(mockIngredients.some((ing) => nickname.includes(ing.name))).toBe(
+        true,
+      );
+      // 띄어쓰기가 없어야 함
+      expect(nickname).not.toContain(' ');
+    });
+
+    it('재료 이름이 )로 끝나면 다시 선택해야 한다', async () => {
+      const ingredientsWithParenthesis: Ingredient[] = [
+        {
+          id: 1,
+          ingredientCategoryId: 1,
+          name: '재료1)',
+          isRestrictedIngredient: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Ingredient,
+        {
+          id: 2,
+          ingredientCategoryId: 1,
+          name: '재료2)',
+          isRestrictedIngredient: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Ingredient,
+        {
+          id: 3,
+          ingredientCategoryId: 1,
+          name: '고등어',
+          isRestrictedIngredient: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Ingredient,
+      ];
+
+      // Math.random을 모킹하여 재료 선택 시 마지막 재료가 선택되도록 설정
+      let randomCallCount = 0;
+      jest.spyOn(Math, 'random').mockImplementation(() => {
+        randomCallCount++;
+        // 첫 번째 호출: 형용사 선택 (0.0 = 첫 번째 형용사)
+        // 이후 호출들: 재료 선택
+        // 재료 선택 시 처음 두 번은 0.0~0.66 사이 (재료1) 또는 재료2) 선택)
+        // 세 번째 이후는 0.67 이상 (고등어 선택)
+        if (randomCallCount === 1) {
+          return 0.0; // 형용사 선택
+        }
+        // 재료가 )로 끝나면 다시 선택해야 하므로, 고등어가 선택될 때까지 반복
+        return randomCallCount <= 3 ? 0.0 : 0.9; // 마지막 재료(고등어) 선택
+      });
+
+      createQueryBuilderMock.getMany.mockResolvedValue(
+        ingredientsWithParenthesis,
+      );
+
+      const nickname = await (service as any).generateRandomNickname();
+
+      expect(nickname).toBeDefined();
+      expect(nickname.endsWith(')')).toBe(false);
+      expect(nickname).toContain('고등어');
+
+      jest.restoreAllMocks();
+    });
+
+    it('여러 번 호출하면 다른 닉네임이 생성될 수 있다', async () => {
+      const nicknames = new Set<string>();
+
+      // 여러 번 호출하여 서로 다른 닉네임이 생성될 수 있는지 확인
+      for (let i = 0; i < 10; i++) {
+        const nickname = await (service as any).generateRandomNickname();
+        nicknames.add(nickname);
+      }
+
+      // 형용사와 재료의 조합이 여러 개 있으므로 다른 닉네임이 생성될 수 있음
+      // (완전히 랜덤이므로 항상 다를 수는 없지만, 가능성은 있음)
+      expect(nicknames.size).toBeGreaterThan(0);
+      nicknames.forEach((nickname) => {
+        expect(nickname).toBeDefined();
+        expect(typeof nickname).toBe('string');
+        expect(nickname.length).toBeGreaterThan(0);
+        expect(nickname).not.toContain(' ');
+      });
+    });
+
+    it('형용사와 재료를 올바르게 조합해야 한다', async () => {
+      // Math.random을 고정하여 특정 값을 반환하도록 설정
+      let callCount = 0;
+      jest.spyOn(Math, 'random').mockImplementation(() => {
+        callCount++;
+        // 첫 번째 호출: 형용사 선택 (0번 인덱스 = 발랄한)
+        // 두 번째 호출: 재료 선택 (0번 인덱스 = 고등어)
+        return callCount === 1 ? 0.0 : 0.0;
+      });
+
+      const nickname = await (service as any).generateRandomNickname();
+
+      expect(nickname).toBe('발랄한고등어');
+
+      jest.restoreAllMocks();
+    });
+
+    it('닉네임이 형용사와 재료 이름으로만 구성되어야 한다', async () => {
+      const nickname = await (service as any).generateRandomNickname();
+
+      // 형용사 중 하나로 시작하는지 확인
+      const startsWithAdjective = mockNicknameAdjectives.some((adj) =>
+        nickname.startsWith(adj.codeName),
+      );
+      expect(startsWithAdjective).toBe(true);
+
+      // 재료 이름 중 하나가 포함되는지 확인
+      const containsIngredient = mockIngredients.some((ing) =>
+        nickname.includes(ing.name),
+      );
+      expect(containsIngredient).toBe(true);
+
+      // 띄어쓰기가 없어야 함
+      expect(nickname).not.toContain(' ');
     });
   });
 });
