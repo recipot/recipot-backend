@@ -77,11 +77,12 @@ export class CreateRecipeStepDto {
   @ApiProperty({
     description: '요리 예시 이미지 주소',
     example: 'https://example.com/step1.jpg',
+    required: false,
   })
   @IsString()
   @IsUrl()
-  @IsNotEmpty()
-  imageUrl: string;
+  @IsOptional()
+  imageUrl?: string;
 
   @ApiProperty({
     description: '요약',
@@ -162,22 +163,6 @@ export class CreateRecipeDto {
   @IsString()
   @IsNotEmpty()
   duration: string;
-
-  @ApiProperty({
-    description: '조리 난이도 (공통코드)',
-    example: 'R01001',
-  })
-  @IsString()
-  @IsNotEmpty()
-  level: string;
-
-  @ApiProperty({
-    description: '조리 방식 (공통코드)',
-    example: 'R02001',
-  })
-  @IsString()
-  @IsNotEmpty()
-  method: string;
 
   @ApiProperty({
     description: '레시피 이미지들',

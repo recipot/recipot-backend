@@ -12,15 +12,21 @@ import {
   Patch,
   Post,
   Request,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -36,6 +42,7 @@ import { RecipeRecommendationConditionResponseDto } from './dto/recipe-recommend
 import { UpdateRecipeRecommendationConditionDto } from './dto/update-recipe-recommend.dto';
 import { RecipeRecommendationConditionService } from './recipe-recommend.service';
 import { RecipeService } from './recipe.service';
+import { FileImportService } from './services/file-import.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 @ApiTags('레시피')
@@ -47,6 +54,7 @@ export class RecipeController {
     private readonly recipeService: RecipeService,
     private readonly recipeRecommendationConditionService: RecipeRecommendationConditionService,
     private readonly recipeRecommendationService: RecipeRecommendationService,
+    private readonly fileImportService: FileImportService,
   ) {}
 
   @Post('admin')
@@ -569,5 +577,81 @@ export class RecipeController {
       conditionId,
     );
     return { message: `컨디션 ${conditionId}의 추천 캐시가 무효화되었습니다.` };
+  }
+
+  @Post('admin/import-ingredients-csv')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 엑셀 파일로 재료/양념 일괄 등록',
+    description:
+      '엑셀 파일을 업로드하여 여러 재료와 양념을 한 번에 등록합니다. 파일의 컬럼은 다음 형식을 따라야 합니다: 재료, 구분, 대분류, 못 먹는 재료 여부, 재료 한줄 카피',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '엑셀 파일 (.xlsx, .xls, .xlsm)',
+        },
+      },
+    },
+  })
+  @ApiSuccessResponse('엑셀 재료/양념 일괄 등록 성공', {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        example:
+          '엑셀 파일에서 10개의 재료와 5개의 양념이 성공적으로 생성되었습니다.',
+      },
+      createdIngredientCount: { type: 'number', example: 10 },
+      createdSeasoningCount: { type: 'number', example: 5 },
+      skippedIngredientCount: { type: 'number', example: 2 },
+      skippedSeasoningCount: { type: 'number', example: 1 },
+    },
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @UseInterceptors(FileInterceptor('file'))
+  async importIngredientsFromCsv(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 파일 검증
+    this.fileImportService.validateExcelFile(file);
+
+    const result =
+      await this.fileImportService.importIngredientsAndSeasoningsFromCsv(
+        file.buffer,
+      );
+
+    // 스킵된 데이터가 있으면 엑셀 파일 다운로드
+    if (result.skippedExcelBuffer && result.skippedFileName) {
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.skippedFileName}"`,
+      );
+      res.send(result.skippedExcelBuffer);
+      return;
+    }
+
+    // 스킵된 데이터가 없으면 일반 응답
+    res.json({
+      message: `엑셀 파일에서 ${result.createdIngredientCount}개의 재료와 ${result.createdSeasoningCount}개의 양념이 성공적으로 생성되었습니다.`,
+      createdIngredientCount: result.createdIngredientCount,
+      createdSeasoningCount: result.createdSeasoningCount,
+      skippedIngredientCount: result.skippedIngredientCount,
+      skippedSeasoningCount: result.skippedSeasoningCount,
+    });
   }
 }

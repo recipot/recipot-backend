@@ -1,6 +1,7 @@
 import { CacheModule } from '@/common/cache/cache.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Condition } from '@/database/entity/condition.entity';
+import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
@@ -21,6 +22,7 @@ import { CommonCodeModule } from '../common-code/common-code.module';
 import { RecipeRecommendationConditionService } from './recipe-recommend.service';
 import { RecipeController } from './recipe.controller';
 import { RecipeService } from './recipe.service';
+import { FileImportService } from './services/file-import.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 @Module({
@@ -35,6 +37,7 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
       RecipeHealthPoint,
       RecipeRecommendationCondition,
       Ingredient,
+      IngredientCategory,
       Seasoning,
       Tool,
       UserRecipeBookmark,
@@ -51,6 +54,7 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
     RecipeService,
     RecipeRecommendationConditionService,
     RecipeRecommendationService,
+    FileImportService,
   ],
   exports: [RecipeService],
 })

@@ -5,7 +5,6 @@ import { IngredientSeed } from './ingredient.seed';
 import { SeasoningSeed } from './seasoning.seed';
 import { ToolSeed } from './tool.seed';
 import { ConditionSeed } from './condition.seed';
-import { RecipeSeed } from './recipe.seed';
 import { IngredientRestrictedSeed } from './ingredient-restricted.seed';
 
 export class DatabaseSeeder {
@@ -47,13 +46,13 @@ export class DatabaseSeeder {
     const conditionSeed = new ConditionSeed(this.dataSource);
     await conditionSeed.run();
 
-    // RecipeSeed 실행
-    const recipeSeed = new RecipeSeed(this.dataSource);
-    await recipeSeed.run();
+    // RecipeSeed 실행 (현재 주석 처리됨)
+    // const recipeSeed = new RecipeSeed(this.dataSource);
+    // await recipeSeed.run();
 
     this.logger.log('All seeding completed successfully');
   }
 }
 
 // 개별 seeder들도 export
-export { CommonCodeSeed, UserSeed, IngredientSeed, ConditionSeed, RecipeSeed };
+export { CommonCodeSeed, UserSeed, IngredientSeed, ConditionSeed };
