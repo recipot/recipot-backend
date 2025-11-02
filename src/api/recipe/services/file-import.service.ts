@@ -1031,11 +1031,20 @@ export class FileImportService {
           }
 
           // 트랜잭션으로 이미지 업데이트
-          await this.updateRecipeImages(
+          const warnings = await this.updateRecipeImages(
             recipeId,
             recipeImageUrls,
             stepImageMap,
           );
+
+          // Step을 찾지 못한 경우 경고를 에러로 추가
+          if (warnings.length > 0) {
+            errors.push({
+              row: rowNumber,
+              title: `레시피 ID: ${recipeId}`,
+              error: `일부 step 이미지를 업데이트하지 못했습니다: ${warnings.join(', ')}`,
+            });
+          }
 
           updatedRecipeCount++;
           this.logger.log(
@@ -1098,8 +1107,8 @@ export class FileImportService {
       // 전체 임포트 과정에서 예상치 못한 에러 발생 시
       this.logger.error('레시피 이미지 엑셀 파싱 중 오류 발생', error);
       throw new CustomException({
-        code: ERROR_CODES.RECIPE_CREATE_FAILED.code,
-        message: `레시피 이미지 엑셀 파싱 실패: ${error.message}`,
+        code: ERROR_CODES.VALIDATION_ERROR.code,
+        message: `레시피 이미지 업데이트 실패: ${error.message}`,
       });
     }
   }
@@ -1112,13 +1121,15 @@ export class FileImportService {
    * @param recipeId 레시피 ID
    * @param recipeImageUrls 레시피 이미지 URL 배열 (쉼표로 구분된 여러 개의 이미지, 빈 배열이면 본문 이미지는 업데이트하지 않음)
    * @param stepImageMap Step 번호와 이미지 URL 맵 (각 step마다 하나의 이미지만)
+   * @returns Step을 찾지 못한 경우의 경고 메시지 배열
    */
   @Transactional()
   private async updateRecipeImages(
     recipeId: number,
     recipeImageUrls: Array<{ imageUrl: string }>,
     stepImageMap: Map<number, string>,
-  ): Promise<void> {
+  ): Promise<string[]> {
+    const warnings: string[] = [];
     // 레시피 본문 이미지 업데이트 (이미지가 제공된 경우에만)
     if (recipeImageUrls.length > 0) {
       // 기존 레시피 이미지 삭제
@@ -1145,12 +1156,14 @@ export class FileImportService {
           step.imageUrl = imageUrl;
           await this.recipeStepRepository.save(step);
         } else {
-          this.logger.warn(
-            `레시피 ${recipeId}의 ${stepNum}단계를 찾을 수 없습니다.`,
-          );
+          const warning = `${stepNum}단계를 찾을 수 없습니다.`;
+          this.logger.warn(`레시피 ${recipeId}의 ${warning}`);
+          warnings.push(warning);
         }
       }
     }
+
+    return warnings;
   }
 
   /**
