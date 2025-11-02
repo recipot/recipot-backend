@@ -45,13 +45,8 @@ export class LoginController {
   async kakaoLoginCallback(@Query('code') code: string, @Res() res: Response) {
     const { userId } = await this.loginService.processKakaoLogin(code, res);
 
-    const redirectUrl = new URL(
-      process.env.FRONTEND_LOGIN_CALLBACK_URL.replace(
-        '{userId}',
-        userId.toString(),
-      ),
-    );
-    return res.redirect(302, redirectUrl.toString());
+    const redirectUrl = this.loginService.buildLoginCallbackUrl(userId);
+    return res.redirect(302, redirectUrl);
   }
 
   @Get('google')
@@ -80,12 +75,7 @@ export class LoginController {
   async googleLoginCallback(@Query('code') code: string, @Res() res: Response) {
     const { userId } = await this.loginService.handleGoogleCallback(code, res);
 
-    const redirectUrl = new URL(
-      process.env.FRONTEND_LOGIN_CALLBACK_URL.replace(
-        '{userId}',
-        userId.toString(),
-      ),
-    );
-    return res.redirect(302, redirectUrl.toString());
+    const redirectUrl = this.loginService.buildLoginCallbackUrl(userId);
+    return res.redirect(302, redirectUrl);
   }
 }

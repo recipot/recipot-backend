@@ -324,4 +324,18 @@ export class LoginService {
     await this.socialLoginService.createSocialLogin(user.id, sid, 'google');
     return user;
   }
+
+  /**
+   * 로그인 콜백 URL을 생성합니다.
+   * @param userId 사용자 ID
+   * @returns 리다이렉트 URL
+   */
+  buildLoginCallbackUrl(userId: number): string {
+    const callbackUrl = process.env.FRONTEND_LOGIN_CALLBACK_URL;
+    if (!callbackUrl) {
+      this.logger.error('FRONTEND_LOGIN_CALLBACK_URL is not defined');
+      throw new CustomException(ERROR_CODES.CONFIG_ERROR);
+    }
+    return callbackUrl.replace('{userId}', userId.toString());
+  }
 }
