@@ -193,7 +193,7 @@ export class LoginService {
   }
 
   /** 구글 콜백 처리 */
-  async handleGoogleCallback(code: string) {
+  async handleGoogleCallback(code: string, res?: Response) {
     // 1) code → tokens
     const tokens = await this.exchangeGoogleCodeForTokens(code);
     const accessToken = tokens?.access_token;
@@ -217,12 +217,32 @@ export class LoginService {
       user.role,
     );
 
+    // 5) 쿠키에 토큰 저장
+    if (res) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const domain = process.env.BASE_DOMAIN;
+
+      res.cookie('accessToken', jwt.accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(jwt.accessExpiresAt as unknown as string),
+      });
+
+      res.cookie('refreshToken', jwt.refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+        domain: isProduction ? domain : undefined,
+        expires: new Date(jwt.refreshExpiresAt as unknown as string),
+      });
+    }
+
     return {
       userId: user.id,
-      accessToken: jwt.accessToken,
-      accessExpiresAt: jwt.accessExpiresAt,
-      refreshToken: jwt.refreshToken,
-      refreshExpiresAt: jwt.refreshExpiresAt,
     };
   }
 
