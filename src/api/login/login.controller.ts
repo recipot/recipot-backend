@@ -1,5 +1,4 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
-import { GoogleLoginResponseDto } from '@/api/login/dto/google-login.response.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -51,11 +50,16 @@ export class LoginController {
 
   @Get('google')
   @Public()
-  @ApiOperation({ summary: '구글 로그인 URL 생성' })
-  @ApiSuccessResponse('구글 로그인 URL 생성 성공', GoogleLoginResponseDto)
-  generateGoogleLoginUrl(): GoogleLoginResponseDto {
-    const loginUrl = this.loginService.generateGoogleLoginUrl();
-    return { loginUrl };
+  @ApiOperation({
+    summary: '구글 로그인 URL 생성',
+    description: '구글 로그인을 위한 인증 URL을 생성합니다.',
+  })
+  @ApiSuccessResponse('구글 로그인 URL 생성 성공', {
+    type: 'string',
+    example: 'https://accounts.google.com/o/oauth2/v2/auth?...',
+  })
+  generateGoogleLoginUrl(): string {
+    return this.loginService.generateGoogleLoginUrl();
   }
 
   @Public()
