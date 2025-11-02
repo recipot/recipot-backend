@@ -4,6 +4,7 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Condition } from '@/database/entity/condition.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
@@ -36,6 +37,8 @@ export class FileImportService {
     private readonly ingredientRepository: Repository<Ingredient>,
     @InjectRepository(IngredientCategory)
     private readonly ingredientCategoryRepository: Repository<IngredientCategory>,
+    @InjectRepository(IngredientHealthInfo)
+    private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
     @InjectRepository(Seasoning)
     private readonly seasoningRepository: Repository<Seasoning>,
     @InjectRepository(Tool)
@@ -711,6 +714,22 @@ export class FileImportService {
             this.logger.log(
               `재료 생성 완료: ${name} (카테고리: ${category.name}, 못 먹는 재료 노출: ${isRestrictedIngredient})`,
             );
+
+            // 재료 한줄 카피(COPY) 필드가 있으면 ingredient_health_infos에 저장
+            const copyContent = row[EXCEL_COLUMNS.INGREDIENT.COPY]?.trim();
+            if (copyContent) {
+              const ingredientHealthInfo =
+                this.ingredientHealthInfoRepository.create({
+                  ingredientId: ingredient.id,
+                  content: copyContent,
+                });
+              await this.ingredientHealthInfoRepository.save(
+                ingredientHealthInfo,
+              );
+              this.logger.log(
+                `재료 건강 정보 생성 완료: ${name} - ${copyContent}`,
+              );
+            }
           } else if (division === DIVISION.SEASONING) {
             // ===== 양념 처리 =====
             // 양념 생성 및 저장 (양념은 이름만 필요)

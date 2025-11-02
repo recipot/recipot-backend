@@ -2,6 +2,7 @@ import { CacheModule } from '@/common/cache/cache.module';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Condition } from '@/database/entity/condition.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
@@ -38,6 +39,7 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
       RecipeRecommendationCondition,
       Ingredient,
       IngredientCategory,
+      IngredientHealthInfo,
       Seasoning,
       Tool,
       UserRecipeBookmark,

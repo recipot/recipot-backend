@@ -8,6 +8,7 @@ import { CustomException } from '@/common/exceptions/custom-exception';
 import { CommonCode } from '@/database/entity/common-code.entity';
 import { Condition } from '@/database/entity/condition.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
+import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
@@ -44,6 +45,9 @@ describe('FileImportService', () => {
   let service: FileImportService;
   let ingredientRepository: MockType<Repository<Ingredient>>;
   let ingredientCategoryRepository: MockType<Repository<IngredientCategory>>;
+  let ingredientHealthInfoRepository: MockType<
+    Repository<IngredientHealthInfo>
+  >;
   let seasoningRepository: MockType<Repository<Seasoning>>;
   let toolRepository: MockType<Repository<Tool>>;
   let conditionRepository: MockType<Repository<Condition>>;
@@ -100,6 +104,10 @@ describe('FileImportService', () => {
           useFactory: createRepositoryMock,
         },
         {
+          provide: getRepositoryToken(IngredientHealthInfo),
+          useFactory: createRepositoryMock,
+        },
+        {
           provide: getRepositoryToken(Seasoning),
           useFactory: createRepositoryMock,
         },
@@ -128,6 +136,9 @@ describe('FileImportService', () => {
     ingredientRepository = module.get(getRepositoryToken(Ingredient));
     ingredientCategoryRepository = module.get(
       getRepositoryToken(IngredientCategory),
+    );
+    ingredientHealthInfoRepository = module.get(
+      getRepositoryToken(IngredientHealthInfo),
     );
     seasoningRepository = module.get(getRepositoryToken(Seasoning));
     toolRepository = module.get(getRepositoryToken(Tool));
@@ -574,6 +585,16 @@ describe('FileImportService', () => {
         .mockResolvedValue(mockIngredientCategory);
       ingredientRepository.create = jest.fn().mockReturnValue(mockIngredient);
       ingredientRepository.save = jest.fn().mockResolvedValue(mockIngredient);
+      ingredientHealthInfoRepository.create = jest.fn().mockReturnValue({
+        id: 1,
+        ingredientId: mockIngredient.id,
+        content: '신선한 김치',
+      });
+      ingredientHealthInfoRepository.save = jest.fn().mockResolvedValue({
+        id: 1,
+        ingredientId: mockIngredient.id,
+        content: '신선한 김치',
+      });
 
       const result =
         await service.importIngredientsAndSeasoningsFromExcel(buffer);
@@ -583,6 +604,12 @@ describe('FileImportService', () => {
       expect(result.skippedIngredientCount).toBe(0);
       expect(result.skippedSeasoningCount).toBe(0);
       expect(ingredientRepository.save).toHaveBeenCalledTimes(1);
+      // COPY 필드가 있으면 건강 정보가 저장되어야 함
+      expect(ingredientHealthInfoRepository.create).toHaveBeenCalledWith({
+        ingredientId: mockIngredient.id,
+        content: '신선한 김치',
+      });
+      expect(ingredientHealthInfoRepository.save).toHaveBeenCalledTimes(1);
     });
 
     it('성공적으로 양념을 임포트해야 함', async () => {
