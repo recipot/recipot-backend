@@ -1,8 +1,10 @@
 import { CacheService } from '@/common/cache/cache.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Condition } from '@/database/entity/condition.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
+import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
@@ -14,7 +16,6 @@ import { Recipe } from '@/database/entity/recipe.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
-import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
@@ -22,6 +23,7 @@ import { CommonCodeService } from '../common-code/common-code.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import {
   GetRecipeResponseDto,
+  RecipeHealthPointDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
 
@@ -51,6 +53,8 @@ export class RecipeService {
     private readonly recipeStepRepository: Repository<RecipeStep>,
     @InjectRepository(RecipeHealthPoint)
     private readonly recipeHealthPointRepository: Repository<RecipeHealthPoint>,
+    @InjectRepository(IngredientHealthInfo)
+    private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
     @InjectRepository(Ingredient)
     private readonly ingredientRepository: Repository<Ingredient>,
     @InjectRepository(Seasoning)
@@ -211,7 +215,6 @@ export class RecipeService {
         recipeSeasonings,
         recipeTools,
         steps,
-        healthPoints,
         userBookmark,
       ] = await Promise.all([
         this.recipeImageRepository.find({ where: { recipeId } }),
@@ -219,7 +222,6 @@ export class RecipeService {
         this.recipeSeasoningRepository.find({ where: { recipeId } }),
         this.recipeToolRepository.find({ where: { recipeId } }),
         this.recipeStepRepository.find({ where: { recipeId } }),
-        this.recipeHealthPointRepository.find({ where: { recipeId } }),
         this.userRecipeBookmarkRepository.findOne({
           where: { userId, recipeId },
         }),
@@ -263,6 +265,8 @@ export class RecipeService {
         }));
 
       const userOwnedIngredients = await this.getUserOwnedIngredients(userId);
+      const healthPoint = await this.getRandomHealthPoint(ingredientIds);
+
       return {
         id: recipe.id,
         title: recipe.title,
@@ -292,13 +296,15 @@ export class RecipeService {
             orderNum: step.orderNum,
             summary: step.summary,
           })),
-        healthPoints: healthPoints.map((healthPoint) => ({
-          content: healthPoint.content,
-        })),
+        healthPoint,
         isBookmarked: !!userBookmark,
       };
     } catch (error) {
       this.logger.error('레시피 조회 중 에러 발생', error);
+      // CustomException인 경우 그대로 전파 (예: INGREDIENT_HEALTH_INFO_NOT_FOUND)
+      if (error instanceof CustomException) {
+        throw error;
+      }
       throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
     }
   }
@@ -320,6 +326,46 @@ export class RecipeService {
       this.logger.error('Failed to get cached ingredients', error);
       throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
     }
+  }
+
+  /**
+   * 레시피에 포함된 재료의 건강정보 중 랜덤으로 1개를 선택하여 반환합니다.
+   * 재료의 건강정보는 필수값이므로, 없을 경우 에러를 발생시킵니다.
+   */
+  private async getRandomHealthPoint(
+    ingredientIds: number[],
+  ): Promise<RecipeHealthPointDto> {
+    if (ingredientIds.length === 0) {
+      throw new CustomException(
+        ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // 레시피 재료의 건강정보 조회
+    const ingredientHealthInfos =
+      await this.ingredientHealthInfoRepository.find({
+        where: {
+          ingredientId: In(ingredientIds),
+        },
+      });
+
+    if (ingredientHealthInfos.length === 0) {
+      throw new CustomException(
+        ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // 랜덤 선택 (0 ~ length-1)
+    const randomIndex = Math.floor(
+      Math.random() * ingredientHealthInfos.length,
+    );
+    const selectedHealthInfo = ingredientHealthInfos[randomIndex];
+
+    return {
+      content: selectedHealthInfo.content,
+    };
   }
 
   private mapIngredientsWithOwnership(

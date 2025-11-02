@@ -361,15 +361,12 @@ export class RecipeController {
           },
         },
       },
-      healthPoints: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            content: {
-              type: 'string',
-              example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
-            },
+      healthPoint: {
+        type: 'object',
+        properties: {
+          content: {
+            type: 'string',
+            example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
           },
         },
       },
@@ -377,6 +374,7 @@ export class RecipeController {
     },
   })
   @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(404, ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND)
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   async getRecipe(
     @Param('id', ParseIntPipe) recipeId: number,
