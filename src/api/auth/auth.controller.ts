@@ -66,7 +66,7 @@ export class AuthController {
     description:
       'Refresh Token을 사용하여 새로운 Access Token과 Refresh Token을 발급합니다.',
   })
-  @ApiBody({ type: RefreshTokenRequestDto })
+  @ApiBody({ type: RefreshTokenRequestDto, required: false })
   @ApiSuccessResponse('토큰 재발급 성공', {
     type: 'object',
     properties: {
@@ -94,12 +94,12 @@ export class AuthController {
   @ApiErrorResponse(401, ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN)
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REFRESH_TOKEN_EXPIRED)
   async refreshToken(
-    @Body() body: RefreshTokenRequestDto,
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
+    @Body() body?: RefreshTokenRequestDto,
   ) {
     return await this.authService.refreshAccessTokenWithCookie(
-      body.refreshToken,
+      body?.refreshToken,
       req,
       res,
     );
