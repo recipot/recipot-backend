@@ -753,4 +753,98 @@ export class RecipeController {
       errors: result.errors,
     });
   }
+
+  @Post('admin/import-recipe-images-excel')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 엑셀 파일로 레시피 이미지 일괄 업데이트',
+    description: `엑셀 파일을 업로드하여 여러 레시피의 이미지를 한 번에 업데이트합니다. 
+파일의 컬럼은 다음 형식을 따라야 합니다: 
+- 레시피 ID
+- 레시피 이미지 (쉼표(,)로 구분된 여러 URL, 예: https://1,https://2,https://3) - 여러 개 등록 가능
+- {숫자}step 이미지 (동적으로 추가 가능, 예: 1step 이미지, 2step 이미지, 3step 이미지, ...) - 각 step마다 하나만 등록 가능
+
+레시피 이미지는 기존 이미지를 모두 삭제하고 새로 추가됩니다. 쉼표로 구분된 여러 개의 이미지를 등록할 수 있습니다.
+Step 이미지는 해당 step의 이미지만 업데이트됩니다. 각 step마다 하나의 이미지만 등록 가능하며, step 번호는 동적으로 처리되며 제한이 없습니다.
+
+스킵된 데이터가 있으면 엑셀 파일로 다운로드됩니다.`,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '엑셀 파일 (.xlsx, .xls, .xlsm)',
+        },
+      },
+    },
+  })
+  @ApiSuccessResponse('엑셀 레시피 이미지 일괄 업데이트 성공', {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        example:
+          '엑셀 파일에서 5개의 레시피 이미지가 성공적으로 업데이트되었습니다.',
+      },
+      updatedRecipeCount: { type: 'number', example: 5 },
+      skippedRecipeCount: { type: 'number', example: 2 },
+      errors: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            row: { type: 'number', example: 3 },
+            title: { type: 'string', example: '레시피 ID: 1' },
+            error: {
+              type: 'string',
+              example: '레시피 ID 1를 찾을 수 없습니다.',
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @UseInterceptors(FileInterceptor('file'))
+  async importRecipeImagesFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 파일 검증
+    this.fileImportService.validateExcelFile(file);
+
+    const result = await this.fileImportService.importRecipeImagesFromExcel(
+      file.buffer,
+    );
+
+    // 스킵된 데이터가 있으면 엑셀 파일 다운로드
+    if (result.skippedExcelBuffer && result.skippedFileName) {
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.skippedFileName}"`,
+      );
+      res.send(result.skippedExcelBuffer);
+      return;
+    }
+
+    // 스킵된 데이터가 없으면 일반 응답
+    res.json({
+      message: `엑셀 파일에서 ${result.updatedRecipeCount}개의 레시피 이미지가 성공적으로 업데이트되었습니다.`,
+      updatedRecipeCount: result.updatedRecipeCount,
+      skippedRecipeCount: result.skippedRecipeCount,
+      errors: result.errors,
+    });
+  }
 }

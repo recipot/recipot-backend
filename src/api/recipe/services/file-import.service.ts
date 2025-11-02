@@ -6,11 +6,15 @@ import { Condition } from '@/database/entity/condition.entity';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
 import { Ingredient } from '@/database/entity/ingredient.entity';
+import { RecipeImage } from '@/database/entity/recipe-image.entity';
+import { RecipeStep } from '@/database/entity/recipe-step.entity';
+import { Recipe } from '@/database/entity/recipe.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 import * as XLSX from 'xlsx';
 import { DIVISION, EXCEL_SHEET_NAME } from '../constants/file-import.constants';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
@@ -18,6 +22,7 @@ import { RecipeService } from '../recipe.service';
 import { RecipeError } from '../types/file-import.types';
 import { ExcelNormalizerUtil } from '../utils/excel-normalizer.util';
 import { IngredientSeasoningParserUtil } from '../utils/ingredient-seasoning-parser.util';
+import { RecipeImageParserUtil } from '../utils/recipe-image-parser.util';
 import { RecipeParserUtil } from '../utils/recipe-parser.util';
 import { FileImportValidator } from '../validators/file-import.validator';
 
@@ -44,6 +49,12 @@ export class FileImportService {
     private readonly conditionRepository: Repository<Condition>,
     @InjectRepository(CommonCode)
     private readonly commonCodeRepository: Repository<CommonCode>,
+    @InjectRepository(Recipe)
+    private readonly recipeRepository: Repository<Recipe>,
+    @InjectRepository(RecipeImage)
+    private readonly recipeImageRepository: Repository<RecipeImage>,
+    @InjectRepository(RecipeStep)
+    private readonly recipeStepRepository: Repository<RecipeStep>,
     private readonly recipeService: RecipeService,
   ) {}
 
@@ -908,5 +919,338 @@ export class FileImportService {
         message: `재료/양념 엑셀 파싱 실패: ${error.message}`,
       });
     }
+  }
+
+  // ============================================================================
+  // 레시피 이미지 업데이트 메서드
+  // ============================================================================
+
+  /**
+   * 엑셀 파일을 파싱하여 레시피 이미지를 업데이트합니다.
+   * 엑셀 파일을 읽어서 각 행의 데이터를 파싱하고 레시피의 이미지를 업데이트합니다.
+   * 에러가 발생한 행은 스킵하고, 스킵된 데이터는 별도의 엑셀 파일로 저장합니다.
+   *
+   * @param buffer 엑셀 파일의 버퍼 데이터
+   * @returns 레시피 이미지 업데이트 결과 (업데이트된 레시피 수, 스킵된 레시피 수, 에러 목록, 스킵된 데이터 엑셀 파일)
+   */
+  async importRecipeImagesFromExcel(buffer: Buffer): Promise<{
+    updatedRecipeCount: number;
+    skippedRecipeCount: number;
+    errors: RecipeError[];
+    skippedExcelBuffer: Buffer | null;
+    skippedFileName: string | null;
+  }> {
+    try {
+      // 엑셀 파일을 파싱하여 레시피 데이터 배열로 변환
+      const records = this.parseExcelFile(buffer) || [];
+      this.logger.log(
+        `엑셀 파일에서 ${records.length}개의 레시피 이미지 데이터를 찾았습니다.`,
+      );
+
+      // 임포트 결과 추적 변수 초기화
+      let updatedRecipeCount = 0; // 성공적으로 업데이트된 레시피 수
+      let skippedRecipeCount = 0; // 스킵된 레시피 수
+      const errors: RecipeError[] = []; // 에러 목록
+      const skippedRows: Array<{
+        row: Record<string, any>;
+        rowNumber: number;
+      }> = []; // 스킵된 행 데이터 (엑셀 파일 생성용)
+
+      // 각 행을 순회하면서 레시피 이미지 업데이트 시도
+      for (const [index, row] of records.entries()) {
+        const rowNumber = index + 2; // 엑셀 행 번호 (헤더 행 포함, 2부터 시작)
+        try {
+          // 레시피 ID 파싱
+          const recipeId = RecipeImageParserUtil.parseRecipeId(row);
+
+          // 헤더 행 및 빈 행 필터링: 레시피 ID가 없거나 유효하지 않으면 스킵
+          if (!recipeId) {
+            // 빈 행 체크: 모든 컬럼이 비어있는지 확인
+            const hasAnyData = Object.values(row).some(
+              (value) =>
+                value !== null &&
+                value !== undefined &&
+                String(value).trim() !== '',
+            );
+
+            if (!hasAnyData) {
+              // 완전히 빈 행인 경우 조용히 스킵
+              this.logger.log(`행 ${rowNumber}: 빈 행으로 스킵합니다.`);
+              continue;
+            }
+
+            // 데이터는 있지만 레시피 ID가 없는 경우 에러로 집계
+            const validationError =
+              FileImportValidator.validateRecipeImageRequiredFields(
+                row,
+                rowNumber,
+                null,
+              );
+            if (validationError) {
+              errors.push(validationError);
+              skippedRows.push({ row, rowNumber });
+              skippedRecipeCount++;
+            }
+            continue;
+          }
+
+          // 레시피 찾기
+          const recipe = await this.recipeRepository.findOne({
+            where: { id: recipeId },
+          });
+
+          // 필수 필드 검증
+          const validationError =
+            FileImportValidator.validateRecipeImageRequiredFields(
+              row,
+              rowNumber,
+              recipe,
+            );
+          if (validationError) {
+            errors.push(validationError);
+            skippedRows.push({ row, rowNumber });
+            skippedRecipeCount++;
+            continue;
+          }
+
+          // 레시피 이미지 파싱 (쉼표로 구분된 URL 리스트)
+          const recipeImagesText = row[EXCEL_COLUMNS.RECIPE_IMAGE.IMAGES] || '';
+          const recipeImageUrls =
+            RecipeImageParserUtil.parseRecipeImages(recipeImagesText || '') ||
+            [];
+
+          // Step 이미지 파싱 (동적으로 처리: 1step 이미지, 2step 이미지, ...)
+          const stepImageMap = RecipeImageParserUtil.parseStepImages(row);
+
+          // 이미지가 하나도 없는 행은 스킵 (데이터가 없는 빈 행)
+          if (recipeImageUrls.length === 0 && stepImageMap.size === 0) {
+            this.logger.log(
+              `행 ${rowNumber}: 레시피 ID ${recipeId}는 이미지 데이터가 없어 스킵합니다.`,
+            );
+            continue;
+          }
+
+          // 트랜잭션으로 이미지 업데이트
+          const warnings = await this.updateRecipeImages(
+            recipeId,
+            recipeImageUrls,
+            stepImageMap,
+          );
+
+          // Step을 찾지 못한 경우 경고를 에러로 추가
+          if (warnings.length > 0) {
+            errors.push({
+              row: rowNumber,
+              title: `레시피 ID: ${recipeId}`,
+              error: `일부 step 이미지를 업데이트하지 못했습니다: ${warnings.join(', ')}`,
+            });
+          }
+
+          updatedRecipeCount++;
+          this.logger.log(
+            `레시피 ${recipeId} 이미지 업데이트 완료: ${recipe.title}`,
+          );
+        } catch (error) {
+          // 에러 발생 시 처리
+          const errorMessage = error?.message || '알 수 없는 오류';
+          if (
+            !errors.some(
+              (e) => e && e.row === rowNumber && e.error === errorMessage,
+            )
+          ) {
+            const recipeId = RecipeImageParserUtil.parseRecipeId(row);
+            errors.push({
+              row: rowNumber,
+              title: recipeId ? `레시피 ID: ${recipeId}` : '(제목 없음)',
+              error: errorMessage,
+            });
+          }
+          skippedRows.push({ row, rowNumber });
+          skippedRecipeCount++;
+          this.logger.error(`행 ${rowNumber} 처리 실패`, error);
+        }
+      }
+
+      // 임포트 완료 로그
+      this.logger.log(
+        `총 ${updatedRecipeCount}개의 레시피 이미지가 업데이트되었습니다.`,
+      );
+      this.logger.log(`${skippedRecipeCount}개의 레시피가 건너뛰었습니다.`);
+
+      // 스킵된 데이터가 있으면 엑셀 파일 생성
+      let skippedExcelBuffer: Buffer | null = null;
+      let skippedFileName: string | null = null;
+
+      // undefined 값 제거
+      const validErrors = errors.filter((err) => err != null);
+
+      if (skippedRows.length > 0) {
+        // 스킵된 레시피 데이터를 엑셀 파일로 변환
+        skippedExcelBuffer = this.createSkippedRecipeImageExcel(
+          skippedRows,
+          validErrors,
+        );
+        // 타임스탬프를 포함한 파일명 생성
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        skippedFileName = `skipped_recipe_images_${timestamp}.xlsx`;
+      }
+
+      // 임포트 결과 반환
+      return {
+        updatedRecipeCount,
+        skippedRecipeCount,
+        errors: validErrors,
+        skippedExcelBuffer,
+        skippedFileName,
+      };
+    } catch (error) {
+      // 전체 임포트 과정에서 예상치 못한 에러 발생 시
+      this.logger.error('레시피 이미지 엑셀 파싱 중 오류 발생', error);
+      throw new CustomException({
+        code: ERROR_CODES.VALIDATION_ERROR.code,
+        message: `레시피 이미지 업데이트 실패: ${error.message}`,
+      });
+    }
+  }
+
+  /**
+   * 레시피 이미지를 업데이트합니다.
+   * 레시피 본문 이미지가 제공된 경우에만 기존 이미지를 삭제하고 새로운 이미지를 추가합니다.
+   * Step 이미지는 해당 step의 이미지만 업데이트합니다. (각 step마다 하나의 이미지만 등록 가능)
+   *
+   * @param recipeId 레시피 ID
+   * @param recipeImageUrls 레시피 이미지 URL 배열 (쉼표로 구분된 여러 개의 이미지, 빈 배열이면 본문 이미지는 업데이트하지 않음)
+   * @param stepImageMap Step 번호와 이미지 URL 맵 (각 step마다 하나의 이미지만)
+   * @returns Step을 찾지 못한 경우의 경고 메시지 배열
+   */
+  @Transactional()
+  private async updateRecipeImages(
+    recipeId: number,
+    recipeImageUrls: Array<{ imageUrl: string }>,
+    stepImageMap: Map<number, string>,
+  ): Promise<string[]> {
+    const warnings: string[] = [];
+    // 레시피 본문 이미지 업데이트 (이미지가 제공된 경우에만)
+    if (recipeImageUrls.length > 0) {
+      // 기존 레시피 이미지 삭제
+      await this.recipeImageRepository.delete({ recipeId });
+
+      // 새로운 레시피 이미지 추가
+      const recipeImages = recipeImageUrls.map((imageDto) =>
+        this.recipeImageRepository.create({
+          recipeId,
+          imageUrl: imageDto.imageUrl,
+        }),
+      );
+      await this.recipeImageRepository.save(recipeImages);
+    }
+
+    // Step 이미지 업데이트
+    if (stepImageMap.size > 0) {
+      for (const [stepNum, imageUrl] of stepImageMap.entries()) {
+        const step = await this.recipeStepRepository.findOne({
+          where: { recipeId, orderNum: stepNum },
+        });
+
+        if (step) {
+          step.imageUrl = imageUrl;
+          await this.recipeStepRepository.save(step);
+        } else {
+          const warning = `${stepNum}단계를 찾을 수 없습니다.`;
+          this.logger.warn(`레시피 ${recipeId}의 ${warning}`);
+          warnings.push(warning);
+        }
+      }
+    }
+
+    return warnings;
+  }
+
+  /**
+   * 스킵된 레시피 이미지 데이터를 엑셀 파일로 변환합니다.
+   * step 이미지 컬럼을 동적으로 찾아서 포함시킵니다.
+   *
+   * @param skippedRows 스킵된 레시피 행 데이터 배열
+   * @param errors 각 행의 에러 정보 배열
+   * @returns 생성된 엑셀 파일 버퍼 (스킵된 행이 없으면 null)
+   */
+  private createSkippedRecipeImageExcel(
+    skippedRows: Array<{
+      row: Record<string, any>;
+      rowNumber: number;
+    }>,
+    errors: RecipeError[],
+  ): Buffer | null {
+    // 스킵된 행이 없으면 null 반환
+    if (skippedRows.length === 0) {
+      return null;
+    }
+
+    // 에러 정보를 행 번호로 매핑
+    const errorMap = new Map<number, string>();
+    errors.forEach((err) => {
+      if (err && err.row !== undefined) {
+        errorMap.set(err.row, err.error);
+      }
+    });
+
+    // 모든 스킵된 행에서 컬럼명 수집 (step 이미지 컬럼 포함)
+    const allColumns = new Set<string>();
+    skippedRows.forEach((item) => {
+      if (item && item.row) {
+        Object.keys(item.row).forEach((key) => {
+          allColumns.add(key);
+        });
+      }
+    });
+
+    // 기본 컬럼 순서 정의
+    const baseColumns = [
+      EXCEL_COLUMNS.RECIPE_IMAGE.ID,
+      EXCEL_COLUMNS.RECIPE_IMAGE.IMAGES,
+    ];
+
+    // step 이미지 컬럼만 추출하여 정렬
+    const stepImageColumns = Array.from(allColumns)
+      .filter((col) => /^\d+step\s*이미지$/.test(col))
+      .sort((a, b) => {
+        // 컬럼명에서 숫자 추출하여 단계 번호로 정렬
+        const numA = parseInt(a.match(/^(\d+)/)?.[1] || '0', 10);
+        const numB = parseInt(b.match(/^(\d+)/)?.[1] || '0', 10);
+        return numA - numB;
+      });
+
+    // 스킵 이유를 포함한 데이터 준비
+    const data = skippedRows
+      .filter((item) => item && item.row)
+      .map((item) => {
+        const row = item.row;
+        const rowNumber = item.rowNumber;
+        const error = errorMap.get(rowNumber) || '';
+
+        const rowData: Record<string, any> = {};
+        // 기본 컬럼 추가
+        for (const col of baseColumns) {
+          rowData[col] = row[col] || '';
+        }
+        // step 이미지 컬럼 추가
+        for (const col of stepImageColumns) {
+          rowData[col] = row[col] || '';
+        }
+        // 스킵 이유 추가
+        rowData[EXCEL_SHEET_NAME.SKIP_REASON_COLUMN] = error;
+
+        return rowData;
+      });
+
+    // 엑셀 파일 생성
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, EXCEL_SHEET_NAME.SKIPPED);
+
+    // 버퍼로 변환하여 반환
+    return Buffer.from(
+      XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
+    );
   }
 }
