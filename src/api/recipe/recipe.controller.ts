@@ -286,7 +286,7 @@ export class RecipeController {
         type: 'string',
         example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
       },
-      duration: { type: 'string', example: '30분' },
+      duration: { type: 'number', example: 30 },
       condition: { type: 'string', example: '힘들어' },
       images: {
         type: 'array',

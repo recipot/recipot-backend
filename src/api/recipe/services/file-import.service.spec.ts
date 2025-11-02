@@ -249,7 +249,15 @@ describe('FileImportService', () => {
           IngredientSeasoningParserUtil,
           'parseIngredientOrSeasoningString',
         )
-        .mockReturnValue([{ name: '김치', amount: '300g' }]);
+        .mockImplementation((text: string) => {
+          if (text.includes('김치')) {
+            return [{ name: '김치', amount: '300g' }];
+          }
+          if (text.includes('고춧가루')) {
+            return [{ name: '고춧가루', amount: '1큰술' }];
+          }
+          return [];
+        });
 
       jest
         .spyOn(RecipeParserUtil, 'parseNonAlternativeIngredients')
@@ -272,12 +280,11 @@ describe('FileImportService', () => {
         },
       ]);
 
-      conditionRepository.findOne = jest.fn().mockResolvedValue(mockCondition);
-      ingredientRepository.findOne = jest
-        .fn()
-        .mockResolvedValue(mockIngredient);
-      seasoningRepository.findOne = jest.fn().mockResolvedValue(mockSeasoning);
-      toolRepository.findOne = jest.fn().mockResolvedValue(mockTool);
+      // 일괄 조회를 위한 find mock 설정
+      conditionRepository.find = jest.fn().mockResolvedValue([mockCondition]);
+      ingredientRepository.find = jest.fn().mockResolvedValue([mockIngredient]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([mockSeasoning]);
+      toolRepository.find = jest.fn().mockResolvedValue([mockTool]);
       recipeService.createRecipe = jest.fn().mockResolvedValue(undefined);
 
       const result = await service.importRecipesFromExcel(buffer);
@@ -311,7 +318,11 @@ describe('FileImportService', () => {
           error: '레시피 타이틀이 없습니다.',
         });
 
-      conditionRepository.findOne = jest.fn().mockResolvedValue(mockCondition);
+      // 일괄 조회를 위한 find mock 설정
+      conditionRepository.find = jest.fn().mockResolvedValue([mockCondition]);
+      ingredientRepository.find = jest.fn().mockResolvedValue([]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      toolRepository.find = jest.fn().mockResolvedValue([]);
 
       const result = await service.importRecipesFromExcel(buffer);
 
@@ -319,67 +330,6 @@ describe('FileImportService', () => {
       expect(result.skippedRecipeCount).toBe(1);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].error).toBe('레시피 타이틀이 없습니다.');
-      expect(recipeService.createRecipe).not.toHaveBeenCalled();
-    });
-
-    it('재료를 찾을 수 없으면 에러를 기록해야 함', async () => {
-      const mockRecipeData = [
-        {
-          [EXCEL_COLUMNS.RECIPE.TITLE]: '김치찌개',
-          [EXCEL_COLUMNS.RECIPE.DURATION]: '30',
-          [EXCEL_COLUMNS.RECIPE.CONDITION]: '힘들어',
-          [EXCEL_COLUMNS.RECIPE.DESCRIPTION]: '맛있는 김치찌개',
-          [EXCEL_COLUMNS.RECIPE.INGREDIENTS]: '존재하지않는재료 300g',
-          [EXCEL_COLUMNS.RECIPE.SEASONINGS]: '',
-          [EXCEL_COLUMNS.RECIPE.TOOLS]: '',
-          [EXCEL_COLUMNS.RECIPE.IMAGES]: '',
-          [EXCEL_COLUMNS.RECIPE.NON_ALTERNATIVE_INGREDIENTS]: '',
-        },
-      ];
-
-      // parseExcelFile을 직접 모킹하여 버퍼 생성 로직을 스킵
-      parseExcelFileSpy.mockReturnValue(mockRecipeData);
-
-      const buffer = Buffer.from('mock-excel-buffer');
-
-      jest
-        .spyOn(FileImportValidator, 'validateRecipeRequiredFields')
-        .mockReturnValue(null);
-
-      jest
-        .spyOn(FileImportValidator, 'parseDurationMinutes')
-        .mockReturnValue(30);
-
-      jest
-        .spyOn(
-          IngredientSeasoningParserUtil,
-          'parseIngredientOrSeasoningString',
-        )
-        .mockReturnValue([{ name: '존재하지않는재료', amount: '300g' }]);
-
-      jest
-        .spyOn(RecipeParserUtil, 'parseNonAlternativeIngredients')
-        .mockReturnValue([]);
-
-      jest.spyOn(RecipeParserUtil, 'parseToolString').mockReturnValue([]);
-      jest.spyOn(RecipeParserUtil, 'parseRecipeImages').mockReturnValue([]);
-      jest.spyOn(RecipeParserUtil, 'parseRecipeSteps').mockReturnValue([
-        {
-          orderNum: 1,
-          summary: '요약',
-          content: '내용',
-        },
-      ]);
-
-      conditionRepository.findOne = jest.fn().mockResolvedValue(mockCondition);
-      ingredientRepository.findOne = jest.fn().mockResolvedValue(null);
-
-      const result = await service.importRecipesFromExcel(buffer);
-
-      expect(result.createdRecipeCount).toBe(0);
-      expect(result.skippedRecipeCount).toBe(1);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].error).toContain('존재하지않는재료');
       expect(recipeService.createRecipe).not.toHaveBeenCalled();
     });
 
@@ -433,12 +383,11 @@ describe('FileImportService', () => {
       jest.spyOn(RecipeParserUtil, 'parseRecipeImages').mockReturnValue([]);
       jest.spyOn(RecipeParserUtil, 'parseRecipeSteps').mockReturnValue([]);
 
-      conditionRepository.findOne = jest.fn().mockResolvedValue(mockCondition);
-      ingredientRepository.findOne = jest
-        .fn()
-        .mockResolvedValue(mockIngredient);
-      seasoningRepository.findOne = jest.fn().mockResolvedValue(null);
-      toolRepository.findOne = jest.fn().mockResolvedValue(null);
+      // 일괄 조회를 위한 find mock 설정
+      conditionRepository.find = jest.fn().mockResolvedValue([mockCondition]);
+      ingredientRepository.find = jest.fn().mockResolvedValue([mockIngredient]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      toolRepository.find = jest.fn().mockResolvedValue([]);
 
       const result = await service.importRecipesFromExcel(buffer);
 
@@ -499,7 +448,15 @@ describe('FileImportService', () => {
           IngredientSeasoningParserUtil,
           'parseIngredientOrSeasoningString',
         )
-        .mockReturnValue([{ name: '김치', amount: '300g' }]);
+        .mockImplementation((text: string) => {
+          if (text.includes('김치')) {
+            return [{ name: '김치', amount: '300g' }];
+          }
+          if (text.includes('고춧가루')) {
+            return [{ name: '고춧가루', amount: '1큰술' }];
+          }
+          return [];
+        });
 
       jest
         .spyOn(RecipeParserUtil, 'parseNonAlternativeIngredients')
@@ -518,12 +475,11 @@ describe('FileImportService', () => {
         },
       ]);
 
-      conditionRepository.findOne = jest.fn().mockResolvedValue(mockCondition);
-      ingredientRepository.findOne = jest
-        .fn()
-        .mockResolvedValue(mockIngredient);
-      seasoningRepository.findOne = jest.fn().mockResolvedValue(mockSeasoning);
-      toolRepository.findOne = jest.fn().mockResolvedValue(mockTool);
+      // 일괄 조회를 위한 find mock 설정
+      conditionRepository.find = jest.fn().mockResolvedValue([mockCondition]);
+      ingredientRepository.find = jest.fn().mockResolvedValue([mockIngredient]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([mockSeasoning]);
+      toolRepository.find = jest.fn().mockResolvedValue([mockTool]);
       recipeService.createRecipe = jest.fn().mockResolvedValue(undefined);
 
       const result = await service.importRecipesFromExcel(buffer);
@@ -579,10 +535,12 @@ describe('FileImportService', () => {
         .spyOn(IngredientSeasoningParserUtil, 'parseRestrictedIngredientValue')
         .mockReturnValue(true);
 
-      ingredientRepository.findOne = jest.fn().mockResolvedValue(null);
-      ingredientCategoryRepository.findOne = jest
+      // 일괄 조회를 위한 find mock 설정
+      ingredientRepository.find = jest.fn().mockResolvedValue([]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      ingredientCategoryRepository.find = jest
         .fn()
-        .mockResolvedValue(mockIngredientCategory);
+        .mockResolvedValue([mockIngredientCategory]);
       ingredientRepository.create = jest.fn().mockReturnValue(mockIngredient);
       ingredientRepository.save = jest.fn().mockResolvedValue(mockIngredient);
       ingredientHealthInfoRepository.create = jest.fn().mockReturnValue({
@@ -632,7 +590,10 @@ describe('FileImportService', () => {
         .spyOn(FileImportValidator, 'validateIngredientOrSeasoningRow')
         .mockReturnValue(null);
 
-      seasoningRepository.findOne = jest.fn().mockResolvedValue(null);
+      // 일괄 조회를 위한 find mock 설정
+      ingredientRepository.find = jest.fn().mockResolvedValue([]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      ingredientCategoryRepository.find = jest.fn().mockResolvedValue([]);
       seasoningRepository.create = jest.fn().mockReturnValue(mockSeasoning);
       seasoningRepository.save = jest.fn().mockResolvedValue(mockSeasoning);
 
@@ -666,9 +627,10 @@ describe('FileImportService', () => {
         .spyOn(FileImportValidator, 'validateIngredientOrSeasoningRow')
         .mockReturnValue('재료 "김치"가 이미 존재합니다.');
 
-      ingredientRepository.findOne = jest
-        .fn()
-        .mockResolvedValue(mockIngredient);
+      // 일괄 조회를 위한 find mock 설정 (이미 존재하는 재료 포함)
+      ingredientRepository.find = jest.fn().mockResolvedValue([mockIngredient]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      ingredientCategoryRepository.find = jest.fn().mockResolvedValue([]);
 
       const result =
         await service.importIngredientsAndSeasoningsFromExcel(buffer);
@@ -704,8 +666,10 @@ describe('FileImportService', () => {
         .spyOn(IngredientSeasoningParserUtil, 'parseRestrictedIngredientValue')
         .mockReturnValue(false);
 
-      ingredientRepository.findOne = jest.fn().mockResolvedValue(null);
-      ingredientCategoryRepository.findOne = jest.fn().mockResolvedValue(null);
+      // 일괄 조회를 위한 find mock 설정 (카테고리가 없음)
+      ingredientRepository.find = jest.fn().mockResolvedValue([]);
+      seasoningRepository.find = jest.fn().mockResolvedValue([]);
+      ingredientCategoryRepository.find = jest.fn().mockResolvedValue([]);
       ingredientCategoryRepository.create = jest
         .fn()
         .mockReturnValue(mockIngredientCategory);

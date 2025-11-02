@@ -10,15 +10,12 @@ import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as XLSX from 'xlsx';
 import { DIVISION, EXCEL_SHEET_NAME } from '../constants/file-import.constants';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import { RecipeService } from '../recipe.service';
-import {
-  IngredientOrSeasoningItem,
-  RecipeError,
-} from '../types/file-import.types';
+import { RecipeError } from '../types/file-import.types';
 import { ExcelNormalizerUtil } from '../utils/excel-normalizer.util';
 import { IngredientSeasoningParserUtil } from '../utils/ingredient-seasoning-parser.util';
 import { RecipeParserUtil } from '../utils/recipe-parser.util';
@@ -174,46 +171,6 @@ export class FileImportService {
   // ============================================================================
 
   /**
-   * 재료/양념 문자열을 파싱합니다.
-   * 예: "땅콩버터 1T, 바나나 1개, 돼지고기 (대패삼겹살) 150g"
-   * -> [{ name: "땅콩버터", amount: "1T" }, { name: "바나나", amount: "1개" }, { name: "돼지고기 (대패삼겹살)", amount: "150g" }]
-   */
-  private parseIngredientOrSeasoningString(
-    text: string,
-  ): IngredientOrSeasoningItem[] {
-    if (!text || !text.trim()) {
-      return [];
-    }
-
-    const items: IngredientOrSeasoningItem[] = [];
-    const parts = text.split(',').map((p) => p.trim());
-
-    for (const part of parts) {
-      if (!part) continue;
-
-      // 마지막 공백을 기준으로 이름과 양을 분리
-      // 예: "땅콩버터 1T" -> name: "땅콩버터", amount: "1T"
-      // 예: "돼지고기 (대패삼겹살) 150g" -> name: "돼지고기 (대패삼겹살)", amount: "150g"
-      const lastSpaceIndex = part.lastIndexOf(' ');
-      if (lastSpaceIndex > 0) {
-        const name = part.substring(0, lastSpaceIndex).trim();
-        const amount = part.substring(lastSpaceIndex + 1).trim();
-        if (name && amount) {
-          items.push({ name, amount });
-        } else {
-          // 이름은 있지만 양이 없는 경우 (공백이 이름 안에 있는 경우)
-          items.push({ name: part, amount: '' });
-        }
-      } else {
-        // 공백이 없으면 전체를 이름으로 처리
-        items.push({ name: part, amount: '' });
-      }
-    }
-
-    return items;
-  }
-
-  /**
    * 스킵된 레시피 데이터를 엑셀 파일로 변환합니다.
    * 레시피 임포트 중 스킵된 행들과 에러 정보를 합쳐서 엑셀 파일로 만들어 반환합니다.
    * 기본 컬럼과 step 컬럼을 올바른 순서로 정렬하여 포함합니다.
@@ -242,14 +199,17 @@ export class FileImportService {
       }
     });
 
-    // 첫 번째 row에서 모든 컬럼명 수집 (step 컬럼 포함)
+    // 모든 스킵된 행에서 컬럼명 수집 (step 컬럼 포함)
     // 이를 통해 동적으로 생성된 step 컬럼들도 포함시킬 수 있음
+    // 각 행이 다른 수의 step 컬럼을 가질 수 있으므로 모든 행을 확인해야 함
     const allColumns = new Set<string>();
-    if (skippedRows.length > 0 && skippedRows[0]?.row) {
-      Object.keys(skippedRows[0].row).forEach((key) => {
-        allColumns.add(key);
-      });
-    }
+    skippedRows.forEach((item) => {
+      if (item && item.row) {
+        Object.keys(item.row).forEach((key) => {
+          allColumns.add(key);
+        });
+      }
+    });
 
     // 기본 컬럼 순서 정의 (레시피의 기본 정보 컬럼들)
     const baseColumns = [
@@ -343,7 +303,7 @@ export class FileImportService {
   }> {
     try {
       // 엑셀 파일을 파싱하여 레시피 데이터 배열로 변환
-      const records = this.parseExcelFile(buffer);
+      const records = this.parseExcelFile(buffer) || [];
       this.logger.log(
         `엑셀 파일에서 ${records.length}개의 레시피 데이터를 찾았습니다.`,
       );
@@ -356,6 +316,111 @@ export class FileImportService {
         row: Record<string, any>;
         rowNumber: number;
       }> = []; // 스킵된 행 데이터 (엑셀 파일 생성용)
+
+      // ============================================================================
+      // 성능 최적화: N+1 쿼리 방지를 위한 일괄 조회
+      // ============================================================================
+
+      // 모든 컨디션 일괄 조회 및 Map 생성
+      const allConditions = (await this.conditionRepository.find()) || [];
+      const conditionMap = new Map<string, Condition>(
+        allConditions.map((c) => [c.name, c]),
+      );
+
+      // 모든 레시피 행을 순회하여 필요한 재료/양념/도구 이름 수집
+      const allIngredientNames = new Set<string>();
+      const allSeasoningNames = new Set<string>();
+      const allToolNames = new Set<string>();
+
+      for (const row of records) {
+        // 재료 이름 수집
+        const ingredientsText = row[EXCEL_COLUMNS.RECIPE.INGREDIENTS]
+          ? String(row[EXCEL_COLUMNS.RECIPE.INGREDIENTS])
+          : '';
+        const ingredientItems =
+          IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
+            ingredientsText || '',
+          ) || [];
+        ingredientItems.forEach((item) => {
+          allIngredientNames.add(item.name.trim());
+        });
+
+        // 양념 이름 수집
+        const seasoningsText = row[EXCEL_COLUMNS.RECIPE.SEASONINGS]
+          ? String(row[EXCEL_COLUMNS.RECIPE.SEASONINGS])
+          : '';
+        const seasoningItems =
+          IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
+            seasoningsText || '',
+          ) || [];
+        seasoningItems.forEach((item) => {
+          allSeasoningNames.add(item.name.trim());
+        });
+
+        // 도구 이름 수집
+        const toolsText = row[EXCEL_COLUMNS.RECIPE.TOOLS]
+          ? String(row[EXCEL_COLUMNS.RECIPE.TOOLS])
+          : '';
+        const toolNames =
+          RecipeParserUtil.parseToolString(toolsText || '') || [];
+        toolNames.forEach((toolName) => {
+          allToolNames.add(toolName.trim());
+        });
+      }
+
+      // 모든 재료 일괄 조회 및 Map 생성
+      const ingredientMap = new Map<string, Ingredient>();
+      if (allIngredientNames.size > 0) {
+        const allIngredients =
+          (await this.ingredientRepository.find({
+            where: { name: In([...allIngredientNames]) },
+          })) || [];
+        allIngredients.forEach((i) => ingredientMap.set(i.name, i));
+      }
+
+      // 모든 양념 일괄 조회 및 Map 생성
+      const seasoningMap = new Map<string, Seasoning>();
+      if (allSeasoningNames.size > 0) {
+        const allSeasonings =
+          (await this.seasoningRepository.find({
+            where: { name: In([...allSeasoningNames]) },
+          })) || [];
+        allSeasonings.forEach((s) => seasoningMap.set(s.name, s));
+      }
+
+      // 모든 도구 일괄 조회 및 Map 생성
+      const toolMap = new Map<string, Tool>();
+      if (allToolNames.size > 0) {
+        const allTools =
+          (await this.toolRepository.find({
+            where: { name: In([...allToolNames]) },
+          })) || [];
+        allTools.forEach((t) => toolMap.set(t.name, t));
+      }
+
+      // 없는 도구들을 일괄 생성
+      const missingToolNames = [...allToolNames].filter(
+        (name) => !toolMap.has(name),
+      );
+      if (missingToolNames.length > 0) {
+        this.logger.log(
+          `${missingToolNames.length}개의 조리도구가 없어 새로 생성합니다.`,
+        );
+        const newTools = missingToolNames.map((toolName) =>
+          this.toolRepository.create({
+            name: toolName,
+            imageUrl: '', // 엑셀에서 이미지 URL을 제공하지 않으므로 빈 문자열
+          }),
+        );
+        const savedTools = (await this.toolRepository.save(newTools)) || [];
+        savedTools.forEach((tool) => {
+          toolMap.set(tool.name, tool);
+        });
+      }
+
+      // ============================================================================
+      // 레시피 생성 루프
+      // ============================================================================
 
       // 각 행을 순회하면서 레시피 생성 시도
       for (const [index, row] of records.entries()) {
@@ -393,10 +458,8 @@ export class FileImportService {
             ? String(row[EXCEL_COLUMNS.RECIPE.SEASONINGS])
             : '';
 
-          // 컨디션 찾기 (검증을 위해 먼저 조회)
-          const condition = await this.conditionRepository.findOne({
-            where: { name: conditionName.trim() },
-          });
+          // 컨디션 찾기 (Map에서 조회)
+          const condition = conditionMap.get(conditionName.trim());
 
           // 필수 필드 검증 (컨디션 포함)
           const validationError =
@@ -421,19 +484,21 @@ export class FileImportService {
           const ingredientItems =
             IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
               ingredientsText || '',
-            );
+            ) || [];
 
           // 대체불가능 재료 목록 파싱 (쉼표로 구분)
           const nonAlternativeIngredientNames =
             RecipeParserUtil.parseNonAlternativeIngredients(
               nonAlternativeIngredientsText || '',
-            );
+            ) || [];
 
           const recipeIngredients = [];
+          let hasIngredientError = false;
           for (const item of ingredientItems) {
             const searchName = item.name.trim();
 
-            const ingredient = await this.findIngredientByName(searchName);
+            // Map에서 재료 조회
+            const ingredient = ingredientMap.get(searchName);
             if (!ingredient) {
               errors.push(
                 IngredientSeasoningParserUtil.createIngredientNotFoundError(
@@ -442,7 +507,8 @@ export class FileImportService {
                   searchName,
                 ),
               );
-              throw new Error(`재료 "${searchName}"을 찾을 수 없습니다.`);
+              hasIngredientError = true;
+              break; // 재료 루프 탈출
             }
 
             // 대체불가능 재료 목록에 있으면 false, 없으면 true
@@ -456,14 +522,23 @@ export class FileImportService {
             });
           }
 
+          // 재료 에러가 있으면 레시피 스킵
+          if (hasIngredientError) {
+            skippedRows.push({ row, rowNumber });
+            skippedRecipeCount++;
+            continue;
+          }
+
           // 양념 파싱 및 검증
           const seasoningItems =
             IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
               seasoningsText || '',
-            );
+            ) || [];
           const recipeSeasonings = [];
+          let hasSeasoningError = false;
           for (const item of seasoningItems) {
-            const seasoning = await this.findSeasoningByName(item.name);
+            // Map에서 양념 조회
+            const seasoning = seasoningMap.get(item.name.trim());
             if (!seasoning) {
               errors.push(
                 IngredientSeasoningParserUtil.createSeasoningNotFoundError(
@@ -472,7 +547,8 @@ export class FileImportService {
                   item.name,
                 ),
               );
-              throw new Error(`양념 "${item.name}"을 찾을 수 없습니다.`);
+              hasSeasoningError = true;
+              break; // 양념 루프 탈출
             }
             recipeSeasonings.push({
               seasoningId: seasoning.id,
@@ -480,19 +556,28 @@ export class FileImportService {
             });
           }
 
-          // 조리도구 파싱 및 검증 (없으면 자동 생성)
-          const toolNames = RecipeParserUtil.parseToolString(toolsText || '');
+          // 양념 에러가 있으면 레시피 스킵
+          if (hasSeasoningError) {
+            skippedRows.push({ row, rowNumber });
+            skippedRecipeCount++;
+            continue;
+          }
+
+          // 조리도구 파싱 및 검증 (Map에서 조회, 이미 일괄 생성됨)
+          const toolNames =
+            RecipeParserUtil.parseToolString(toolsText || '') || [];
           const recipeTools = [];
           for (const toolName of toolNames) {
-            let tool = await this.findToolByName(toolName);
+            // Map에서 도구 조회 (없는 도구는 이미 일괄 생성됨)
+            const tool = toolMap.get(toolName.trim());
             if (!tool) {
-              // 조리도구가 없으면 자동으로 생성
-              this.logger.log(`조리도구 "${toolName}"이 없어 새로 생성합니다.`);
-              tool = this.toolRepository.create({
-                name: toolName,
-                imageUrl: '', // 엑셀에서 이미지 URL을 제공하지 않으므로 빈 문자열
+              // 이론적으로는 발생하지 않아야 하지만 안전성을 위해 체크
+              errors.push({
+                row: rowNumber,
+                title,
+                error: `조리도구 "${toolName}"을 찾을 수 없습니다.`,
               });
-              tool = await this.toolRepository.save(tool);
+              throw new Error(`조리도구 "${toolName}"을 찾을 수 없습니다.`);
             }
             recipeTools.push({
               toolId: tool.id,
@@ -500,16 +585,12 @@ export class FileImportService {
           }
 
           // 레시피 이미지 파싱 (콤마로 구분된 URL 리스트)
-          const recipeImages = RecipeParserUtil.parseRecipeImages(
-            imagesText || '',
-          );
+          const recipeImages =
+            RecipeParserUtil.parseRecipeImages(imagesText || '') || [];
 
           // 조리과정 파싱 (동적으로 처리: 1step 요약, 1step, 1step 이미지, 2step 요약, 2step, 2step 이미지, ...)
-          const steps = RecipeParserUtil.parseRecipeSteps(
-            row,
-            title,
-            this.logger,
-          );
+          const steps =
+            RecipeParserUtil.parseRecipeSteps(row, title, this.logger) || [];
 
           // 조리과정이 하나도 없으면 에러 처리
           if (steps.length === 0) {
@@ -639,22 +720,48 @@ export class FileImportService {
       const skippedRows: Record<string, any>[] = []; // 스킵된 행 데이터 (엑셀 파일 생성용)
       const skippedReasons: string[] = []; // 각 행의 스킵 이유
 
+      // ============================================================================
+      // 성능 최적화: N+1 쿼리 방지를 위한 일괄 조회
+      // ============================================================================
+
+      // 모든 기존 재료 일괄 조회 및 Map 생성
+      const allIngredients = await this.ingredientRepository.find();
+      const ingredientMap = new Map<string, Ingredient>(
+        allIngredients.map((i) => [i.name, i]),
+      );
+
+      // 모든 기존 양념 일괄 조회 및 Map 생성
+      const allSeasonings = await this.seasoningRepository.find();
+      const seasoningMap = new Map<string, Seasoning>(
+        allSeasonings.map((s) => [s.name, s]),
+      );
+
+      // 모든 카테고리 일괄 조회 및 Map 생성
+      const allCategories = await this.ingredientCategoryRepository.find();
+      const categoryMap = new Map<string, IngredientCategory>(
+        allCategories.map((c) => [c.name, c]),
+      );
+
+      // ============================================================================
+      // 재료/양념 생성 루프
+      // ============================================================================
+
       // 각 행을 순차적으로 처리
       for (const [index, row] of records.entries()) {
-        try {
-          // 엑셀 데이터에서 각 컬럼값 추출
-          const name = row[EXCEL_COLUMNS.INGREDIENT.NAME]?.trim(); // 재료/양념 이름
-          const division = row[EXCEL_COLUMNS.INGREDIENT.DIVISION]?.trim(); // 구분: '식재료' or '양념'
-          const categoryName = row[EXCEL_COLUMNS.INGREDIENT.CATEGORY]?.trim(); // 카테고리 이름 (식재료만 해당)
+        // 엑셀 데이터에서 각 컬럼값 추출 (catch 블록에서도 사용하므로 try 밖에서 선언)
+        const name = row[EXCEL_COLUMNS.INGREDIENT.NAME]?.trim(); // 재료/양념 이름
+        const division = row[EXCEL_COLUMNS.INGREDIENT.DIVISION]?.trim(); // 구분: '식재료' or '양념'
+        const categoryName = row[EXCEL_COLUMNS.INGREDIENT.CATEGORY]?.trim(); // 카테고리 이름 (식재료만 해당)
 
-          // 이미 존재하는 재료/양념 확인 (검증을 위해 먼저 조회)
+        try {
+          // 이미 존재하는 재료/양념 확인 (Map에서 조회)
           const existingIngredient =
             division === DIVISION.INGREDIENT
-              ? await this.findIngredientByName(name)
+              ? ingredientMap.get(name) || null
               : null;
           const existingSeasoning =
             division === DIVISION.SEASONING
-              ? await this.findSeasoningByName(name)
+              ? seasoningMap.get(name) || null
               : null;
 
           // 필수 필드 검증
@@ -683,10 +790,8 @@ export class FileImportService {
           // 구분에 따라 식재료 또는 양념 처리
           if (division === DIVISION.INGREDIENT) {
             // ===== 식재료 처리 =====
-            // 카테고리 조회 또는 생성
-            let category = await this.ingredientCategoryRepository.findOne({
-              where: { name: categoryName },
-            });
+            // 카테고리 조회 또는 생성 (Map에서 조회)
+            let category = categoryMap.get(categoryName);
 
             if (!category) {
               // 카테고리가 없으면 새로 생성
@@ -697,6 +802,8 @@ export class FileImportService {
                 name: categoryName,
               });
               category = await this.ingredientCategoryRepository.save(category);
+              // 생성된 카테고리를 Map에 추가하여 중복 생성 방지
+              categoryMap.set(categoryName, category);
             }
 
             // 제한 재료 여부 파싱
@@ -710,6 +817,8 @@ export class FileImportService {
               isRestrictedIngredient,
             });
             await this.ingredientRepository.save(ingredient);
+            // 생성된 재료를 Map에 추가하여 중복 생성 방지
+            ingredientMap.set(name, ingredient);
             createdIngredientCount++;
             this.logger.log(
               `재료 생성 완료: ${name} (카테고리: ${category.name}, 못 먹는 재료 노출: ${isRestrictedIngredient})`,
@@ -735,6 +844,8 @@ export class FileImportService {
             // 양념 생성 및 저장 (양념은 이름만 필요)
             const seasoning = this.seasoningRepository.create({ name });
             await this.seasoningRepository.save(seasoning);
+            // 생성된 양념을 Map에 추가하여 중복 생성 방지
+            seasoningMap.set(name, seasoning);
             createdSeasoningCount++;
             this.logger.log(`양념 생성 완료: ${name}`);
           }
@@ -744,8 +855,13 @@ export class FileImportService {
             `행 ${index + 1} 처리 실패: ${row[EXCEL_COLUMNS.INGREDIENT.NAME]}`,
             error,
           );
+          // 구분에 따라 적절한 에러 코드 사용
+          const errorCode =
+            division === DIVISION.INGREDIENT
+              ? ERROR_CODES.INGREDIENT_CREATE_FAILED.code
+              : ERROR_CODES.SEASONING_CREATE_FAILED.code;
           throw new CustomException({
-            code: ERROR_CODES.RECIPE_CREATE_FAILED.code,
+            code: errorCode,
             message: `재료/양념 "${row[EXCEL_COLUMNS.INGREDIENT.NAME]}" 생성 실패: ${error.message}`,
           });
         }
@@ -786,9 +902,10 @@ export class FileImportService {
     } catch (error) {
       // 전체 임포트 과정에서 예상치 못한 에러 발생 시
       this.logger.error('엑셀 파싱 중 오류 발생', error);
+      // 재료/양념 임포트 실패이므로 일반적인 유효성 검사 오류 코드 사용
       throw new CustomException({
-        code: ERROR_CODES.RECIPE_CREATE_FAILED.code,
-        message: `엑셀 파싱 실패: ${error.message}`,
+        code: ERROR_CODES.VALIDATION_ERROR.code,
+        message: `재료/양념 엑셀 파싱 실패: ${error.message}`,
       });
     }
   }

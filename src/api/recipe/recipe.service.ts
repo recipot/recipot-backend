@@ -267,7 +267,7 @@ export class RecipeService {
         id: recipe.id,
         title: recipe.title,
         description: recipe.description,
-        duration: recipe.duration.toString(),
+        duration: recipe.duration,
         images: images.map((image) => ({
           id: image.id,
           imageUrl: image.imageUrl,

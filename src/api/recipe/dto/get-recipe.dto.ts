@@ -164,10 +164,10 @@ export class GetRecipeResponseDto {
 
   @ApiProperty({
     description: '소요 시간 (분)',
-    example: '30',
-    type: 'string',
+    example: 30,
+    type: 'number',
   })
-  duration: string;
+  duration: number;
 
   @ApiProperty({
     description: '레시피 이미지 배열',
