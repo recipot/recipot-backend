@@ -104,22 +104,36 @@ export class UserService {
       },
     });
 
+    if (nicknameAdjectives.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
     // 재료 목록 조회 (삭제되지 않은 것만)
     const ingredients = await this.ingredientRepository
       .createQueryBuilder('ingredient')
       .where('ingredient.deleted_at IS NULL')
       .getMany();
 
+    if (ingredients.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
+    // )로 끝나지 않는 재료 필터링
+    const validIngredients = ingredients.filter(
+      (ing) => !ing.name.endsWith(')'),
+    );
+
+    if (validIngredients.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
     // 랜덤 선택
     const randomAdjective =
       nicknameAdjectives[Math.floor(Math.random() * nicknameAdjectives.length)];
 
-    // 재료 이름이 )로 끝나지 않을 때까지 반복 선택
-    let randomIngredient;
-    do {
-      randomIngredient =
-        ingredients[Math.floor(Math.random() * ingredients.length)];
-    } while (randomIngredient.name.endsWith(')'));
+    // 유효한 재료 중에서 랜덤 선택
+    const randomIngredient =
+      validIngredients[Math.floor(Math.random() * validIngredients.length)];
 
     // 닉네임 조합: "형용사 + 재료 이름" (예: "발랄한고등어")
     return `${randomAdjective.codeName}${randomIngredient.name}`;

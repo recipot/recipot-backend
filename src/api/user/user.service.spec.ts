@@ -556,7 +556,7 @@ describe('UserService', () => {
       expect(nickname).not.toContain(' ');
     });
 
-    it('재료 이름이 )로 끝나면 다시 선택해야 한다', async () => {
+    it('재료 이름이 )로 끝나면 필터링되어 선택되지 않아야 한다', async () => {
       const ingredientsWithParenthesis: Ingredient[] = [
         {
           id: 1,
@@ -584,20 +584,11 @@ describe('UserService', () => {
         } as Ingredient,
       ];
 
-      // Math.random을 모킹하여 재료 선택 시 마지막 재료가 선택되도록 설정
-      let randomCallCount = 0;
-      jest.spyOn(Math, 'random').mockImplementation(() => {
-        randomCallCount++;
-        // 첫 번째 호출: 형용사 선택 (0.0 = 첫 번째 형용사)
-        // 이후 호출들: 재료 선택
-        // 재료 선택 시 처음 두 번은 0.0~0.66 사이 (재료1) 또는 재료2) 선택)
-        // 세 번째 이후는 0.67 이상 (고등어 선택)
-        if (randomCallCount === 1) {
-          return 0.0; // 형용사 선택
-        }
-        // 재료가 )로 끝나면 다시 선택해야 하므로, 고등어가 선택될 때까지 반복
-        return randomCallCount <= 3 ? 0.0 : 0.9; // 마지막 재료(고등어) 선택
-      });
+      // Math.random을 모킹하여 형용사와 재료를 선택하도록 설정
+      jest
+        .spyOn(Math, 'random')
+        .mockReturnValueOnce(0.0) // 형용사 선택
+        .mockReturnValueOnce(0.9); // 유효한 재료(고등어) 선택
 
       createQueryBuilderMock.getMany.mockResolvedValue(
         ingredientsWithParenthesis,
@@ -608,6 +599,40 @@ describe('UserService', () => {
       expect(nickname).toBeDefined();
       expect(nickname.endsWith(')')).toBe(false);
       expect(nickname).toContain('고등어');
+      // )로 끝나는 재료는 포함되지 않아야 함
+      expect(nickname).not.toContain('재료1)');
+      expect(nickname).not.toContain('재료2)');
+
+      jest.restoreAllMocks();
+    });
+
+    it('모든 재료가 )로 끝나면 에러를 발생시켜야 한다', async () => {
+      const ingredientsAllWithParenthesis: Ingredient[] = [
+        {
+          id: 1,
+          ingredientCategoryId: 1,
+          name: '재료1)',
+          isRestrictedIngredient: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Ingredient,
+        {
+          id: 2,
+          ingredientCategoryId: 1,
+          name: '재료2)',
+          isRestrictedIngredient: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Ingredient,
+      ];
+
+      createQueryBuilderMock.getMany.mockResolvedValue(
+        ingredientsAllWithParenthesis,
+      );
+
+      await expect((service as any).generateRandomNickname()).rejects.toThrow(
+        CustomException,
+      );
 
       jest.restoreAllMocks();
     });
