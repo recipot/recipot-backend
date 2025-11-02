@@ -157,12 +157,12 @@ export class CreateRecipeDto {
   description: string;
 
   @ApiProperty({
-    description: '소요 시간 (공통코드)',
-    example: 'R01004',
+    description: '소요 시간 (분)',
+    example: 30,
   })
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
-  duration: string;
+  duration: number;
 
   @ApiProperty({
     description: '레시피 이미지들',

@@ -17,9 +17,8 @@ export class Recipe extends CommonEntity {
   description: string;
 
   @Column({
-    type: 'varchar',
-    length: 6,
-    comment: '소요 시간',
+    type: 'int',
+    comment: '소요 시간 (분)',
   })
-  duration: string;
+  duration: number;
 }

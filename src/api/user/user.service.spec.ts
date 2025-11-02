@@ -84,9 +84,7 @@ describe('UserService', () => {
     id: 10,
     title: '테스트 레시피',
     description: '테스트 설명',
-    duration: '30분',
-    level: '초급',
-    method: '볶음',
+    duration: 30,
     createdAt: new Date(),
     updatedAt: new Date(),
   } as Recipe;

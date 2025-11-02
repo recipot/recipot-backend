@@ -579,14 +579,21 @@ export class RecipeController {
     return { message: `컨디션 ${conditionId}의 추천 캐시가 무효화되었습니다.` };
   }
 
-  @Post('admin/import-ingredients-csv')
+  @Post('admin/import-ingredients-excel')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({
     summary: '[어드민] 엑셀 파일로 재료/양념 일괄 등록',
-    description:
-      '엑셀 파일을 업로드하여 여러 재료와 양념을 한 번에 등록합니다. 파일의 컬럼은 다음 형식을 따라야 합니다: 재료, 구분, 대분류, 못 먹는 재료 여부, 재료 한줄 카피',
+    description: `엑셀 파일을 업로드하여 여러 재료와 양념을 한 번에 등록합니다. 
+파일의 컬럼은 다음 형식을 따라야 합니다: 
+- 재료
+- 구분
+- 대분류
+- 못 먹는 재료 여부
+- 재료 한줄 카피
+
+스킵된 데이터가 있으면 엑셀 파일로 다운로드됩니다.`,
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -619,7 +626,7 @@ export class RecipeController {
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
   @UseInterceptors(FileInterceptor('file'))
-  async importIngredientsFromCsv(
+  async importIngredientsFromExcel(
     @UploadedFile() file: Express.Multer.File,
     @Res() res: Response,
   ): Promise<void> {
@@ -627,7 +634,7 @@ export class RecipeController {
     this.fileImportService.validateExcelFile(file);
 
     const result =
-      await this.fileImportService.importIngredientsAndSeasoningsFromCsv(
+      await this.fileImportService.importIngredientsAndSeasoningsFromExcel(
         file.buffer,
       );
 
@@ -652,6 +659,100 @@ export class RecipeController {
       createdSeasoningCount: result.createdSeasoningCount,
       skippedIngredientCount: result.skippedIngredientCount,
       skippedSeasoningCount: result.skippedSeasoningCount,
+    });
+  }
+
+  @Post('admin/import-recipes-excel')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 엑셀 파일로 레시피 일괄 등록',
+    description: `엑셀 파일을 업로드하여 여러 레시피를 한 번에 등록합니다. 
+파일의 컬럼은 다음 형식을 따라야 합니다: 
+- 레시피 타이틀
+- 레시피 이미지 (콤마로 구분된 여러 URL, 예: https://1, https://2, https://3)
+- 조리 시간 (분 단위 숫자)
+- 유저 컨디션
+- 한줄 카피
+- 조리도구 (콤마로 구분)
+- 재료 (콤마로 구분, 예: 땅콩버터 1T, 바나나 1개)
+- 대체불가능 재료 (콤마로 구분)
+- 양념 (콤마로 구분, 예: 물 200ml, 간장 1T)
+- 1step 요약, 1step, 1step 이미지, 2step 요약, 2step, 2step 이미지, ... (step은 동적으로 추가 가능, 이미지는 선택사항)
+
+스킵된 데이터가 있으면 엑셀 파일로 다운로드됩니다.`,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '엑셀 파일 (.xlsx, .xls, .xlsm)',
+        },
+      },
+    },
+  })
+  @ApiSuccessResponse('엑셀 레시피 일괄 등록 성공', {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        example: '엑셀 파일에서 5개의 레시피가 성공적으로 생성되었습니다.',
+      },
+      createdRecipeCount: { type: 'number', example: 5 },
+      skippedRecipeCount: { type: 'number', example: 2 },
+      errors: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            row: { type: 'number', example: 3 },
+            title: { type: 'string', example: '레시피 제목' },
+            error: { type: 'string', example: '재료를 찾을 수 없습니다.' },
+          },
+        },
+      },
+    },
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @UseInterceptors(FileInterceptor('file'))
+  async importRecipesFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 파일 검증
+    this.fileImportService.validateExcelFile(file);
+
+    const result = await this.fileImportService.importRecipesFromExcel(
+      file.buffer,
+    );
+
+    // 스킵된 데이터가 있으면 엑셀 파일 다운로드
+    if (result.skippedExcelBuffer && result.skippedFileName) {
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.skippedFileName}"`,
+      );
+      res.send(result.skippedExcelBuffer);
+      return;
+    }
+
+    // 스킵된 데이터가 없으면 일반 응답
+    res.json({
+      message: `엑셀 파일에서 ${result.createdRecipeCount}개의 레시피가 성공적으로 생성되었습니다.`,
+      createdRecipeCount: result.createdRecipeCount,
+      skippedRecipeCount: result.skippedRecipeCount,
+      errors: result.errors,
     });
   }
 }

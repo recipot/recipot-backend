@@ -255,14 +255,11 @@ export class RecipeService {
         }));
 
       const userOwnedIngredients = await this.getUserOwnedIngredients(userId);
-      const durationName = await this.commonCodeService.findCommonCode(
-        recipe.duration,
-      );
       return {
         id: recipe.id,
         title: recipe.title,
         description: recipe.description,
-        duration: durationName.codeName,
+        duration: recipe.duration.toString(),
         images: images.map((image) => ({
           id: image.id,
           imageUrl: image.imageUrl,

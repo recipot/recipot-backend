@@ -425,7 +425,7 @@ export class RecipeRecommendationService {
       }
     }
 
-    // duration 공통코드 일괄 조회
+    // 레시피 일괄 조회
     const recipes = await this.recipeRepository.find({
       where: { id: In(recipeIds) },
       select: ['id', 'title', 'description', 'duration'],
@@ -433,19 +433,6 @@ export class RecipeRecommendationService {
 
     // 레시피 맵 생성 (N+1 쿼리 방지)
     const recipeById = new Map(recipes.map((r) => [r.id, r]));
-
-    const durationCodes = [
-      ...new Set(recipes.map((r) => r.duration).filter((d) => d)),
-    ];
-
-    const durationCommonCodes = await this.commonCodeRepository.find({
-      where: { code: In(durationCodes) },
-    });
-
-    const durationMap = new Map<string, string>();
-    for (const commonCode of durationCommonCodes) {
-      durationMap.set(commonCode.code, commonCode.codeName);
-    }
 
     for (const condition of conditions) {
       const recipe = recipeById.get(condition.recipeId);
@@ -477,7 +464,7 @@ export class RecipeRecommendationService {
         imageMap.get(recipe.id),
         recipeToolsMap.get(recipe.id),
         bookmarkMap.get(recipe.id),
-        durationMap.get(recipe.duration),
+        recipe.duration,
       );
 
       scores.push(score);
@@ -498,7 +485,7 @@ export class RecipeRecommendationService {
     imageUrls?: string[],
     tools?: string[],
     isBookmarked?: boolean,
-    durationName?: string,
+    duration?: number,
   ): RecipeScore {
     // 사용 가능한 재료 (못 먹는 재료 제외)
     const availableIngredients = essentialIngredients.filter(
@@ -540,7 +527,11 @@ export class RecipeRecommendationService {
       priorityScore,
       missingIngredientIds,
       imageUrls,
-      duration: durationName || recipe.duration,
+      duration: duration
+        ? `${duration}분`
+        : recipe.duration
+          ? `${recipe.duration}분`
+          : undefined,
       tools,
       isBookmarked: isBookmarked || false,
     };
