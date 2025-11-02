@@ -78,14 +78,65 @@ export class UserService {
    * 사용자 정보(email)로 새 유저를 생성합니다.
    */
   async createUser(email: string): Promise<User> {
+    // 랜덤 닉네임 생성: 공통코드 U02 (닉네임 형용사) + 재료 이름
+    const nickname = await this.generateRandomNickname();
+
     return this.userRepository.save({
       email,
-      nickname: '닉네임',
+      nickname,
       profileImageUrl: '',
       recipeCompleteCount: 0,
       isFirstEntry: true,
       role: UserRole.GENERAL,
     });
+  }
+
+  /**
+   * 랜덤 닉네임을 생성합니다.
+   * 공통코드 U02 (닉네임 형용사) 중 하나와 재료 이름을 랜덤으로 조합합니다.
+   */
+  private async generateRandomNickname(): Promise<string> {
+    // 공통코드 U02 (닉네임 형용사) 목록 조회
+    const nicknameAdjectives = await this.commonRepository.find({
+      where: {
+        groupCode: 'U02',
+        isActive: true,
+      },
+    });
+
+    if (nicknameAdjectives.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
+    // 재료 목록 조회 (삭제되지 않은 것만)
+    const ingredients = await this.ingredientRepository
+      .createQueryBuilder('ingredient')
+      .where('ingredient.deleted_at IS NULL')
+      .getMany();
+
+    if (ingredients.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
+    // )로 끝나지 않는 재료 필터링
+    const validIngredients = ingredients.filter(
+      (ing) => !ing.name.endsWith(')'),
+    );
+
+    if (validIngredients.length === 0) {
+      throw new CustomException(ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+
+    // 랜덤 선택
+    const randomAdjective =
+      nicknameAdjectives[Math.floor(Math.random() * nicknameAdjectives.length)];
+
+    // 유효한 재료 중에서 랜덤 선택
+    const randomIngredient =
+      validIngredients[Math.floor(Math.random() * validIngredients.length)];
+
+    // 닉네임 조합: "형용사 + 재료 이름" (예: "발랄한고등어")
+    return `${randomAdjective.codeName}${randomIngredient.name}`;
   }
 
   /**
