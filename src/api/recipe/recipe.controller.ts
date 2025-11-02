@@ -377,6 +377,7 @@ export class RecipeController {
     },
   })
   @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(404, ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND)
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   async getRecipe(
     @Param('id', ParseIntPipe) recipeId: number,

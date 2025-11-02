@@ -204,11 +204,10 @@ export class GetRecipeResponseDto {
   steps: RecipeStepDto[];
 
   @ApiProperty({
-    description: '건강 포인트 배열',
-    type: [RecipeHealthPointDto],
-    isArray: true,
+    description: '랜덤 선택된 건강 포인트 (레시피 재료의 건강정보)',
+    type: RecipeHealthPointDto,
   })
-  healthPoints: RecipeHealthPointDto[];
+  healthPoint: RecipeHealthPointDto;
 
   @ApiProperty({
     description: '사용자의 북마크 여부',
