@@ -330,7 +330,7 @@ export class RecipeService {
 
   /**
    * 레시피에 포함된 재료의 건강정보 중 랜덤으로 1개를 선택하여 반환합니다.
-   * 재료의 건강정보는 필수값이므로, 없을 경우 에러를 발생시킵니다.
+   * 건강 정보가 없을 경우, 기본 메시지를 반환합니다.
    */
   private async getRandomHealthPoint(
     ingredientIds: number[],
@@ -350,18 +350,19 @@ export class RecipeService {
         },
       });
 
-    if (ingredientHealthInfos.length === 0) {
-      throw new CustomException(
-        ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND,
-        HttpStatus.NOT_FOUND,
-      );
+    const validHealthInfos = ingredientHealthInfos.filter(
+      (info) => info.content && info.content.trim().length > 0,
+    );
+
+    if (validHealthInfos.length === 0) {
+      return {
+        content:
+          '그래도 가끔은 속세의 맛도 필요하잖아요...? 오늘만큼은 괜찮아요!',
+      };
     }
 
-    // 랜덤 선택 (0 ~ length-1)
-    const randomIndex = Math.floor(
-      Math.random() * ingredientHealthInfos.length,
-    );
-    const selectedHealthInfo = ingredientHealthInfos[randomIndex];
+    const randomIndex = Math.floor(Math.random() * validHealthInfos.length);
+    const selectedHealthInfo = validHealthInfos[randomIndex];
 
     return {
       content: selectedHealthInfo.content,
