@@ -182,6 +182,16 @@ export class IngredientService {
       where: { isRestrictedIngredient: true },
       order: { id: 'ASC' },
     });
+
+    // 카테고리 일괄 조회
+    const categoryIds = [
+      ...new Set(restrictedIngredients.map((i) => i.ingredientCategoryId)),
+    ];
+    const categories = await this.ingredientCategoryRepository.find({
+      where: { id: In(categoryIds) },
+    });
+    const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+
     const unavailableIngredients =
       await this.userUnavailableIngredientRepository.find({
         where: { userId },
@@ -190,10 +200,13 @@ export class IngredientService {
     const unavailableIngredientIds = new Set(
       unavailableIngredients.map((item) => item.ingredientId),
     );
+
     return {
       data: restrictedIngredients.map((ingredient) => ({
         id: ingredient.id,
         name: ingredient.name,
+        categoryName:
+          categoryMap.get(ingredient.ingredientCategoryId) || '미분류',
         isUserRestricted: unavailableIngredientIds.has(ingredient.id),
       })),
     };
