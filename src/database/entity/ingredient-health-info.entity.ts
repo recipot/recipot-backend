@@ -13,6 +13,7 @@ export class IngredientHealthInfo extends CommonEntity {
   @Column({
     type: 'text',
     comment: '건강 정보 내용',
+    nullable: true,
   })
-  content: string;
+  content: string | null;
 }
