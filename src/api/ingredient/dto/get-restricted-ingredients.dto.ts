@@ -16,6 +16,13 @@ export class RestrictedIngredientItemDto {
   name: string;
 
   @ApiProperty({
+    type: String,
+    description: '카테고리 이름',
+    example: '해산물류',
+  })
+  categoryName: string;
+
+  @ApiProperty({
     type: Boolean,
     description: '사용자가 선택한 못먹는 재료 여부',
     example: false,
