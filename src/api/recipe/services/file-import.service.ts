@@ -436,12 +436,14 @@ export class FileImportService {
       // 각 행을 순회하면서 레시피 생성 시도
       for (const [index, row] of records.entries()) {
         const rowNumber = index + 1; // 엑셀 행 번호 (1부터 시작)
+        // catch 블록에서 접근할 수 있도록 try 밖에서 선언
+        const title = row[EXCEL_COLUMNS.RECIPE.TITLE]
+          ? String(row[EXCEL_COLUMNS.RECIPE.TITLE])
+          : '';
+
         try {
-          // 엑셀 데이터에서 각 컬럼값 추출
+          // 엑셀 데이터에서 각 컬럼값 추출 (나머지는 여기서)
           // 엑셀에서 숫자로 읽혀올 수 있으므로 모두 문자열로 변환
-          const title = row[EXCEL_COLUMNS.RECIPE.TITLE]
-            ? String(row[EXCEL_COLUMNS.RECIPE.TITLE])
-            : '';
           const imagesText = row[EXCEL_COLUMNS.RECIPE.IMAGES]
             ? String(row[EXCEL_COLUMNS.RECIPE.IMAGES])
             : '';
@@ -469,6 +471,11 @@ export class FileImportService {
             ? String(row[EXCEL_COLUMNS.RECIPE.SEASONINGS])
             : '';
 
+          // 디버그: 원본 양념 텍스트 출력
+          this.logger.debug(
+            `[DEBUG] [행 ${rowNumber}] 원본 양념 텍스트: "${seasoningsText}"`,
+          );
+
           // 컨디션 찾기 (Map에서 조회)
           const condition = conditionMap.get(conditionName.trim());
 
@@ -480,6 +487,9 @@ export class FileImportService {
               condition,
             );
           if (validationError) {
+            this.logger.warn(
+              `⏭️ [행 ${rowNumber}] 레시피 스킵 - 필수 필드 부재 | 제목: "${title}" | 사유: ${validationError.error}`,
+            );
             errors.push(validationError);
             skippedRows.push({ row, rowNumber });
             skippedRecipeCount++;
@@ -491,11 +501,23 @@ export class FileImportService {
             durationText.trim(),
           );
 
+          // 디버그: 원본 재료 텍스트 출력
+          this.logger.debug(
+            `[DEBUG] [행 ${rowNumber}] 원본 재료 텍스트: "${ingredientsText}"`,
+          );
+
           // 재료 파싱 및 검증
           const ingredientItems =
             IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
               ingredientsText || '',
             ) || [];
+
+          // 디버그: 파싱된 재료 데이터 출력
+          if (ingredientItems.length > 0) {
+            this.logger.debug(
+              `[DEBUG] [행 ${rowNumber}] 파싱된 재료: ${JSON.stringify(ingredientItems)}`,
+            );
+          }
 
           // 대체불가능 재료 목록 파싱 (쉼표로 구분)
           const nonAlternativeIngredientNames =
@@ -511,6 +533,9 @@ export class FileImportService {
             // Map에서 재료 조회
             const ingredient = ingredientMap.get(searchName);
             if (!ingredient) {
+              this.logger.warn(
+                `⏭️ [행 ${rowNumber}] 레시피 스킵 - 재료 미발견 | 제목: "${title}" | 찾지 못한 재료: "${searchName}"`,
+              );
               errors.push(
                 IngredientSeasoningParserUtil.createIngredientNotFoundError(
                   rowNumber,
@@ -545,12 +570,23 @@ export class FileImportService {
             IngredientSeasoningParserUtil.parseIngredientOrSeasoningString(
               seasoningsText || '',
             ) || [];
+
+          // 디버그: 파싱된 양념 데이터 출력
+          if (seasoningItems.length > 0) {
+            this.logger.debug(
+              `[DEBUG] [행 ${rowNumber}] 파싱된 양념: ${JSON.stringify(seasoningItems)}`,
+            );
+          }
+
           const recipeSeasonings = [];
           let hasSeasoningError = false;
           for (const item of seasoningItems) {
             // Map에서 양념 조회
             const seasoning = seasoningMap.get(item.name.trim());
             if (!seasoning) {
+              this.logger.warn(
+                `⏭️ [행 ${rowNumber}] 레시피 스킵 - 양념 미발견 | 제목: "${title}" | 찾지 못한 양념: "${item.name}"`,
+              );
               errors.push(
                 IngredientSeasoningParserUtil.createSeasoningNotFoundError(
                   rowNumber,
@@ -605,6 +641,9 @@ export class FileImportService {
 
           // 조리과정이 하나도 없으면 에러 처리
           if (steps.length === 0) {
+            this.logger.warn(
+              `⏭️ [행 ${rowNumber}] 레시피 스킵 - 조리과정 미발견 | 제목: "${title}" | 사유: 1step 이상의 조리과정이 없습니다.`,
+            );
             errors.push({
               row: rowNumber,
               title,
@@ -633,11 +672,16 @@ export class FileImportService {
           // 레시피 생성
           await this.recipeService.createRecipe(createRecipeDto);
           createdRecipeCount++;
-          this.logger.log(`레시피 생성 완료: ${title}`);
+          this.logger.log(
+            `✅ [행 ${rowNumber}] 레시피 생성 완료 | 제목: "${title}" | 조건: "${conditionName}" | 재료: ${recipeIngredients.length}개 | 양념: ${recipeSeasonings.length}개 | 조리도구: ${recipeTools.length}개`,
+          );
         } catch (error) {
           // 에러 발생 시 처리
           // 중복 에러 추가 방지 (같은 행, 같은 에러 메시지가 이미 있는지 확인)
           const errorMessage = error?.message || '알 수 없는 오류';
+          this.logger.error(
+            `❌ [행 ${rowNumber}] 레시피 스킵 - 예상치 못한 에러 | 제목: "${title}" | 원인: ${errorMessage}`,
+          );
           if (
             !errors.some(
               (e) => e && e.row === rowNumber && e.error === errorMessage,
@@ -656,8 +700,9 @@ export class FileImportService {
       }
 
       // 임포트 완료 로그
-      this.logger.log(`총 ${createdRecipeCount}개의 레시피가 생성되었습니다.`);
-      this.logger.log(`${skippedRecipeCount}개의 레시피가 건너뛰었습니다.`);
+      this.logger.log(
+        `\n📊 [FINAL] 레시피 임포트 완료 | 총: ${records.length}개 | ✅ 성공: ${createdRecipeCount}개 | ⏭️ 스킵: ${skippedRecipeCount}개 | 성공률: ${((createdRecipeCount / records.length) * 100).toFixed(1)}%`,
+      );
 
       // 스킵된 데이터가 있으면 엑셀 파일 생성
       let skippedExcelBuffer: Buffer | null = null;
