@@ -145,4 +145,48 @@ export class CacheLockService {
       }
     }
   }
+
+  /**
+   * 캐시 키 패턴으로 키를 스캔하여 반환합니다.
+   */
+  async scanKeys(pattern: string): Promise<string[]> {
+    const store: any = (this.cache as any).store;
+    const keys: string[] = [];
+
+    if (store?.client) {
+      let cursor = '0';
+
+      do {
+        // SCAN을 사용하여 안전하게 패턴 매칭
+        const result: any = await store.client.scan(cursor, {
+          MATCH: pattern,
+          COUNT: 100,
+        });
+
+        cursor = String(result?.cursor ?? result?.[0] ?? '0');
+        const scannedKeys: string[] = result?.keys ?? result?.[1] ?? [];
+
+        if (scannedKeys.length > 0) {
+          keys.push(...scannedKeys);
+        }
+      } while (cursor !== '0');
+    }
+
+    return keys;
+  }
+
+  /**
+   * 특정 키들을 삭제합니다.
+   */
+  async deleteKeys(keys: string[]): Promise<void> {
+    if (keys.length === 0) {
+      return;
+    }
+
+    const store: any = (this.cache as any).store;
+    if (store?.client) {
+      await store.client.del(...keys);
+      this.logger.debug(`${keys.length}개 캐시 키 삭제`);
+    }
+  }
 }

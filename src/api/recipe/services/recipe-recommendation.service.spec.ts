@@ -37,6 +37,8 @@ describe('RecipeRecommendationService', () => {
     acquireLock: jest.fn(),
     releaseLock: jest.fn(),
     deleteByPattern: jest.fn(),
+    scanKeys: jest.fn(),
+    deleteKeys: jest.fn(),
   } as any;
 
   beforeEach(async () => {
@@ -97,6 +99,8 @@ describe('RecipeRecommendationService', () => {
     cacheLockServiceMock.acquireLock.mockReset();
     cacheLockServiceMock.releaseLock.mockReset();
     cacheLockServiceMock.deleteByPattern.mockReset();
+    cacheLockServiceMock.scanKeys.mockReset();
+    cacheLockServiceMock.deleteKeys.mockReset();
   });
 
   describe('getRecipeRecommendationsWithCache', () => {
@@ -222,6 +226,130 @@ describe('RecipeRecommendationService', () => {
       expect(cacheLockServiceMock.deleteByPattern).toHaveBeenCalledWith(
         'recommend:v1:*',
       );
+    });
+
+    describe('invalidateCacheByRecipeId', () => {
+      let recipeRecommendationConditionRepository: MockType<
+        Repository<RecipeRecommendationCondition>
+      >;
+
+      beforeEach(() => {
+        recipeRecommendationConditionRepository = service[
+          'recipeRecommendationConditionRepository'
+        ] as any;
+      });
+
+      it('레시피가 포함된 condition의 캐시만 스캔하여 해당 레시피가 포함된 캐시만 무효화', async () => {
+        const recipeId = 123;
+        const conditionId1 = 1;
+        const conditionId2 = 2;
+
+        // 해당 레시피가 포함된 condition 조회 결과
+        recipeRecommendationConditionRepository.find.mockResolvedValue([
+          { conditionId: conditionId1 },
+          { conditionId: conditionId2 },
+          { conditionId: conditionId1 }, // 중복
+        ] as any);
+
+        // conditionId 1의 캐시 키들
+        const condition1Keys = [
+          'recommend:v1:c:1:p:hash1:u:hash1',
+          'recommend:v1:c:1:p:hash2:u:hash2',
+        ];
+        // conditionId 2의 캐시 키들
+        const condition2Keys = [
+          'recommend:v1:c:2:p:hash3:u:hash3',
+          'recommend:v1:c:2:p:hash4:u:hash4',
+        ];
+
+        // 각 condition의 캐시 키 스캔 결과
+        cacheLockServiceMock.scanKeys
+          .mockResolvedValueOnce(condition1Keys)
+          .mockResolvedValueOnce(condition2Keys);
+
+        // 캐시 데이터 모킹
+        // conditionId 1의 첫 번째 캐시: 레시피 포함
+        cacheLockServiceMock.getFromCache.mockResolvedValueOnce({
+          items: [
+            { recipeId: 123, title: 'Recipe 123' },
+            { recipeId: 456, title: 'Recipe 456' },
+          ],
+          totalItems: 2,
+        } as any);
+        // conditionId 1의 두 번째 캐시: 레시피 미포함
+        cacheLockServiceMock.getFromCache.mockResolvedValueOnce({
+          items: [
+            { recipeId: 456, title: 'Recipe 456' },
+            { recipeId: 789, title: 'Recipe 789' },
+          ],
+          totalItems: 2,
+        } as any);
+        // conditionId 2의 첫 번째 캐시: 레시피 포함
+        cacheLockServiceMock.getFromCache.mockResolvedValueOnce({
+          items: [{ recipeId: 123, title: 'Recipe 123' }],
+          totalItems: 1,
+        } as any);
+        // conditionId 2의 두 번째 캐시: 레시피 미포함
+        cacheLockServiceMock.getFromCache.mockResolvedValueOnce({
+          items: [{ recipeId: 999, title: 'Recipe 999' }],
+          totalItems: 1,
+        } as any);
+
+        await service.invalidateCacheByRecipeId(recipeId);
+
+        // conditionId 1, 2에 대해 각각 스캔 호출
+        expect(cacheLockServiceMock.scanKeys).toHaveBeenCalledTimes(2);
+        expect(cacheLockServiceMock.scanKeys).toHaveBeenCalledWith(
+          'recommend:v1:c:1:*',
+        );
+        expect(cacheLockServiceMock.scanKeys).toHaveBeenCalledWith(
+          'recommend:v1:c:2:*',
+        );
+
+        // 레시피가 포함된 캐시만 삭제 (2개)
+        expect(cacheLockServiceMock.deleteKeys).toHaveBeenCalledTimes(1);
+        expect(cacheLockServiceMock.deleteKeys).toHaveBeenCalledWith([
+          'recommend:v1:c:1:p:hash1:u:hash1',
+          'recommend:v1:c:2:p:hash3:u:hash3',
+        ]);
+      });
+
+      it('레시피에 대한 추천 조건이 없으면 캐시 무효화를 수행하지 않음', async () => {
+        const recipeId = 999;
+
+        recipeRecommendationConditionRepository.find.mockResolvedValue([]);
+
+        await service.invalidateCacheByRecipeId(recipeId);
+
+        expect(cacheLockServiceMock.scanKeys).not.toHaveBeenCalled();
+        expect(cacheLockServiceMock.deleteKeys).not.toHaveBeenCalled();
+      });
+
+      it('스캔한 캐시에 해당 레시피가 없으면 무효화하지 않음', async () => {
+        const recipeId = 123;
+        const conditionId = 1;
+
+        recipeRecommendationConditionRepository.find.mockResolvedValue([
+          { conditionId },
+        ] as any);
+
+        const cacheKeys = ['recommend:v1:c:1:p:hash1:u:hash1'];
+        cacheLockServiceMock.scanKeys.mockResolvedValue(cacheKeys);
+
+        // 레시피가 포함되지 않은 캐시
+        cacheLockServiceMock.getFromCache.mockResolvedValue({
+          items: [
+            { recipeId: 456, title: 'Recipe 456' },
+            { recipeId: 789, title: 'Recipe 789' },
+          ],
+          totalItems: 2,
+        } as any);
+
+        await service.invalidateCacheByRecipeId(recipeId);
+
+        expect(cacheLockServiceMock.scanKeys).toHaveBeenCalled();
+        expect(cacheLockServiceMock.deleteKeys).not.toHaveBeenCalled();
+      });
     });
   });
 });

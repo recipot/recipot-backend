@@ -264,6 +264,37 @@ export class RecipeController {
     );
   }
 
+  @Delete('admin/:id')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 레시피 삭제',
+    description:
+      '레시피를 삭제합니다. Soft Delete 방식으로 처리되며, 관련 추천 캐시도 자동으로 무효화됩니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '삭제할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 삭제 성공', {
+    type: 'object',
+    properties: {
+      message: { type: 'string', example: '레시피가 삭제되었습니다.' },
+    },
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  async deleteRecipe(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
+    await this.recipeService.deleteRecipe(id);
+    return { message: '레시피가 삭제되었습니다.' };
+  }
+
   @Get(':id')
   @ApiBearerAuth('Authorization')
   @ApiOperation({

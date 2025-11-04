@@ -13,7 +13,7 @@ import { UserRecipeRecommendation } from '@/database/entity/user-recipe-recommen
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { GetRecipeRecommendationRequestDto } from '../dto/get-recipe-recommendation-request.dto';
 import {
   GetRecipeRecommendationResponseDto,
@@ -425,9 +425,9 @@ export class RecipeRecommendationService {
       }
     }
 
-    // 레시피 일괄 조회
+    // 레시피 일괄 조회 (삭제된 레시피 제외)
     const recipes = await this.recipeRepository.find({
-      where: { id: In(recipeIds) },
+      where: { id: In(recipeIds), deletedAt: IsNull() },
       select: ['id', 'title', 'description', 'duration'],
     });
 
@@ -621,5 +621,62 @@ export class RecipeRecommendationService {
     const pattern = 'recommend:v1:*';
     await this.cacheLockService.deleteByPattern(pattern);
     this.logger.log('전체 캐시 무효화 완료');
+  }
+
+  /**
+   * 특정 레시피가 포함된 모든 추천 캐시 무효화
+   * 레시피가 삭제되거나 수정될 때 호출됩니다.
+   * 해당 레시피와 관련된 condition의 캐시만 스캔하여 효율적으로 처리합니다.
+   */
+  async invalidateCacheByRecipeId(recipeId: number): Promise<void> {
+    // 해당 레시피가 포함된 모든 추천 조건 조회
+    const conditions = await this.recipeRecommendationConditionRepository.find({
+      where: { recipeId },
+      select: ['conditionId'],
+    });
+
+    if (conditions.length === 0) {
+      this.logger.debug(`레시피 ${recipeId}에 대한 추천 조건이 없음`);
+      return;
+    }
+
+    // 고유한 conditionId 추출
+    const uniqueConditionIds = [
+      ...new Set(conditions.map((c) => c.conditionId)),
+    ];
+
+    // 각 conditionId에 대해 해당 condition의 캐시만 스캔
+    const keysToInvalidate: string[] = [];
+
+    for (const conditionId of uniqueConditionIds) {
+      // 해당 condition의 캐시만 스캔 (패턴: recommend:v1:c:{conditionId}:*)
+      const pattern = `recommend:v1:c:${conditionId}:*`;
+      const cacheKeys = await this.cacheLockService.scanKeys(pattern);
+
+      // 각 캐시를 확인하여 해당 레시피가 포함된 캐시만 선택
+      for (const key of cacheKeys) {
+        const cached = await this.getFromCache(key);
+        if (cached?.items) {
+          // 캐시된 항목들 중에서 해당 recipeId가 있는지 확인
+          const hasRecipe = cached.items.some(
+            (item) => item.recipeId === recipeId,
+          );
+          if (hasRecipe) {
+            keysToInvalidate.push(key);
+          }
+        }
+      }
+    }
+
+    // 해당 레시피가 포함된 캐시만 삭제
+    if (keysToInvalidate.length > 0) {
+      await this.cacheLockService.deleteKeys(keysToInvalidate);
+
+      this.logger.log(
+        `레시피 ${recipeId} 관련 캐시 무효화 완료: ${keysToInvalidate.length}개 캐시 (${uniqueConditionIds.length}개 조건)`,
+      );
+    } else {
+      this.logger.debug(`레시피 ${recipeId}가 포함된 캐시가 없음`);
+    }
   }
 }
