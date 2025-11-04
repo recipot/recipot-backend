@@ -24,6 +24,13 @@ export function setupSwagger(app: INestApplication) {
     deepScanRoutes: true,
   });
 
+  // FIXME
+  if (process.env.NODE_ENV !== 'development') {
+    if (document.paths && document.paths['/v1/auth/debug']) {
+      delete document.paths['/v1/auth/debug'];
+    }
+  }
+
   const path = process.env.SWAGGER_PATH || '/docs'; // e.g. "/docs"
   SwaggerModule.setup(path, app, document, {
     swaggerOptions: {

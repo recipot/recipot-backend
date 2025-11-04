@@ -51,6 +51,14 @@ jobs:
             echo "=== Clean apt cache ==="
             sudo apt-get clean
 
+            echo "=== Clean old docker-compose backup files ==="
+            APP_DIR=/home/ubuntu/recipot-backend
+            if [ -d "\$APP_DIR" ]; then
+              cd "\$APP_DIR"
+              # 최근 5개만 유지하고 나머지 삭제
+              ls -t docker-compose.yml.bak.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+            fi
+
             AFTER=$(df -h / | tail -1)
             echo "CLEANED=1" >> /tmp/cleanup_status.txt
             echo "AFTER=$AFTER" >> /tmp/cleanup_status.txt

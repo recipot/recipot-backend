@@ -107,6 +107,9 @@ jobs:
             # 기존 파일 백업(있을 경우)
             if [ -f "\$FILE" ]; then
               cp -f "\$FILE" "\$FILE.bak.$(date +%Y%m%d%H%M%S)"
+              
+              # 오래된 백업 파일 정리 (최근 10개만 유지)
+              ls -t "\$FILE.bak."* 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
             fi
 
             # Git 저장소 초기화 또는 업데이트
