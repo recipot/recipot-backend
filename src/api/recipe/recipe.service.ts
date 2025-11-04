@@ -1,10 +1,9 @@
 import { CacheService } from '@/common/cache/cache.service';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Condition } from '@/database/entity/condition.entity';
-import { Ingredient } from '@/database/entity/ingredient.entity';
 import { IngredientHealthInfo } from '@/database/entity/ingredient-health-info.entity';
+import { Ingredient } from '@/database/entity/ingredient.entity';
 import { RecipeHealthPoint } from '@/database/entity/recipe-health-point.entity';
 import { RecipeImage } from '@/database/entity/recipe-image.entity';
 import { RecipeIngredient } from '@/database/entity/recipe-ingredient.entity';
@@ -16,6 +15,7 @@ import { Recipe } from '@/database/entity/recipe.entity';
 import { Seasoning } from '@/database/entity/seasoning.entity';
 import { Tool } from '@/database/entity/tool.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
@@ -26,6 +26,7 @@ import {
   RecipeHealthPointDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
+import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 interface RecipeIngredientDetail {
   ingredientId: number;
@@ -69,6 +70,7 @@ export class RecipeService {
     private readonly conditionRepository: Repository<Condition>,
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
+    private readonly recipeRecommendationService: RecipeRecommendationService,
   ) {}
 
   @Transactional()
@@ -189,6 +191,12 @@ export class RecipeService {
       if (!createdRecipe) {
         throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
       }
+
+      // 레시피 생성 시 해당 레시피가 포함된 모든 추천 캐시 무효화
+      // (새로 생성된 레시피가 추천 결과에 포함될 수 있으므로)
+      await this.recipeRecommendationService.invalidateCacheByRecipeId(
+        createdRecipe.id,
+      );
 
       return createdRecipe;
     } catch (error) {
@@ -405,5 +413,38 @@ export class RecipeService {
       notOwned,
       alternativeUnavailable,
     };
+  }
+
+  /**
+   * 레시피 삭제 (Soft Delete)
+   * 삭제 시 관련 추천 캐시를 무효화합니다.
+   */
+  @Transactional()
+  async deleteRecipe(recipeId: number): Promise<void> {
+    try {
+      const recipe = await this.recipeRepository.findOne({
+        where: { id: recipeId },
+      });
+
+      if (!recipe) {
+        throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+      }
+
+      // Soft delete 수행
+      await this.recipeRepository.softDelete(recipeId);
+
+      // 해당 레시피가 포함된 모든 추천 캐시 무효화
+      await this.recipeRecommendationService.invalidateCacheByRecipeId(
+        recipeId,
+      );
+
+      this.logger.log(`레시피 ${recipeId} 삭제 완료 및 캐시 무효화 완료`);
+    } catch (error) {
+      this.logger.error('레시피 삭제 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_DELETE_FAILED);
+    }
   }
 }

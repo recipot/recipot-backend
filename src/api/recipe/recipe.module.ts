@@ -58,6 +58,6 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
     RecipeRecommendationService,
     FileImportService,
   ],
-  exports: [RecipeService],
+  exports: [RecipeService, RecipeRecommendationService],
 })
 export class RecipeModule {}

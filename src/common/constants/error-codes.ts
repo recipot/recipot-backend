@@ -75,8 +75,9 @@ export const ERROR_CODES = {
   RECIPE_CREATE_FAILED: { code: 'E13001', message: '레시피 생성에 실패했습니다.' },
   RECIPE_NOT_FOUND: { code: 'E13002', message: '레시피를 찾을 수 없습니다.' },
   RECIPE_GET_FAILED: { code: 'E13003', message: '레시피 조회에 실패했습니다.' },
-  RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS: { code: 'E13004', message: '이미 존재하는 레시피 추천 조건입니다.' },
-  RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND: { code: 'E13005', message: '레시피 추천 조건을 찾을 수 없습니다.' },
+  RECIPE_DELETE_FAILED: { code: 'E13004', message: '레시피 삭제에 실패했습니다.' },
+  RECIPE_RECOMMENDATION_CONDITION_ALREADY_EXISTS: { code: 'E13005', message: '이미 존재하는 레시피 추천 조건입니다.' },
+  RECIPE_RECOMMENDATION_CONDITION_NOT_FOUND: { code: 'E13006', message: '레시피 추천 조건을 찾을 수 없습니다.' },
 
   // 컨디션 관련 오류
   CONDITION_ALREADY_EXISTS: { code: 'E14001', message: '이미 존재하는 컨디션입니다.' },
