@@ -13,7 +13,7 @@ import { UserRecipeRecommendation } from '@/database/entity/user-recipe-recommen
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { GetRecipeRecommendationRequestDto } from '../dto/get-recipe-recommendation-request.dto';
 import {
   GetRecipeRecommendationResponseDto,
@@ -425,9 +425,9 @@ export class RecipeRecommendationService {
       }
     }
 
-    // 레시피 일괄 조회
+    // 레시피 일괄 조회 (삭제된 레시피 제외)
     const recipes = await this.recipeRepository.find({
-      where: { id: In(recipeIds) },
+      where: { id: In(recipeIds), deletedAt: IsNull() },
       select: ['id', 'title', 'description', 'duration'],
     });
 
