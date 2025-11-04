@@ -561,9 +561,9 @@ export class RecipeRecommendationService {
       recipeId: score.recipeId,
       title: score.title,
       description: score.description,
-      imageUrls: score.imageUrls,
+      imageUrls: score.imageUrls ?? [],
       duration: score.duration,
-      tools: score.tools,
+      tools: score.tools ?? [],
       isBookmarked: score.isBookmarked,
     }));
   }
