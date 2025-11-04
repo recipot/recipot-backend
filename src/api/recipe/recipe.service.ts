@@ -295,6 +295,7 @@ export class RecipeService {
           .map((step) => ({
             orderNum: step.orderNum,
             summary: step.summary,
+            imageUrl: step.imageUrl,
           })),
         healthPoint,
         isBookmarked: !!userBookmark,
