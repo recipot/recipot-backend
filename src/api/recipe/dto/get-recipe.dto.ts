@@ -129,6 +129,14 @@ export class RecipeStepDto {
     type: 'string',
   })
   summary: string;
+
+  @ApiProperty({
+    description: '요리 예시 이미지 주소',
+    example: 'https://example.com/step1.jpg',
+    type: 'string',
+    nullable: true,
+  })
+  imageUrl: string | null;
 }
 
 export class RecipeHealthPointDto {
