@@ -10,7 +10,8 @@ const { name: appName } = JSON.parse(
 );
 
 // Ensure logs directory exists for file transports
-const logsDir = path.resolve(process.cwd(), 'logs');
+// Use 'dist/log' to match Docker volume mount at /app/dist/log
+const logsDir = path.resolve(process.cwd(), 'dist', 'log');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
