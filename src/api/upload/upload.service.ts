@@ -15,6 +15,7 @@ import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 export class UploadService {
   private readonly s3: S3Client;
   private readonly logger: CustomLoggerService;
+  private readonly cdnUrl: string;
 
   constructor(private readonly loggerFactory: LoggerFactoryService) {
     this.s3 = new S3Client({
@@ -25,6 +26,7 @@ export class UploadService {
       },
     });
     this.logger = this.loggerFactory.create(UploadService.name);
+    this.cdnUrl = process.env.AWS_CDN_URL;
   }
 
   async uploadToS3(file: Express.Multer.File) {
@@ -41,7 +43,11 @@ export class UploadService {
 
       await this.s3.send(command);
 
-      const url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+      const url = this.cdnUrl
+        ? `${this.cdnUrl}/${key}`
+        : `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+      this.logger.log(`File uploaded successfully: ${url}`);
 
       return {
         key,
