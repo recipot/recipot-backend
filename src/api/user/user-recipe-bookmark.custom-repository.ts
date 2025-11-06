@@ -33,7 +33,7 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
         'image.image_url as recipe_image',
       ])
       .from('user_recipe_bookmarks', 'bookmark')
-      .leftJoin(
+      .innerJoin(
         'recipes',
         'recipe',
         'bookmark.recipe_id = recipe.id AND recipe.deleted_at IS NULL',

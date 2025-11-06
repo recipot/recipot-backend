@@ -32,7 +32,7 @@ export class UserRecentRecipesCustomRepository extends Repository<any> {
         'CASE WHEN bookmark.id IS NOT NULL THEN 1 ELSE 0 END as is_bookmarked',
       ])
       .from('user_recent_recipes', 'recent')
-      .leftJoin(
+      .innerJoin(
         'recipes',
         'recipe',
         'recent.recipe_id = recipe.id AND recipe.deleted_at IS NULL',
