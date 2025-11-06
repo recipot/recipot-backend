@@ -33,7 +33,11 @@ export class UserRecipeBookmarkCustomRepository extends Repository<UserRecipeBoo
         'image.image_url as recipe_image',
       ])
       .from('user_recipe_bookmarks', 'bookmark')
-      .leftJoin('recipes', 'recipe', 'bookmark.recipe_id = recipe.id')
+      .leftJoin(
+        'recipes',
+        'recipe',
+        'bookmark.recipe_id = recipe.id AND recipe.deleted_at IS NULL',
+      )
       .leftJoin('recipe_images', 'image', 'recipe.id = image.recipe_id')
       .where('bookmark.user_id = :userId', { userId })
       .orderBy('bookmark.created_at', 'DESC');
