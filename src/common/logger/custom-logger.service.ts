@@ -15,12 +15,19 @@ export class CustomLoggerService implements NestLoggerService {
     this.logger.info(message, { context: this.context });
   }
 
-  warn(message: string) {
-    this.logger.warn(message, { context: this.context });
+  warn(message: string, metadata?: Record<string, any>) {
+    this.logger.warn(message, {
+      context: this.context,
+      ...metadata,
+    });
   }
 
-  error(message: string, trace?: string) {
-    this.logger.error(message, { context: this.context, trace });
+  error(message: string, trace?: string, metadata?: Record<string, any>) {
+    this.logger.error(message, {
+      context: this.context,
+      trace,
+      ...metadata,
+    });
   }
 
   debug(message: string) {
