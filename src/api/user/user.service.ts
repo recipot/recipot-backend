@@ -136,7 +136,10 @@ export class UserService {
       validIngredients[Math.floor(Math.random() * validIngredients.length)];
 
     // 닉네임 조합: "형용사 + 재료 이름" (예: "발랄한고등어")
-    return `${randomAdjective.codeName}${randomIngredient.name}`;
+    return `${randomAdjective.codeName}${randomIngredient.name}`.replace(
+      /\s/g,
+      '',
+    );
   }
 
   /**
