@@ -90,10 +90,14 @@ export async function renderTemplate(
     // 템플릿 로드 (캐시에서 가져오거나 파일에서 읽기)
     let template = await loadTemplate(templateName);
 
-    // 변수 치환
+    // 변수 치환 (ReDoS 방지를 위해 정규식 대신 문자열 치환 사용)
     Object.entries(variables).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;
-      template = template.replace(new RegExp(placeholder, 'g'), value);
+      const replacement = value ?? '';
+      // 모든 발생을 치환하기 위해 반복 (replace는 첫 번째만 치환)
+      while (template.includes(placeholder)) {
+        template = template.replace(placeholder, replacement);
+      }
     });
 
     return template;

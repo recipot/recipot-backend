@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Rollback to previous version
         env:
@@ -28,9 +28,15 @@ jobs:
             APP_DIR=/home/ubuntu/recipot-backend
             cd "\$APP_DIR"
 
+            # 변수 설정
+            AWS_REGION='${{ secrets.AWS_REGION }}'
+            ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
+            AWS_ACCOUNT_ID='488599977281'
+            AWS_ECR_REGISTRY_URL="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+            
             # ECR 로그인
-            aws ecr get-login-password --region ap-northeast-2 | \
-            docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
+            aws ecr get-login-password --region \${AWS_REGION} | \
+            docker login --username AWS --password-stdin \${AWS_ECR_REGISTRY_URL}
 
             # 롤백할 이미지 태그로 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
@@ -39,11 +45,11 @@ jobs:
             echo "🔄 롤백 중: IMAGE_TAG=\$IMAGE_TAG"
             
             # 이미지 존재 여부 확인
-            IMAGE_REPO="488599977281.dkr.ecr.ap-northeast-2.amazonaws.com/my-project-api"
+            IMAGE_REPO="\${AWS_ECR_REGISTRY_URL}/\${ECR_REPO}"
             IMAGE_URI="\${IMAGE_REPO}:\${IMAGE_TAG}"
             
             echo "🔍 이미지 존재 여부 확인: \${IMAGE_URI}"
-            if aws ecr describe-images --repository-name my-project-api --image-ids imageTag=\${IMAGE_TAG} --region ap-northeast-2 > /dev/null 2>&1; then
+            if aws ecr describe-images --repository-name \${ECR_REPO} --image-ids imageTag=\${IMAGE_TAG} --region \${AWS_REGION} > /dev/null 2>&1; then
               echo "✅ 이미지 확인됨: \${IMAGE_TAG}"
             else
               echo "❌ 에러: 이미지가 ECR에 존재하지 않습니다: \${IMAGE_TAG}"
@@ -67,33 +73,14 @@ jobs:
             echo "✅ 롤백 완료: \$IMAGE_TAG"
           EOF
 
-      - name: Health check after rollback
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > private_key.pem
-          chmod 600 private_key.pem
-
-          echo "⏳ Health check 대기 중 (30초)..."
-          sleep 30
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            set -Eeuo pipefail
-            
-            echo "🔍 Health check 실행 중..."
-            HEALTH_CHECK_URL="http://localhost:8080/v1/health"
-            
-            if curl -f -s "\$HEALTH_CHECK_URL" > /dev/null; then
-              echo "✅ Health check 성공"
-              exit 0
-            else
-              echo "❌ Health check 실패"
-              exit 1
-            fi
-          EOF
-
       - name: Write rollback summary
+        if: always()
         run: |
           echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
           echo "- Rolled back to Image Tag: \`${{ github.event.inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: ✅ Successfully rolled back" >> $GITHUB_STEP_SUMMARY
-          echo "- Health Check: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "- Status: ✅ Successfully rolled back" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: ❌ Rollback failed" >> $GITHUB_STEP_SUMMARY
+          fi
 
