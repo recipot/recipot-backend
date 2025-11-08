@@ -14,6 +14,16 @@ import { Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  private static readonly SENSITIVE_FIELDS = [
+    'token',
+    'accessToken',
+    'refreshToken',
+    'authorization',
+    'secret',
+    'apiKey',
+    'apikey',
+  ];
+
   private logger: CustomLoggerService;
 
   constructor(private readonly loggerFactory: LoggerFactoryService) {
@@ -41,7 +51,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const query = request?.query || {};
     const body = request?.body || {};
 
-    // 민감 정보 제거 (비밀번호, 토큰 등)
+    // 민감 정보 제거 (토큰 등)
     const sanitizedBody = this.sanitizeBody(body);
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -59,8 +69,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       userAgent,
     };
 
-    if (Object.keys(query).length > 0) {
-      logMetadata.query = query;
+    if (query && Object.keys(query).length > 0) {
+      logMetadata.query = this.sanitizeBody(query);
     }
     if (Object.keys(sanitizedBody).length > 0) {
       logMetadata.body = sanitizedBody;
@@ -125,28 +135,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   /**
    * 요청 본문에서 민감한 정보를 제거합니다.
+   * 대소문자를 구분하지 않고 검사합니다.
+   *
+   * @example
+   * // 입력
+   * { username: 'user', Password: 'secret123', AccessToken: 'token123' }
+   *
+   * // 출력
+   * { username: 'user', Password: '[REDACTED]', AccessToken: '[REDACTED]' }
    */
   private sanitizeBody(body: any): any {
     if (!body || typeof body !== 'object') {
       return body;
     }
 
-    const sensitiveFields = [
-      'password',
-      'currentPassword',
-      'newPassword',
-      'confirmPassword',
-      'token',
-      'accessToken',
-      'refreshToken',
-      'authorization',
-      'secret',
-      'apiKey',
-      'apikey',
-    ];
-
     const sanitized = { ...body };
-    for (const field of sensitiveFields) {
+    for (const field of GlobalExceptionFilter.SENSITIVE_FIELDS) {
       for (const key in sanitized) {
         if (key.toLowerCase() === field.toLowerCase()) {
           sanitized[key] = '[REDACTED]';
