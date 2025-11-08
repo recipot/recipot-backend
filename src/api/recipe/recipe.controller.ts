@@ -57,7 +57,7 @@ export class RecipeController {
     private readonly fileImportService: FileImportService,
   ) {}
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
@@ -264,7 +264,7 @@ export class RecipeController {
     );
   }
 
-  @Delete('admin/:id')
+  @Delete(':id')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
@@ -416,7 +416,7 @@ export class RecipeController {
   }
 
   // 레시피 추천 관련 엔드포인트들
-  @Get('recommendations/admin')
+  @Get('recommendations')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -455,7 +455,7 @@ export class RecipeController {
     return await this.recipeRecommendationConditionService.getRecipeRecommendationConditions();
   }
 
-  @Post('recommendations/admin')
+  @Post('recommendations')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -497,7 +497,7 @@ export class RecipeController {
     );
   }
 
-  @Patch('recommendations/admin/:id')
+  @Patch('recommendations/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -542,7 +542,7 @@ export class RecipeController {
     );
   }
 
-  @Delete('recommendations/admin/:id')
+  @Delete('recommendations/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -564,7 +564,7 @@ export class RecipeController {
     );
   }
 
-  @Post('recommendations/admin/cache/invalidate')
+  @Post('recommendations/cache/invalidate')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
@@ -585,7 +585,7 @@ export class RecipeController {
     return { message: '추천 캐시가 무효화되었습니다.' };
   }
 
-  @Post('recommendations/admin/cache/invalidate/:conditionId')
+  @Post('recommendations/cache/invalidate/:conditionId')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -608,7 +608,7 @@ export class RecipeController {
     return { message: `컨디션 ${conditionId}의 추천 캐시가 무효화되었습니다.` };
   }
 
-  @Post('admin/import-ingredients-excel')
+  @Post('import/ingredients')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
@@ -691,7 +691,7 @@ export class RecipeController {
     });
   }
 
-  @Post('admin/import-recipes-excel')
+  @Post('import')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
@@ -785,7 +785,7 @@ export class RecipeController {
     });
   }
 
-  @Post('admin/import-recipe-images-excel')
+  @Post('import/images')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')

@@ -60,7 +60,7 @@ export class MeasurementGuideController {
     return this.measurementGuideService.getMeasurementGuides();
   }
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')

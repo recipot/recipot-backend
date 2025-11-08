@@ -82,7 +82,7 @@ export class AppController implements OnModuleInit {
       this.configService.get<number>('HTTP_PORT') ||
       parseInt(process.env.HTTP_PORT || '8080', 10);
     const env = process.env.ENV || process.env.NODE_ENV || 'local';
-    const swaggerPath = '/docs';
+    const swaggerPath = process.env.SWAGGER_PATH;
     const githubUrl = 'https://github.com/recipot/recipot-backend';
 
     const html = await renderTemplate('main-page', {

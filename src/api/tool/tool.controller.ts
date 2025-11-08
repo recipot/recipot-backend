@@ -13,7 +13,7 @@ import { JwtGuard } from '../auth/guards/auth.guard';
 export class ToolController {
   constructor(private readonly toolService: ToolService) {}
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')

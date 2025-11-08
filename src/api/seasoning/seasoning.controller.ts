@@ -16,7 +16,7 @@ import { JwtGuard } from '../auth/guards/auth.guard';
 export class SeasoningController {
   constructor(private readonly seasoningService: SeasoningService) {}
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
