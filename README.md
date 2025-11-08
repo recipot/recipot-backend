@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🍳 Recipot Backend
+# 🍳 [Recipot Backend](https://api.hankkibuteo.com)
 
 ### *NestJS 기반 레시피 공유 플랫폼 백엔드 API*
 
@@ -85,13 +85,13 @@ npm run env:sync
 ```
 
 ### ⚠️ 중요 안내
-- `.env.development` 파일은 Git에 포함되지 않습니다
+- `.env.local` 파일은 Git에 포함되지 않습니다
 - `npm run env:sync` 명령어로 개별적으로 환경변수를 동기화해야 합니다
 - infisical 로그인이 필요합니다: `infisical login`
 
 ### 🔄 동작 방식
-- `npm run start:dev` 실행 시 자동으로 infisical dev 환경의 환경변수를 `.env.development` 파일로 동기화
-- 그 후 `.env.development` 파일을 사용하여 애플리케이션 실행
+- `npm run start:dev` 실행 시 자동으로 infisical dev 환경의 환경변수를 `.env.local` 파일로 동기화
+- 그 후 `.env.local` 파일을 사용하여 애플리케이션 실행
 
 ## 📁 프로젝트 구조
 
@@ -157,8 +157,8 @@ npm run migration:show      # 마이그레이션 상태 확인 (infisical 직접
 
 | 서비스 | URL | 설명 |
 |--------|-----|------|
-| 📖 **Swagger UI** | http://3.34.40.123/api/document | API 문서 |
-| 💚 **Health Check** | http://3.34.40.123/health | 상태 확인 |
+| 📖 **Swagger UI** | https://api.hankkibuteo.com/api/document | API 문서 |
+| 💚 **Health Check** | https://api.hankkibuteo.com/v1/health | 상태 확인 |
 
 </div>
 
