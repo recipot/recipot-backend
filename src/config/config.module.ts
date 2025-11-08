@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
 import { loadConfig } from '@/config/config.loader';
 import { ConfigService } from '@/config/config.service';
+import { Module } from '@nestjs/common';
 import { ConfigModuleOptions } from '@nestjs/config';
 
-const ENV = process.env.NODE_ENV || 'development';
+const ENV = process.env.ENV || process.env.NODE_ENV || 'local';
 
 @Module({})
 export class ConfigModule {

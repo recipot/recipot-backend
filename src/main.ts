@@ -16,6 +16,12 @@ import cookieParser from 'cookie-parser';
 import { WinstonModule } from 'nest-winston';
 
 async function bootstrap() {
+  // API_DOMAIN 환경 변수 필수 체크
+  if (!process.env.API_DOMAIN) {
+    console.error('❌ API_DOMAIN environment variable is required');
+    process.exit(1);
+  }
+
   initializeTransactionalContext();
 
   const app = await NestFactory.create(AppModule);
@@ -83,9 +89,8 @@ async function bootstrap() {
   const port = config.get<number>('HTTP_PORT');
   await app.listen(port);
 
-  logger.log(
-    `🚀 Server running on http://localhost:${port} 🌱 [env: ${process.env.ENV}]`,
-  );
+  const env = process.env.ENV || process.env.NODE_ENV || 'local';
+  logger.log(`🚀 Server running on http://localhost:${port} 🌱 [env: ${env}]`);
 }
 
 bootstrap().catch((err) => {

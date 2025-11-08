@@ -13,7 +13,7 @@
     "start:debug": "NODE_ENV=development infisical run --env=dev --path=/env -- nest start --debug --watch",
     "start:dev": "NODE_ENV=development nest start --watch",
     "start:prod": "node dist/main",
-    "env:sync": "infisical export --env=dev --path=/env --format=dotenv > .env.development",
+    "env:sync": "infisical export --env=dev --path=/env --format=dotenv > .env.local",
     "prestart:dev": "npm run env:sync",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",

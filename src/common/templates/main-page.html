@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipot Backend API</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍳</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍳</text></svg>">
+    <style>
+        {{CSS}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍳 Recipot Backend API</h1>
+        <div class="{{STATUS_CLASS}}">{{STATUS_TEXT}}</div>
+        <p class="message">
+            {{MESSAGE_TEXT}}
+        </p>
+        <div class="links">
+            <a href="{{SWAGGER_PATH}}" target="_blank">📚 API 문서 보기 (Swagger)</a>
+            <a href="/v1/health" target="_blank">🏥 Health Check</a>
+            <a href="{{GITHUB_URL}}" target="_blank">🐙 GitHub 저장소</a>
+        </div>
+        <div class="info">
+            <p class="info-link-wrapper">
+                <a href="https://hankkibuteo.com" target="_blank" class="info-link">🌐 한끼부터</a>
+            </p>
+            <p>환경: {{ENV}}</p>
+            <p>포트: {{PORT}}</p>
+        </div>
+    </div>
+</body>
+</html>
+
