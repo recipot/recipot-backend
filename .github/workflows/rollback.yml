@@ -30,26 +30,12 @@ jobs:
 
             # 변수 설정
             AWS_REGION='${{ secrets.AWS_REGION }}'
-            AWS_ACCOUNT_ID='488599977281'
-            AWS_ECR_REGISTRY_URL="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
-            
-            # docker-compose.yml에서 실제 사용하는 ECR 저장소명 확인
-            if [ -f "docker-compose.yml" ]; then
-              # docker-compose.yml에서 image 라인을 찾아 저장소명 추출
-              ECR_REPO=\$(grep -E '^\s+image:' docker-compose.yml | grep recipot-api | sed -E 's|.*/([^:]+):.*|\1|' | head -1)
-              if [ -z "\$ECR_REPO" ]; then
-                ECR_REPO='my-project-api'
-              fi
-              echo "📋 docker-compose.yml에서 확인한 ECR 저장소명: \${ECR_REPO}"
-            else
-              # docker-compose.yml이 없으면 secrets에서 가져오기
-              ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
-              echo "📋 secrets에서 가져온 ECR 저장소명: \${ECR_REPO}"
-            fi
+            ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
+            FULL_REPOSITORY="488599977281.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
             
             # ECR 로그인
             aws ecr get-login-password --region \${AWS_REGION} | \
-            docker login --username AWS --password-stdin \${AWS_ECR_REGISTRY_URL}
+            docker login --username AWS --password-stdin 488599977281.dkr.ecr.\${AWS_REGION}.amazonaws.com
 
             # 롤백할 이미지 태그로 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
@@ -58,8 +44,7 @@ jobs:
             echo "🔄 롤백 중: IMAGE_TAG=\$IMAGE_TAG"
             
             # 이미지 존재 여부 확인
-            IMAGE_REPO="\${AWS_ECR_REGISTRY_URL}/\${ECR_REPO}"
-            IMAGE_URI="\${IMAGE_REPO}:\${IMAGE_TAG}"
+            IMAGE_URI="\${FULL_REPOSITORY}:\${IMAGE_TAG}"
             
             echo "🔍 이미지 존재 여부 확인: \${IMAGE_URI}"
             if aws ecr describe-images --repository-name \${ECR_REPO} --image-ids imageTag=\${IMAGE_TAG} --region \${AWS_REGION} > /dev/null 2>&1; then
