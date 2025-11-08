@@ -91,7 +91,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = responseBody['message'];
       }
 
-      code = responseBody['code'] || code;
+      code = (typeof responseBody === 'object' && responseBody['code']) || code;
       statusCode = status;
       logMetadata.statusCode = statusCode;
 
@@ -147,8 +147,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const sanitized = { ...body };
     for (const field of sensitiveFields) {
-      if (sanitized[field]) {
-        sanitized[field] = '[REDACTED]';
+      for (const key in sanitized) {
+        if (key.toLowerCase() === field.toLowerCase()) {
+          sanitized[key] = '[REDACTED]';
+        }
       }
     }
 
