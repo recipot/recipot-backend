@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Request,
   Res,
   UploadedFile,
@@ -33,7 +34,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../user/enums/role.enum';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
 import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
-import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
 import { GetRecipeRecommendationRequestDto } from './dto/get-recipe-recommendation-request.dto';
 import { GetRecipeRecommendationResponseDto } from './dto/get-recipe-recommendation-response.dto';
 import { GetRecipeRecommendationConditionsResponseDto } from './dto/get-recipe-recommends.dto';
@@ -262,6 +263,60 @@ export class RecipeController {
       dto,
       userId,
     );
+  }
+
+  @Put(':id')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 레시피 수정',
+    description:
+      '기존 레시피를 수정합니다. 레시피의 모든 정보(이미지, 재료, 양념, 조리도구, 요리순서, 건강포인트)를 전체적으로 업데이트합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '수정할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiBody({
+    description:
+      '수정할 레시피의 데이터 (이미지, 재료, 양념, 조리도구, 요리순서, 건강포인트 포함)',
+    type: UpdateRecipeDto,
+  })
+  @ApiSuccessResponse('레시피 수정 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      title: { type: 'string', example: '간장 고등어 구이' },
+      description: {
+        type: 'string',
+        example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
+      },
+      duration: { type: 'number', example: 30 },
+      createdAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2025-01-01T00:00:00.000Z',
+      },
+      updatedAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2025-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(500, ERROR_CODES.RECIPE_UPDATE_FAILED)
+  async updateRecipe(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateRecipeDto: UpdateRecipeDto,
+  ): Promise<Recipe> {
+    return await this.recipeService.updateRecipe(id, updateRecipeDto);
   }
 
   @Delete(':id')
