@@ -30,9 +30,22 @@ jobs:
 
             # 변수 설정
             AWS_REGION='${{ secrets.AWS_REGION }}'
-            ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
             AWS_ACCOUNT_ID='488599977281'
             AWS_ECR_REGISTRY_URL="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+            
+            # docker-compose.yml에서 실제 사용하는 ECR 저장소명 확인
+            if [ -f "docker-compose.yml" ]; then
+              # docker-compose.yml에서 image 라인을 찾아 저장소명 추출
+              ECR_REPO=\$(grep -E '^\s+image:' docker-compose.yml | grep recipot-api | sed -E 's|.*/([^:]+):.*|\1|' | head -1)
+              if [ -z "\$ECR_REPO" ]; then
+                ECR_REPO='my-project-api'
+              fi
+              echo "📋 docker-compose.yml에서 확인한 ECR 저장소명: \${ECR_REPO}"
+            else
+              # docker-compose.yml이 없으면 secrets에서 가져오기
+              ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
+              echo "📋 secrets에서 가져온 ECR 저장소명: \${ECR_REPO}"
+            fi
             
             # ECR 로그인
             aws ecr get-login-password --region \${AWS_REGION} | \
@@ -53,6 +66,7 @@ jobs:
               echo "✅ 이미지 확인됨: \${IMAGE_TAG}"
             else
               echo "❌ 에러: 이미지가 ECR에 존재하지 않습니다: \${IMAGE_TAG}"
+              echo "저장소명: \${ECR_REPO}, 리전: \${AWS_REGION}"
               echo "사용 가능한 이미지 태그를 확인하세요."
               exit 1
             fi
