@@ -105,7 +105,7 @@ export class IngredientController {
     return await this.ingredientService.getRestrictedIngredients(req.user.sub);
   }
 
-  @Get('admin/categories')
+  @Get('categories')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -145,7 +145,7 @@ export class IngredientController {
     return this.ingredientService.getIngredientCategories(query);
   }
 
-  @Post('admin/categories')
+  @Post('categories')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -182,7 +182,7 @@ export class IngredientController {
     return this.ingredientService.createIngredientCategory(dto);
   }
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({

@@ -37,7 +37,7 @@ export class ConditionController {
     return await this.conditionService.getConditions();
   }
 
-  @Post('admin')
+  @Post()
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({

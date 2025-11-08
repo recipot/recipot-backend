@@ -1,0 +1,86 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '롤백할 이미지 태그 (예: develop-abc1234)'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rollback to previous version
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            set -Eeuo pipefail
+
+            APP_DIR=/home/ubuntu/recipot-backend
+            cd "\$APP_DIR"
+
+            # 변수 설정
+            AWS_REGION='${{ secrets.AWS_REGION }}'
+            ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
+            AWS_ACCOUNT_ID='488599977281'
+            AWS_ECR_REGISTRY_URL="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+            
+            # ECR 로그인
+            aws ecr get-login-password --region \${AWS_REGION} | \
+            docker login --username AWS --password-stdin \${AWS_ECR_REGISTRY_URL}
+
+            # 롤백할 이미지 태그로 배포
+            export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
+            export IMAGE_TAG='${{ github.event.inputs.image_tag }}'
+            
+            echo "🔄 롤백 중: IMAGE_TAG=\$IMAGE_TAG"
+            
+            # 이미지 존재 여부 확인
+            IMAGE_REPO="\${AWS_ECR_REGISTRY_URL}/\${ECR_REPO}"
+            IMAGE_URI="\${IMAGE_REPO}:\${IMAGE_TAG}"
+            
+            echo "🔍 이미지 존재 여부 확인: \${IMAGE_URI}"
+            if aws ecr describe-images --repository-name \${ECR_REPO} --image-ids imageTag=\${IMAGE_TAG} --region \${AWS_REGION} > /dev/null 2>&1; then
+              echo "✅ 이미지 확인됨: \${IMAGE_TAG}"
+            else
+              echo "❌ 에러: 이미지가 ECR에 존재하지 않습니다: \${IMAGE_TAG}"
+              echo "사용 가능한 이미지 태그를 확인하세요."
+              exit 1
+            fi
+            
+            # 이미지 pull 및 배포
+            echo "📥 이미지 pull 중..."
+            if ! infisical run --env=prod --path=/env -- docker compose pull recipot-api; then
+              echo "❌ 에러: 이미지 pull 실패"
+              exit 1
+            fi
+            
+            echo "🚀 컨테이너 시작 중..."
+            if ! infisical run --env=prod --path=/env -- docker compose up -d --no-deps recipot-api; then
+              echo "❌ 에러: 컨테이너 시작 실패"
+              exit 1
+            fi
+            
+            echo "✅ 롤백 완료: \$IMAGE_TAG"
+          EOF
+
+      - name: Write rollback summary
+        if: always()
+        run: |
+          echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Rolled back to Image Tag: \`${{ github.event.inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "- Status: ✅ Successfully rolled back" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: ❌ Rollback failed" >> $GITHUB_STEP_SUMMARY
+          fi
+

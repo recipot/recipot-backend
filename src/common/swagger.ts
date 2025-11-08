@@ -31,7 +31,7 @@ export function setupSwagger(app: INestApplication) {
     }
   }
 
-  const path = process.env.SWAGGER_PATH || '/docs'; // e.g. "/docs"
+  const path = process.env.SWAGGER_PATH || '/api/document';
   SwaggerModule.setup(path, app, document, {
     swaggerOptions: {
       persistAuthorization: true,

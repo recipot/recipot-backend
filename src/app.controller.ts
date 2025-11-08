@@ -1,6 +1,7 @@
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { renderTemplate } from '@/common/utils/template.util';
-import { Controller, Get, Res } from '@nestjs/common';
+import { ConfigService } from '@/config/config.service';
+import { Controller, Get, Logger, OnModuleInit, Res } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import axios from 'axios';
 import { Response } from 'express';
@@ -13,30 +14,36 @@ interface HealthStatus {
 
 @ApiExcludeController()
 @Controller()
-export class AppController {
-  /**
-   * API Base URL을 환경 변수에 따라 결정합니다.
-   */
-  private getApiBaseUrl(): string {
-    if (process.env.API_DOMAIN.includes('localhost')) {
-      return `http://${process.env.API_DOMAIN}`;
-    }
+export class AppController implements OnModuleInit {
+  private readonly logger = new Logger(AppController.name);
+  private isServerReady = false;
 
-    return `https://${process.env.API_DOMAIN}`;
+  constructor(private readonly configService: ConfigService) {}
+
+  onModuleInit() {
+    setTimeout(() => {
+      this.isServerReady = true;
+      this.logger.log('Server is ready for health checks');
+    }, 2000);
   }
 
-  /**
-   * Health Check를 통해 서버 상태를 확인합니다.
-   */
   private async checkHealthStatus(): Promise<HealthStatus> {
-    const apiBaseUrl = this.getApiBaseUrl();
+    // 서버가 준비되지 않았으면 기본 상태 반환
+    if (!this.isServerReady) {
+      return {
+        statusText: '● Starting',
+        statusClass: 'status',
+        messageText: '서버가 시작 중입니다...',
+      };
+    }
+
+    const apiBaseUrl = process.env.API_DOMAIN!;
 
     try {
       const healthResponse = await axios.get(`${apiBaseUrl}/v1/health`, {
         timeout: 2000,
       });
 
-      // ResponseDto로 감싸진 응답 구조: {status: 200, data: {status: "ok", ...}}
       const healthStatus = healthResponse.data?.data?.status;
 
       if (healthStatus === 'ok') {
@@ -52,8 +59,13 @@ export class AppController {
         statusClass: 'status degraded',
         messageText: '일부 서비스에 문제가 있을 수 있습니다.',
       };
-    } catch {
-      // Health check 실패 시에도 서버는 실행 중이므로 Running으로 표시
+    } catch (error) {
+      this.logger.warn('Health check failed', {
+        message: error.message,
+        url: `${apiBaseUrl}/v1/health`,
+        stack: error.stack,
+      });
+
       return {
         statusText: '● Running',
         statusClass: 'status',
@@ -64,23 +76,23 @@ export class AppController {
 
   @Get()
   @Public()
-  async getMainPage(@Res() res: Response) {
-    const swaggerPath = process.env.SWAGGER_PATH || '/docs';
-    const githubUrl =
-      process.env.GITHUB_URL || 'https://github.com/recipot/recipot-backend';
-    const env = process.env.ENV || process.env.NODE_ENV || 'local';
-    const port = process.env.HTTP_PORT || '8080';
-
+  async getStatus(@Res() res: Response) {
     const healthStatus = await this.checkHealthStatus();
+    const port =
+      this.configService.get<number>('HTTP_PORT') ||
+      parseInt(process.env.HTTP_PORT || '8080', 10);
+    const env = process.env.ENV || process.env.NODE_ENV || 'local';
+    const swaggerPath = process.env.SWAGGER_PATH;
+    const githubUrl = 'https://github.com/recipot/recipot-backend';
 
-    const html = renderTemplate('main-page', {
-      STATUS_TEXT: healthStatus.statusText,
+    const html = await renderTemplate('main-page', {
       STATUS_CLASS: healthStatus.statusClass,
+      STATUS_TEXT: healthStatus.statusText,
       MESSAGE_TEXT: healthStatus.messageText,
       SWAGGER_PATH: swaggerPath,
       GITHUB_URL: githubUrl,
       ENV: env,
-      PORT: port,
+      PORT: port.toString(),
     });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
