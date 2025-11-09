@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} from '@aws-sdk/client-s3';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { LoggerFactoryService } from '@/common/logger/logger-factory.service';
 import { CustomLoggerService } from '@/common/logger/custom-logger.service';
 import { GetOrphanedFilesResponseDto } from './dto/get-orphaned-files.dto';
+import { DeleteOrphanedFilesResponseDto } from './dto/delete-orphaned-files.dto';
 
 interface S3FileInfo {
   key: string;
@@ -232,6 +237,49 @@ export class FileCleanupService {
       return fileUrl;
     } catch (error) {
       this.logger.error(`S3 Key 추출 실패: ${fileUrl}`, error);
+      throw new CustomException(ERROR_CODES.FILE_CLEANUP_FAILED);
+    }
+  }
+
+  /**
+   * 고아 파일 삭제 (배치 방식)
+   * - AWS SDK의 DeleteObjectsCommand 사용
+   * - 최대 1000개 배치 처리
+   * - 부분 실패 처리 (실패 목록 반환)
+   */
+  async deleteOrphanedFiles(
+    keys: string[],
+  ): Promise<DeleteOrphanedFilesResponseDto> {
+    try {
+      this.logger.log(`고아 파일 삭제 시작 (총 ${keys.length}개)`);
+
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Delete: {
+          Objects: keys.map((key) => ({ Key: key })),
+        },
+      });
+
+      const response = await this.s3.send(deleteCommand);
+
+      const deletedFiles = (response.Deleted || []).map((d) => ({
+        key: d.Key!,
+      }));
+
+      const failedKeys = (response.Errors || []).map((e) => e.Key!);
+
+      this.logger.log(
+        `고아 파일 삭제 완료: ${deletedFiles.length}개 성공, ${failedKeys.length}개 실패`,
+      );
+
+      return {
+        deletedCount: deletedFiles.length,
+        deletedFiles,
+        failedCount: failedKeys.length,
+        failedKeys,
+      };
+    } catch (error) {
+      this.logger.error('고아 파일 삭제 실패', error);
       throw new CustomException(ERROR_CODES.FILE_CLEANUP_FAILED);
     }
   }
