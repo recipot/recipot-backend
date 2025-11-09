@@ -442,10 +442,16 @@ export class RecipeService {
       const updatedRecipe = await this.recipeRepository.save(recipe);
 
       // 3. 기존 이미지 S3 파일 삭제 (새 이미지 추가 전에)
-      await this.deleteExistingRecipeImages(recipeId);
+      // - 새로 저장될 이미지 URL과 비교하여 제거 대상만 삭제
+      const nextImageUrls =
+        updateRecipeDto.images?.map((image) => image.imageUrl) ?? [];
+      await this.deleteExistingRecipeImages(recipeId, nextImageUrls);
 
       // 4. 기존 단계 이미지 S3 파일 삭제 (새 단계 추가 전에)
-      await this.deleteExistingRecipeStepImages(recipeId);
+      // - 새로 저장될 단계 이미지 URL과 비교하여 제거 대상만 삭제
+      const nextStepImageUrls =
+        updateRecipeDto.steps?.map((step) => step.imageUrl) ?? [];
+      await this.deleteExistingRecipeStepImages(recipeId, nextStepImageUrls);
 
       // 5. 기존 관계 데이터 모두 삭제
       await Promise.all([
@@ -599,9 +605,13 @@ export class RecipeService {
   /**
    * 기존 레시피 메인 이미지의 S3 파일 삭제
    * - RecipeImage 테이블에서 조회 후 S3 Key 추출
-   * - FileCleanupService를 통해 삭제
+   * - 새로 저장될 이미지 URL(reservedImageUrls)과 비교하여 제거 대상만 삭제
+   * - 재사용되는 이미지는 삭제하지 않음
    */
-  private async deleteExistingRecipeImages(recipeId: number): Promise<void> {
+  private async deleteExistingRecipeImages(
+    recipeId: number,
+    reservedImageUrls: string[],
+  ): Promise<void> {
     try {
       const existingImages = await this.recipeImageRepository.find({
         where: { recipeId },
@@ -612,15 +622,28 @@ export class RecipeService {
         return;
       }
 
+      // 새로 저장될 이미지 키를 Set으로 만들어 O(1) 조회 가능하게
+      const reservedKeys = new Set(
+        reservedImageUrls
+          .map((url) => this.extractS3KeyFromUrl(url))
+          .filter(Boolean),
+      );
+
+      // 기존 이미지 중 새로 저장될 이미지에 없는 것만 삭제 대상으로 지정
       const s3KeysToDelete = existingImages
         .map((image) => this.extractS3KeyFromUrl(image.imageUrl))
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((key) => !reservedKeys.has(key));
 
       if (s3KeysToDelete.length > 0) {
         this.logger.log(
-          `레시피 ${recipeId}의 기존 메인 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개)`,
+          `레시피 ${recipeId}의 기존 메인 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개 / 예약됨 ${reservedKeys.size}개)`,
         );
         await this.fileCleanupService.deleteS3FilesByKeys(s3KeysToDelete);
+      } else {
+        this.logger.log(
+          `레시피 ${recipeId}의 메인 이미지 모두 재사용 중이므로 삭제 안 함`,
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -634,10 +657,12 @@ export class RecipeService {
   /**
    * 기존 레시피 단계 이미지의 S3 파일 삭제
    * - RecipeStep 테이블에서 조회 후 S3 Key 추출
-   * - FileCleanupService를 통해 삭제
+   * - 새로 저장될 단계 이미지 URL(reservedStepImageUrls)과 비교하여 제거 대상만 삭제
+   * - 재사용되는 이미지는 삭제하지 않음
    */
   private async deleteExistingRecipeStepImages(
     recipeId: number,
+    reservedStepImageUrls: string[],
   ): Promise<void> {
     try {
       const existingSteps = await this.recipeStepRepository.find({
@@ -649,15 +674,28 @@ export class RecipeService {
         return;
       }
 
+      // 새로 저장될 단계 이미지 키를 Set으로 만들어 O(1) 조회 가능하게
+      const reservedKeys = new Set(
+        reservedStepImageUrls
+          .map((url) => this.extractS3KeyFromUrl(url))
+          .filter(Boolean),
+      );
+
+      // 기존 단계 이미지 중 새로 저장될 이미지에 없는 것만 삭제 대상으로 지정
       const s3KeysToDelete = existingSteps
         .map((step) => this.extractS3KeyFromUrl(step.imageUrl))
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((key) => !reservedKeys.has(key));
 
       if (s3KeysToDelete.length > 0) {
         this.logger.log(
-          `레시피 ${recipeId}의 기존 단계 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개)`,
+          `레시피 ${recipeId}의 기존 단계 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개 / 예약됨 ${reservedKeys.size}개)`,
         );
         await this.fileCleanupService.deleteS3FilesByKeys(s3KeysToDelete);
+      } else {
+        this.logger.log(
+          `레시피 ${recipeId}의 단계 이미지 모두 재사용 중이므로 삭제 안 함`,
+        );
       }
     } catch (error) {
       this.logger.error(
