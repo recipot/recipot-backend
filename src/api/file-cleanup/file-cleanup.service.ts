@@ -85,6 +85,34 @@ export class FileCleanupService {
   }
 
   /**
+   * S3의 사용 가능한 폴더 목록 조회
+   * - 최상위 1단계 폴더들만 반환
+   * - Delimiter로 폴더 구분
+   */
+  async getS3Folders(): Promise<string[]> {
+    try {
+      this.logger.log('S3 폴더 목록 조회 시작');
+
+      const command = new ListObjectsV2Command({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Delimiter: '/',
+      });
+
+      const response = await this.s3.send(command);
+      const folders =
+        response.CommonPrefixes?.map((p) => p.Prefix).filter(Boolean) || [];
+
+      const folderList = folders.sort();
+      this.logger.log(`S3 폴더 목록 조회 완료: ${folderList.join(', ')}`);
+
+      return folderList;
+    } catch (error) {
+      this.logger.error('S3 폴더 목록 조회 실패', error);
+      throw new CustomException(ERROR_CODES.FILE_CLEANUP_FAILED);
+    }
+  }
+
+  /**
    * DB 모든 테이블에서 imageUrl 필드를 가진 레코드의 URL 수집 (동적 쿼리)
    * - 모든 엔티티 메타데이터를 스캔
    * - imageUrl 컬럼이 있는 테이블만 조회

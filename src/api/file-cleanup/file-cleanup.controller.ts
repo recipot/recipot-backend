@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { FileCleanupService } from './file-cleanup.service';
 import { GetOrphanedFilesResponseDto } from './dto/get-orphaned-files.dto';
+import { GetS3FoldersResponseDto } from './dto/get-s3-folders.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -27,6 +28,30 @@ import { ERROR_CODES } from '@/common/constants/error-codes';
 export class FileCleanupController {
   constructor(private fileCleanupService: FileCleanupService) {}
 
+  /**
+   * S3 폴더 목록 조회
+   * - 사용 가능한 모든 S3 폴더 반환
+   */
+  @Get('folders')
+  @ApiOperation({
+    summary: '[어드민] S3 폴더 목록 조회',
+    description: 'S3에 존재하는 사용 가능한 1단계 폴더 목록을 조회합니다.',
+  })
+  @ApiSuccessResponse('S3 폴더 목록 조회 성공', {
+    type: GetS3FoldersResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @ApiErrorResponse(500, ERROR_CODES.FILE_CLEANUP_FAILED)
+  async getS3Folders(): Promise<GetS3FoldersResponseDto> {
+    const folders = await this.fileCleanupService.getS3Folders();
+    return { folders };
+  }
+
+  /**
+   * 고아 파일 조회
+   * - folder 쿼리 파라미터로 특정 폴더 지정
+   */
   @Get('orphaned-files')
   @ApiOperation({
     summary: '[어드민] 고아 파일 조회',
