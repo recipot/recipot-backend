@@ -66,12 +66,15 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
+          AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
+          FULL_REPOSITORY="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}"
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-          docker login --username AWS --password-stdin 488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker login --username AWS --password-stdin ${FULL_REPOSITORY%/*}
 
       - name: Build and Push Docker image
         run: |
-          FULL_REPOSITORY="488599977281.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}"
+          AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
+          FULL_REPOSITORY="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}"
           docker build -t $FULL_REPOSITORY:${{ needs.setup.outputs.image-tag }} -t $FULL_REPOSITORY:latest .
           docker push $FULL_REPOSITORY:${{ needs.setup.outputs.image-tag }}
           docker push $FULL_REPOSITORY:latest
@@ -124,8 +127,12 @@ jobs:
             fi
 
             # ECR 로그인(EC2 리전 기준)
-            aws ecr get-login-password --region ap-northeast-2 | \
-            docker login --username AWS --password-stdin 488599977281.dkr.ecr.ap-northeast-2.amazonaws.com
+            AWS_REGION='ap-northeast-2'
+            AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
+            ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
+            FULL_REPOSITORY="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
+            aws ecr get-login-password --region \${AWS_REGION} | \
+            docker login --username AWS --password-stdin \${FULL_REPOSITORY%/*}
 
             # Infisical 토큰/이미지 태그 주입 후 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'

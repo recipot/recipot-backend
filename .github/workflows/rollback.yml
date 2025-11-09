@@ -31,11 +31,12 @@ jobs:
             # 변수 설정
             AWS_REGION='${{ secrets.AWS_REGION }}'
             ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
-            FULL_REPOSITORY="488599977281.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
+            AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
+            FULL_REPOSITORY="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
             
             # ECR 로그인
             aws ecr get-login-password --region \${AWS_REGION} | \
-            docker login --username AWS --password-stdin 488599977281.dkr.ecr.\${AWS_REGION}.amazonaws.com
+            docker login --username AWS --password-stdin \${FULL_REPOSITORY%/*}
 
             # 롤백할 이미지 태그로 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
