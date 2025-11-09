@@ -20,7 +20,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { CommonCodeService } from '../common-code/common-code.service';
-import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
 import {
   GetRecipeResponseDto,
   RecipeHealthPointDto,
@@ -413,6 +413,173 @@ export class RecipeService {
       notOwned,
       alternativeUnavailable,
     };
+  }
+
+  /**
+   * 레시피 수정
+   */
+  @Transactional()
+  async updateRecipe(
+    recipeId: number,
+    updateRecipeDto: UpdateRecipeDto,
+  ): Promise<Recipe> {
+    try {
+      // 1. 레시피 존재 여부 확인
+      const recipe = await this.recipeRepository.findOne({
+        where: { id: recipeId },
+      });
+
+      if (!recipe) {
+        throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+      }
+
+      // 2. 기본 정보 업데이트
+      recipe.title = updateRecipeDto.title;
+      recipe.description = updateRecipeDto.description;
+      recipe.duration = updateRecipeDto.duration;
+      const updatedRecipe = await this.recipeRepository.save(recipe);
+
+      // 3. 기존 관계 데이터 모두 삭제
+      await Promise.all([
+        this.recipeImageRepository.delete({ recipeId }),
+        this.recipeIngredientRepository.delete({ recipeId }),
+        this.recipeSeasoningRepository.delete({ recipeId }),
+        this.recipeToolRepository.delete({ recipeId }),
+        this.recipeStepRepository.delete({ recipeId }),
+        this.recipeHealthPointRepository.delete({ recipeId }),
+        this.recipeRecommendationConditionRepository.delete({ recipeId }),
+      ]);
+
+      this.logger.log(`레시피 ${recipeId}의 관계 데이터 삭제 완료`);
+
+      // 4. 새로운 관계 데이터 생성
+      // 4.1. 이미지 저장
+      if (updateRecipeDto.images && updateRecipeDto.images.length > 0) {
+        const recipeImages = updateRecipeDto.images.map((imageDto) =>
+          this.recipeImageRepository.create({
+            recipeId: updatedRecipe.id,
+            imageUrl: imageDto.imageUrl,
+          }),
+        );
+        await this.recipeImageRepository.save(recipeImages);
+      }
+
+      // 4.2. 재료 저장
+      if (
+        updateRecipeDto.ingredients &&
+        updateRecipeDto.ingredients.length > 0
+      ) {
+        const recipeIngredients = updateRecipeDto.ingredients.map(
+          (ingredientDto) =>
+            this.recipeIngredientRepository.create({
+              recipeId: updatedRecipe.id,
+              ingredientId: ingredientDto.ingredientId,
+              isAlternative: ingredientDto.isAlternative,
+              amount: ingredientDto.amount,
+            }),
+        );
+        await this.recipeIngredientRepository.save(recipeIngredients);
+      }
+
+      // 4.3. 양념 저장
+      if (updateRecipeDto.seasonings && updateRecipeDto.seasonings.length > 0) {
+        const recipeSeasonings = updateRecipeDto.seasonings.map(
+          (seasoningDto) =>
+            this.recipeSeasoningRepository.create({
+              recipeId: updatedRecipe.id,
+              seasoningId: seasoningDto.seasoningId,
+              amount: seasoningDto.amount,
+            }),
+        );
+        await this.recipeSeasoningRepository.save(recipeSeasonings);
+      }
+
+      // 4.4. 조리도구 저장
+      if (updateRecipeDto.tools && updateRecipeDto.tools.length > 0) {
+        const recipeTools = updateRecipeDto.tools.map((toolDto) =>
+          this.recipeToolRepository.create({
+            recipeId: updatedRecipe.id,
+            toolId: toolDto.toolId,
+          }),
+        );
+        await this.recipeToolRepository.save(recipeTools);
+      }
+
+      // 4.5. 요리 단계 저장
+      if (updateRecipeDto.steps && updateRecipeDto.steps.length > 0) {
+        const recipeSteps = updateRecipeDto.steps.map((stepDto) =>
+          this.recipeStepRepository.create({
+            recipeId: updatedRecipe.id,
+            orderNum: stepDto.orderNum,
+            imageUrl: stepDto.imageUrl,
+            summary: stepDto.summary,
+            content: stepDto.content,
+          }),
+        );
+        await this.recipeStepRepository.save(recipeSteps);
+      }
+
+      // 4.6. 건강 포인트 저장
+      if (
+        updateRecipeDto.healthPoints &&
+        updateRecipeDto.healthPoints.length > 0
+      ) {
+        const recipeHealthPoints = updateRecipeDto.healthPoints.map(
+          (healthPointDto) =>
+            this.recipeHealthPointRepository.create({
+              recipeId: updatedRecipe.id,
+              content: healthPointDto.content,
+            }),
+        );
+        await this.recipeHealthPointRepository.save(recipeHealthPoints);
+      }
+
+      // 4.7. 컨디션별 가중치 저장
+      if (updateRecipeDto.conditionId) {
+        const allConditions = await this.conditionRepository.find({
+          order: { id: 'ASC' },
+        });
+
+        const recipeRecommendationConditions = allConditions.map((condition) =>
+          this.recipeRecommendationConditionRepository.create({
+            recipeId: updatedRecipe.id,
+            conditionId: condition.id,
+            priorityScore:
+              condition.id === updateRecipeDto.conditionId ? 1.0 : 0.5,
+          }),
+        );
+
+        await this.recipeRecommendationConditionRepository.save(
+          recipeRecommendationConditions,
+        );
+        this.logger.log(
+          `레시피 ${updatedRecipe.id}의 컨디션별 가중치 ${recipeRecommendationConditions.length}개 저장 완료`,
+        );
+      }
+
+      this.logger.log(`레시피 ${recipeId} 수정 완료`);
+
+      // 5. 캐시 무효화
+      await this.recipeRecommendationService.invalidateCacheByRecipeId(
+        updatedRecipe.id,
+      );
+
+      const finalRecipe = await this.recipeRepository.findOne({
+        where: { id: updatedRecipe.id },
+      });
+
+      if (!finalRecipe) {
+        throw new CustomException(ERROR_CODES.RECIPE_UPDATE_FAILED);
+      }
+
+      return finalRecipe;
+    } catch (error) {
+      this.logger.error('레시피 수정 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_UPDATE_FAILED);
+    }
   }
 
   /**

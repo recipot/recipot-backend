@@ -218,9 +218,107 @@ export class CreateRecipeDto {
     description:
       '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
     example: 1,
-    required: false,
   })
   @IsInt()
+  conditionId!: number;
+}
+
+export class UpdateRecipeIngredientDto extends CreateRecipeIngredientDto {}
+export class UpdateRecipeSeasoningDto extends CreateRecipeSeasoningDto {}
+export class UpdateRecipeToolDto extends CreateRecipeToolDto {}
+export class UpdateRecipeStepDto extends CreateRecipeStepDto {}
+export class UpdateRecipeHealthPointDto extends CreateRecipeHealthPointDto {}
+export class UpdateRecipeImageDto extends CreateRecipeImageDto {}
+export class UpdateRecipeConditionWeightDto extends CreateRecipeConditionWeightDto {}
+
+export class UpdateRecipeDto {
+  @ApiProperty({
+    description: '레시피 제목',
+    example: '간장 고등어 구이',
+  })
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @ApiProperty({
+    description: '레시피 설명',
+    example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
+  })
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @ApiProperty({
+    description: '소요 시간 (분)',
+    example: 30,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  duration: number;
+
+  @ApiProperty({
+    description: '레시피 이미지들',
+    type: [UpdateRecipeImageDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeImageDto)
   @IsOptional()
-  conditionId?: number;
+  images?: UpdateRecipeImageDto[];
+
+  @ApiProperty({
+    description: '레시피 재료들',
+    type: [UpdateRecipeIngredientDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeIngredientDto)
+  ingredients: UpdateRecipeIngredientDto[];
+
+  @ApiProperty({
+    description: '레시피 양념들',
+    type: [UpdateRecipeSeasoningDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeSeasoningDto)
+  @IsOptional()
+  seasonings?: UpdateRecipeSeasoningDto[];
+
+  @ApiProperty({
+    description: '레시피 조리도구들',
+    type: [UpdateRecipeToolDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeToolDto)
+  @IsOptional()
+  tools?: UpdateRecipeToolDto[];
+
+  @ApiProperty({
+    description: '레시피 요리 순서들',
+    type: [UpdateRecipeStepDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeStepDto)
+  steps: UpdateRecipeStepDto[];
+
+  @ApiProperty({
+    description: '레시피 건강 포인트들',
+    type: [UpdateRecipeHealthPointDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRecipeHealthPointDto)
+  @IsOptional()
+  healthPoints?: UpdateRecipeHealthPointDto[];
+
+  @ApiProperty({
+    description:
+      '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
+    example: 1,
+  })
+  @IsInt()
+  conditionId!: number;
 }
