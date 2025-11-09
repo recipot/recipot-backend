@@ -20,6 +20,7 @@ import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-in
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonCodeModule } from '../common-code/common-code.module';
+import { FileCleanupModule } from '../file-cleanup/file-cleanup.module';
 import { RecipeRecommendationConditionService } from './recipe-recommend.service';
 import { RecipeController } from './recipe.controller';
 import { RecipeService } from './recipe.service';
@@ -50,6 +51,7 @@ import { RecipeRecommendationService } from './services/recipe-recommendation.se
     ]),
     CacheModule,
     CommonCodeModule,
+    FileCleanupModule,
   ],
   controllers: [RecipeController],
   providers: [
