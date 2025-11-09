@@ -218,11 +218,9 @@ export class CreateRecipeDto {
     description:
       '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
     example: 1,
-    required: false,
   })
   @IsInt()
-  @IsOptional()
-  conditionId?: number;
+  conditionId!: number;
 }
 
 export class UpdateRecipeIngredientDto extends CreateRecipeIngredientDto {}
@@ -320,9 +318,7 @@ export class UpdateRecipeDto {
     description:
       '레시피 컨디션 ID (해당 컨디션은 가중치 1.0, 나머지는 0.5로 저장됩니다)',
     example: 1,
-    required: false,
   })
   @IsInt()
-  @IsOptional()
-  conditionId?: number;
+  conditionId!: number;
 }

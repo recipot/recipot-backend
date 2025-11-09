@@ -416,8 +416,7 @@ export class RecipeService {
   }
 
   /**
-   * 레시피 삭제 (Soft Delete)
-   * 삭제 시 관련 추천 캐시를 무효화합니다.
+   * 레시피 수정
    */
   @Transactional()
   async updateRecipe(
