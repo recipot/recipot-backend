@@ -24,6 +24,7 @@ import { ToolModule } from './api/tool/tool.module';
 import { UploadModule } from './api/upload/upload.module';
 import { ResponseTimeInterceptor } from './common/interceptors/response-time.interceptor';
 import { MeasurementGuideModule } from './api/measurement-guide/measurement-guide.module';
+import { FileCleanupModule } from './api/file-cleanup/file-cleanup.module';
 
 export const FeatureModules = [
   UserModule,
@@ -35,6 +36,7 @@ export const FeatureModules = [
   LoggerModule,
   HealthModule,
   UploadModule,
+  FileCleanupModule,
   CommonCodeModule,
   IngredientModule,
   SeasoningModule,

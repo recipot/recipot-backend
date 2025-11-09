@@ -89,6 +89,10 @@ export const ERROR_CODES = {
   REVIEW_ALREADY_EXISTS: { code: 'E15002', message: '이미 해당 레시피에 대한 후기를 작성했습니다.' },
   REVIEW_COMPLETION_NOT_FOUND: { code: 'E15003', message: '완료된 레시피 기록을 찾을 수 없습니다.' },
 
+  // 파일 정리 오류
+  FILE_CLEANUP_FAILED: { code: 'E15004', message: '고아 파일 정리 중 오류가 발생했습니다.' },
+  FILE_LIST_FAILED: { code: 'E15005', message: 'S3 파일 목록 조회에 실패했습니다.' },
+
   // 건강 설문 오류
   HEALTH_SURVEY_NOT_ELIGIBLE: { code: 'E16001', message: '현재는 건강 설문을 작성할 수 없습니다.' },
 
