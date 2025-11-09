@@ -9,5 +9,6 @@ import { FileCleanupService } from './file-cleanup.service';
 @Module({
   controllers: [FileCleanupController],
   providers: [FileCleanupService],
+  exports: [FileCleanupService],
 })
 export class FileCleanupModule {}

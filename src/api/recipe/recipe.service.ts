@@ -20,6 +20,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { CommonCodeService } from '../common-code/common-code.service';
+import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
 import {
   GetRecipeResponseDto,
@@ -71,6 +72,7 @@ export class RecipeService {
     private readonly cacheService: CacheService,
     private readonly commonCodeService: CommonCodeService,
     private readonly recipeRecommendationService: RecipeRecommendationService,
+    private readonly fileCleanupService: FileCleanupService,
   ) {}
 
   @Transactional()
@@ -416,7 +418,7 @@ export class RecipeService {
   }
 
   /**
-   * 레시피 수정
+   * 레시피 수정 - 기존 이미지(레시피 + 요리 단계) S3 파일 삭제 후 재생성
    */
   @Transactional()
   async updateRecipe(
@@ -439,7 +441,13 @@ export class RecipeService {
       recipe.duration = updateRecipeDto.duration;
       const updatedRecipe = await this.recipeRepository.save(recipe);
 
-      // 3. 기존 관계 데이터 모두 삭제
+      // 3. 기존 이미지 S3 파일 삭제 (새 이미지 추가 전에)
+      await this.deleteExistingRecipeImages(recipeId);
+
+      // 4. 기존 단계 이미지 S3 파일 삭제 (새 단계 추가 전에)
+      await this.deleteExistingRecipeStepImages(recipeId);
+
+      // 5. 기존 관계 데이터 모두 삭제
       await Promise.all([
         this.recipeImageRepository.delete({ recipeId }),
         this.recipeIngredientRepository.delete({ recipeId }),
@@ -452,8 +460,8 @@ export class RecipeService {
 
       this.logger.log(`레시피 ${recipeId}의 관계 데이터 삭제 완료`);
 
-      // 4. 새로운 관계 데이터 생성
-      // 4.1. 이미지 저장
+      // 6. 새로운 관계 데이터 생성
+      // 6.1. 이미지 저장
       if (updateRecipeDto.images && updateRecipeDto.images.length > 0) {
         const recipeImages = updateRecipeDto.images.map((imageDto) =>
           this.recipeImageRepository.create({
@@ -462,9 +470,12 @@ export class RecipeService {
           }),
         );
         await this.recipeImageRepository.save(recipeImages);
+        this.logger.log(
+          `레시피 ${recipeId}의 새 메인 이미지 ${recipeImages.length}개 저장 완료`,
+        );
       }
 
-      // 4.2. 재료 저장
+      // 6.2. 재료 저장
       if (
         updateRecipeDto.ingredients &&
         updateRecipeDto.ingredients.length > 0
@@ -481,7 +492,7 @@ export class RecipeService {
         await this.recipeIngredientRepository.save(recipeIngredients);
       }
 
-      // 4.3. 양념 저장
+      // 6.3. 양념 저장
       if (updateRecipeDto.seasonings && updateRecipeDto.seasonings.length > 0) {
         const recipeSeasonings = updateRecipeDto.seasonings.map(
           (seasoningDto) =>
@@ -494,7 +505,7 @@ export class RecipeService {
         await this.recipeSeasoningRepository.save(recipeSeasonings);
       }
 
-      // 4.4. 조리도구 저장
+      // 6.4. 조리도구 저장
       if (updateRecipeDto.tools && updateRecipeDto.tools.length > 0) {
         const recipeTools = updateRecipeDto.tools.map((toolDto) =>
           this.recipeToolRepository.create({
@@ -505,7 +516,7 @@ export class RecipeService {
         await this.recipeToolRepository.save(recipeTools);
       }
 
-      // 4.5. 요리 단계 저장
+      // 6.5. 요리 단계 저장 (단계 이미지 포함)
       if (updateRecipeDto.steps && updateRecipeDto.steps.length > 0) {
         const recipeSteps = updateRecipeDto.steps.map((stepDto) =>
           this.recipeStepRepository.create({
@@ -517,9 +528,12 @@ export class RecipeService {
           }),
         );
         await this.recipeStepRepository.save(recipeSteps);
+        this.logger.log(
+          `레시피 ${recipeId}의 새 단계 이미지 ${recipeSteps.length}개 저장 완료`,
+        );
       }
 
-      // 4.6. 건강 포인트 저장
+      // 6.6. 건강 포인트 저장
       if (
         updateRecipeDto.healthPoints &&
         updateRecipeDto.healthPoints.length > 0
@@ -534,7 +548,7 @@ export class RecipeService {
         await this.recipeHealthPointRepository.save(recipeHealthPoints);
       }
 
-      // 4.7. 컨디션별 가중치 저장
+      // 6.7. 컨디션별 가중치 저장
       if (updateRecipeDto.conditionId) {
         const allConditions = await this.conditionRepository.find({
           order: { id: 'ASC' },
@@ -559,7 +573,7 @@ export class RecipeService {
 
       this.logger.log(`레시피 ${recipeId} 수정 완료`);
 
-      // 5. 캐시 무효화
+      // 7. 캐시 무효화
       await this.recipeRecommendationService.invalidateCacheByRecipeId(
         updatedRecipe.id,
       );
@@ -579,6 +593,104 @@ export class RecipeService {
         throw error;
       }
       throw new CustomException(ERROR_CODES.RECIPE_UPDATE_FAILED);
+    }
+  }
+
+  /**
+   * 기존 레시피 메인 이미지의 S3 파일 삭제
+   * - RecipeImage 테이블에서 조회 후 S3 Key 추출
+   * - FileCleanupService를 통해 삭제
+   */
+  private async deleteExistingRecipeImages(recipeId: number): Promise<void> {
+    try {
+      const existingImages = await this.recipeImageRepository.find({
+        where: { recipeId },
+      });
+
+      if (existingImages.length === 0) {
+        this.logger.log(`레시피 ${recipeId}의 기존 메인 이미지 없음`);
+        return;
+      }
+
+      const s3KeysToDelete = existingImages
+        .map((image) => this.extractS3KeyFromUrl(image.imageUrl))
+        .filter(Boolean);
+
+      if (s3KeysToDelete.length > 0) {
+        this.logger.log(
+          `레시피 ${recipeId}의 기존 메인 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개)`,
+        );
+        await this.fileCleanupService.deleteS3FilesByKeys(s3KeysToDelete);
+      }
+    } catch (error) {
+      this.logger.error(
+        `레시피 ${recipeId}의 기존 메인 이미지 삭제 실패`,
+        error,
+      );
+      // 예외 발생 안 함 - 레시피 업데이트는 계속 진행
+    }
+  }
+
+  /**
+   * 기존 레시피 단계 이미지의 S3 파일 삭제
+   * - RecipeStep 테이블에서 조회 후 S3 Key 추출
+   * - FileCleanupService를 통해 삭제
+   */
+  private async deleteExistingRecipeStepImages(
+    recipeId: number,
+  ): Promise<void> {
+    try {
+      const existingSteps = await this.recipeStepRepository.find({
+        where: { recipeId },
+      });
+
+      if (existingSteps.length === 0) {
+        this.logger.log(`레시피 ${recipeId}의 기존 단계 이미지 없음`);
+        return;
+      }
+
+      const s3KeysToDelete = existingSteps
+        .map((step) => this.extractS3KeyFromUrl(step.imageUrl))
+        .filter(Boolean);
+
+      if (s3KeysToDelete.length > 0) {
+        this.logger.log(
+          `레시피 ${recipeId}의 기존 단계 이미지 S3 파일 삭제 시작 (${s3KeysToDelete.length}개)`,
+        );
+        await this.fileCleanupService.deleteS3FilesByKeys(s3KeysToDelete);
+      }
+    } catch (error) {
+      this.logger.error(
+        `레시피 ${recipeId}의 기존 단계 이미지 삭제 실패`,
+        error,
+      );
+      // 예외 발생 안 함 - 레시피 업데이트는 계속 진행
+    }
+  }
+
+  /**
+   * ImageUrl을 S3 Key로 변환
+   * 예) https://cdn.example.com/recipes/123/uuid.jpg → recipes/123/uuid.jpg
+   */
+  private extractS3KeyFromUrl(imageUrl: string): string {
+    try {
+      if (!imageUrl) return '';
+
+      const cdnUrl = process.env.AWS_CDN_URL;
+
+      if (cdnUrl && imageUrl.includes(cdnUrl)) {
+        return imageUrl.replace(`${cdnUrl}/`, '');
+      }
+
+      if (imageUrl.includes('amazonaws.com')) {
+        const url = new URL(imageUrl);
+        return url.pathname.replace(/^\//, '');
+      }
+
+      return imageUrl;
+    } catch (error) {
+      this.logger.error(`S3 Key 추출 실패: ${imageUrl}`, error);
+      return '';
     }
   }
 

@@ -283,4 +283,44 @@ export class FileCleanupService {
       throw new CustomException(ERROR_CODES.FILE_CLEANUP_FAILED);
     }
   }
+
+  /**
+   * 단일 키 또는 여러 키의 파일 삭제 (내부 사용 - 반환값 없음)
+   * - 고아 파일 정리 중 또는 레시피 업데이트 시 S3 파일 삭제
+   * - 에러 발생 시 로깅하지만 예외 발생 안 함
+   */
+  async deleteS3FilesByKeys(keys: string[]): Promise<void> {
+    if (keys.length === 0) {
+      this.logger.log('삭제할 파일이 없습니다');
+      return;
+    }
+
+    try {
+      this.logger.log(`S3 파일 삭제 시작 (총 ${keys.length}개)`);
+
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Delete: {
+          Objects: keys.map((key) => ({ Key: key })),
+        },
+      });
+
+      const response = await this.s3.send(deleteCommand);
+
+      const deletedCount = (response.Deleted || []).length;
+      const failedCount = (response.Errors || []).length;
+
+      this.logger.log(
+        `S3 파일 삭제 완료: ${deletedCount}개 성공, ${failedCount}개 실패`,
+      );
+
+      if (failedCount > 0) {
+        const failedKeys = (response.Errors || []).map((e) => e.Key);
+        this.logger.warn(`삭제 실패한 파일: ${failedKeys.join(', ')}`);
+      }
+    } catch (error) {
+      this.logger.error('S3 파일 삭제 중 에러 발생', error);
+      // 내부 용도이므로 예외 발생 안 함 (레시피 업데이트는 계속 진행)
+    }
+  }
 }
