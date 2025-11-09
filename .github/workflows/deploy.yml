@@ -127,7 +127,7 @@ jobs:
             fi
 
             # ECR 로그인(EC2 리전 기준)
-            AWS_REGION='ap-northeast-2'
+            AWS_REGION='${{ secrets.AWS_REGION }}'
             AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
             ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
             FULL_REPOSITORY="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
