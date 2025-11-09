@@ -54,7 +54,7 @@ export class FileCleanupController {
   })
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
-  @ApiErrorResponse(500, ERROR_CODES.FILE_CLEANUP_FAILED)
+  @ApiErrorResponse(500, ERROR_CODES.FILE_LIST_FAILED)
   async getS3Folders(): Promise<GetS3FoldersResponseDto> {
     const folders = await this.fileCleanupService.getS3Folders();
     return { folders };

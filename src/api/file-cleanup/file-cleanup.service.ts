@@ -169,7 +169,7 @@ export class FileCleanupService {
       return urls;
     } catch (error) {
       this.logger.error('DB에서 파일 URL 수집 실패', error);
-      throw new CustomException(ERROR_CODES.FILE_CLEANUP_FAILED);
+      throw new CustomException(ERROR_CODES.FILE_LIST_FAILED);
     }
   }
 
