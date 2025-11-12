@@ -18,6 +18,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommonCodeService } from '../common-code/common-code.service';
+import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { RecipeService } from './recipe.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
@@ -131,6 +132,12 @@ describe('RecipeService', () => {
           provide: RecipeRecommendationService,
           useValue: {
             invalidateCacheByRecipeId: jest.fn(),
+          },
+        },
+        {
+          provide: FileCleanupService,
+          useValue: {
+            deleteS3FilesByKeys: jest.fn(),
           },
         },
       ],
