@@ -31,12 +31,12 @@ jobs:
             # 변수 설정
             AWS_REGION='${{ secrets.AWS_REGION }}'
             ECR_REPO='${{ secrets.ECR_REPOSITORY }}'
-            AWS_ACCOUNT_ID='488599977281'
-            AWS_ECR_REGISTRY_URL="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+            AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}'
+            FULL_REPOSITORY="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/\${ECR_REPO}"
             
             # ECR 로그인
             aws ecr get-login-password --region \${AWS_REGION} | \
-            docker login --username AWS --password-stdin \${AWS_ECR_REGISTRY_URL}
+            docker login --username AWS --password-stdin \${FULL_REPOSITORY%/*}
 
             # 롤백할 이미지 태그로 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
@@ -45,14 +45,14 @@ jobs:
             echo "🔄 롤백 중: IMAGE_TAG=\$IMAGE_TAG"
             
             # 이미지 존재 여부 확인
-            IMAGE_REPO="\${AWS_ECR_REGISTRY_URL}/\${ECR_REPO}"
-            IMAGE_URI="\${IMAGE_REPO}:\${IMAGE_TAG}"
+            IMAGE_URI="\${FULL_REPOSITORY}:\${IMAGE_TAG}"
             
             echo "🔍 이미지 존재 여부 확인: \${IMAGE_URI}"
             if aws ecr describe-images --repository-name \${ECR_REPO} --image-ids imageTag=\${IMAGE_TAG} --region \${AWS_REGION} > /dev/null 2>&1; then
               echo "✅ 이미지 확인됨: \${IMAGE_TAG}"
             else
               echo "❌ 에러: 이미지가 ECR에 존재하지 않습니다: \${IMAGE_TAG}"
+              echo "저장소명: \${ECR_REPO}, 리전: \${AWS_REGION}"
               echo "사용 가능한 이미지 태그를 확인하세요."
               exit 1
             fi
