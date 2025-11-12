@@ -28,6 +28,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
+import { Public } from '../auth/decorators/auth.decorators';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -348,6 +349,123 @@ export class RecipeController {
   ): Promise<{ message: string }> {
     await this.recipeService.deleteRecipe(id);
     return { message: '레시피가 삭제되었습니다.' };
+  }
+
+  @Get('/public/:id')
+  @Public()
+  @ApiOperation({
+    summary: '레시피 상세 조회 (공개)',
+    description:
+      '레시피 ID로 상세 정보를 조회합니다. 인증 없이 접근 가능합니다. 사용자의 재료 보유 상태는 인증된 경우에만 포함됩니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '조회할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 상세 조회 성공', {
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      title: { type: 'string', example: '간장 고등어 구이' },
+      description: {
+        type: 'string',
+        example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
+      },
+      duration: { type: 'number', example: 30 },
+      condition: { type: 'string', example: '힘들어' },
+      images: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/recipe.jpg',
+            },
+          },
+        },
+      },
+      ingredients: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '고등어' },
+            amount: { type: 'string', example: '1마리' },
+            is_alternative: { type: 'boolean', example: false },
+            ownership_status: {
+              type: 'string',
+              enum: ['owned', 'not_owned', 'alternative_unavailable'],
+              example: 'owned',
+            },
+          },
+        },
+      },
+      seasonings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '간장' },
+            amount: { type: 'string', example: '2큰술' },
+          },
+        },
+      },
+      tools: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            name: { type: 'string', example: '프라이팬(원팬)' },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/pan.jpg',
+            },
+          },
+        },
+      },
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            order_num: { type: 'number', example: 1 },
+            summary: { type: 'string', example: '고등어 손질하기' },
+            content: {
+              type: 'string',
+              example: '고등어를 깨끗이 씻어서 3등분으로 자릅니다.',
+            },
+            image_url: {
+              type: 'string',
+              example: 'https://example.com/step1.jpg',
+            },
+          },
+        },
+      },
+      healthPoint: {
+        type: 'object',
+        properties: {
+          content: {
+            type: 'string',
+            example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
+          },
+        },
+      },
+      isBookmarked: { type: 'boolean', example: true },
+    },
+  })
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  @ApiErrorResponse(404, ERROR_CODES.INGREDIENT_HEALTH_INFO_NOT_FOUND)
+  async getRecipePublic(
+    @Param('id', ParseIntPipe) recipeId: number,
+  ): Promise<GetRecipeResponseDto> {
+    return await this.recipeService.getRecipe(undefined, recipeId);
   }
 
   @Get(':id')
