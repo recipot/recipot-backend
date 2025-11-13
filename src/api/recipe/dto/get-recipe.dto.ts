@@ -131,6 +131,13 @@ export class RecipeStepDto {
   summary: string;
 
   @ApiProperty({
+    description: '조리 단계 본문',
+    example: '고등어를 깨끗이 씻어서 3등분으로 자릅니다.',
+    type: 'string',
+  })
+  content: string;
+
+  @ApiProperty({
     description: '요리 예시 이미지 주소',
     example: 'https://example.com/step1.jpg',
     type: 'string',

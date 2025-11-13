@@ -208,119 +208,120 @@ export class RecipeService {
   }
 
   async getRecipe(
-    userId: number,
+    userId: number | undefined,
     recipeId: number,
   ): Promise<GetRecipeResponseDto> {
-    try {
-      const recipe = await this.recipeRepository.findOne({
-        where: { id: recipeId },
-      });
-      if (!recipe) {
-        throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-      }
-
-      const [
-        images,
-        recipeIngredients,
-        recipeSeasonings,
-        recipeTools,
-        steps,
-        userBookmark,
-      ] = await Promise.all([
-        this.recipeImageRepository.find({ where: { recipeId } }),
-        this.recipeIngredientRepository.find({ where: { recipeId } }),
-        this.recipeSeasoningRepository.find({ where: { recipeId } }),
-        this.recipeToolRepository.find({ where: { recipeId } }),
-        this.recipeStepRepository.find({ where: { recipeId } }),
-        this.userRecipeBookmarkRepository.findOne({
-          where: { userId, recipeId },
-        }),
-      ]);
-
-      const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
-      const seasoningIds = recipeSeasonings.map((item) => item.seasoningId);
-      const toolIds = recipeTools.map((item) => item.toolId);
-
-      const [ingredients, seasonings, tools] = await Promise.all([
-        ingredientIds.length
-          ? this.ingredientRepository.find({ where: { id: In(ingredientIds) } })
-          : [],
-        seasoningIds.length
-          ? this.seasoningRepository.find({ where: { id: In(seasoningIds) } })
-          : [],
-        toolIds.length
-          ? this.toolRepository.find({ where: { id: In(toolIds) } })
-          : [],
-      ]);
-
-      const ingredientMap = new Map<number, Ingredient>();
-      ingredients.forEach((ingredient) =>
-        ingredientMap.set(ingredient.id, ingredient),
-      );
-
-      const seasoningMap = new Map<number, Seasoning>();
-      seasonings.forEach((seasoning) =>
-        seasoningMap.set(seasoning.id, seasoning),
-      );
-
-      const toolMap = new Map<number, Tool>();
-      tools.forEach((tool) => toolMap.set(tool.id, tool));
-
-      const recipeIngredientsWithDetail: RecipeIngredientDetail[] =
-        recipeIngredients.map((item) => ({
-          ingredientId: item.ingredientId,
-          name: ingredientMap.get(item.ingredientId)?.name ?? '',
-          amount: item.amount,
-          isAlternative: item.isAlternative,
-        }));
-
-      const userOwnedIngredients = await this.getUserOwnedIngredients(userId);
-      const healthPoint = await this.getRandomHealthPoint(ingredientIds);
-
-      return {
-        id: recipe.id,
-        title: recipe.title,
-        description: recipe.description,
-        duration: recipe.duration,
-        images: images.map((image) => ({
-          id: image.id,
-          imageUrl: image.imageUrl,
-        })),
-        ingredients: this.mapIngredientsWithOwnership(
-          recipeIngredientsWithDetail,
-          userOwnedIngredients,
-        ),
-        seasonings: recipeSeasonings.map((seasoning) => ({
-          id: seasoning.seasoningId,
-          name: seasoningMap.get(seasoning.seasoningId)?.name ?? '',
-          amount: seasoning.amount,
-        })),
-        tools: recipeTools.map((tool) => ({
-          id: tool.toolId,
-          name: toolMap.get(tool.toolId)?.name ?? '',
-          imageUrl: toolMap.get(tool.toolId)?.imageUrl ?? '',
-        })),
-        steps: steps
-          .sort((a, b) => a.orderNum - b.orderNum)
-          .map((step) => ({
-            orderNum: step.orderNum,
-            summary: step.summary,
-            imageUrl: step.imageUrl,
-          })),
-        healthPoint,
-        isBookmarked: !!userBookmark,
-      };
-    } catch (error) {
-      this.logger.error('레시피 조회 중 에러 발생', error);
-      // CustomException인 경우 그대로 전파 (예: INGREDIENT_HEALTH_INFO_NOT_FOUND)
-      if (error instanceof CustomException) {
-        throw error;
-      }
-      throw new CustomException(ERROR_CODES.RECIPE_GET_FAILED);
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
     }
+
+    const [
+      images,
+      recipeIngredients,
+      recipeSeasonings,
+      recipeTools,
+      steps,
+      userBookmark,
+    ] = await Promise.all([
+      this.recipeImageRepository.find({ where: { recipeId } }),
+      this.recipeIngredientRepository.find({ where: { recipeId } }),
+      this.recipeSeasoningRepository.find({ where: { recipeId } }),
+      this.recipeToolRepository.find({ where: { recipeId } }),
+      this.recipeStepRepository.find({ where: { recipeId } }),
+      userId
+        ? this.userRecipeBookmarkRepository.findOne({
+            where: { userId, recipeId },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
+    const seasoningIds = recipeSeasonings.map((item) => item.seasoningId);
+    const toolIds = recipeTools.map((item) => item.toolId);
+
+    const [ingredients, seasonings, tools] = await Promise.all([
+      ingredientIds.length
+        ? this.ingredientRepository.find({ where: { id: In(ingredientIds) } })
+        : [],
+      seasoningIds.length
+        ? this.seasoningRepository.find({ where: { id: In(seasoningIds) } })
+        : [],
+      toolIds.length
+        ? this.toolRepository.find({ where: { id: In(toolIds) } })
+        : [],
+    ]);
+
+    const ingredientMap = new Map<number, Ingredient>();
+    ingredients.forEach((ingredient) =>
+      ingredientMap.set(ingredient.id, ingredient),
+    );
+
+    const seasoningMap = new Map<number, Seasoning>();
+    seasonings.forEach((seasoning) =>
+      seasoningMap.set(seasoning.id, seasoning),
+    );
+
+    const toolMap = new Map<number, Tool>();
+    tools.forEach((tool) => toolMap.set(tool.id, tool));
+
+    const recipeIngredientsWithDetail: RecipeIngredientDetail[] =
+      recipeIngredients.map((item) => ({
+        ingredientId: item.ingredientId,
+        name: ingredientMap.get(item.ingredientId)?.name ?? '',
+        amount: item.amount,
+        isAlternative: item.isAlternative,
+      }));
+
+    const userOwnedIngredients = userId
+      ? await this.getUserOwnedIngredients(userId)
+      : [];
+    const healthPoint = await this.getRandomHealthPoint(ingredientIds);
+
+    return {
+      id: recipe.id,
+      title: recipe.title,
+      description: recipe.description,
+      duration: recipe.duration,
+      images: images.map((image) => ({
+        id: image.id,
+        imageUrl: image.imageUrl,
+      })),
+      ingredients: this.mapIngredientsWithOwnership(
+        recipeIngredientsWithDetail,
+        userOwnedIngredients,
+      ),
+      seasonings: recipeSeasonings.map((seasoning) => ({
+        id: seasoning.seasoningId,
+        name: seasoningMap.get(seasoning.seasoningId)?.name ?? '',
+        amount: seasoning.amount,
+      })),
+      tools: recipeTools.map((tool) => ({
+        id: tool.toolId,
+        name: toolMap.get(tool.toolId)?.name ?? '',
+        imageUrl: toolMap.get(tool.toolId)?.imageUrl ?? '',
+      })),
+      steps: steps
+        .sort((a, b) => a.orderNum - b.orderNum)
+        .map((step) => ({
+          orderNum: step.orderNum,
+          summary: step.summary,
+          content: step.content,
+          imageUrl: step.imageUrl,
+        })),
+      healthPoint,
+      isBookmarked: userId ? !!userBookmark : false,
+    };
   }
 
-  private async getUserOwnedIngredients(userId: number): Promise<number[]> {
+  private async getUserOwnedIngredients(
+    userId: number | undefined,
+  ): Promise<number[]> {
+    if (!userId) {
+      return [];
+    }
     try {
       const cacheKey = `user:${userId}:owned_ingredients`;
       const cachedIngredients = await this.cacheService.get(cacheKey);
