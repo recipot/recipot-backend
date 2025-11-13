@@ -308,6 +308,7 @@ export class RecipeService {
         .map((step) => ({
           orderNum: step.orderNum,
           summary: step.summary,
+          content: step.content,
           imageUrl: step.imageUrl,
         })),
       healthPoint,

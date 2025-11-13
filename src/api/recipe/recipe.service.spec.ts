@@ -482,6 +482,10 @@ describe('RecipeService', () => {
       expect(result.seasonings).toHaveLength(1);
       expect(result.tools).toHaveLength(1);
       expect(result.steps).toHaveLength(1);
+      expect(result.steps[0]).toHaveProperty('orderNum');
+      expect(result.steps[0]).toHaveProperty('summary');
+      expect(result.steps[0]).toHaveProperty('content');
+      expect(result.steps[0]).toHaveProperty('imageUrl');
       expect(result.healthPoint).toHaveProperty('content');
       expect(result.isBookmarked).toBe(false);
     });
