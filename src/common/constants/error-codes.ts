@@ -95,6 +95,8 @@ export const ERROR_CODES = {
 
   // 건강 설문 오류
   HEALTH_SURVEY_NOT_ELIGIBLE: { code: 'E16001', message: '현재는 건강 설문을 작성할 수 없습니다.' },
+  HEALTH_SURVEY_EFFECT_CODES_REQUIRED: { code: 'E16002', message: '느낀 변화 코드는 필수입니다.' },
+  HEALTH_SURVEY_EFFECT_CODES_NOT_ALLOWED: { code: 'E16003', message: '느낀 변화 코드는 선택할 수 없습니다.' },
 
   // 건강정보 오류
   INGREDIENT_HEALTH_INFO_NOT_FOUND: { code: 'E18001', message: '재료의 건강정보를 찾을 수 없습니다.' },

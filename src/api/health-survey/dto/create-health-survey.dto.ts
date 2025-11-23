@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  ArrayNotEmpty,
   ArrayUnique,
   IsArray,
   IsNotEmpty,
@@ -24,7 +23,6 @@ export class CreateHealthSurveyRequestDto {
     type: [String],
   })
   @IsArray()
-  @ArrayNotEmpty()
   @ArrayUnique()
   @IsString({ each: true })
   effectCodes: string[];
