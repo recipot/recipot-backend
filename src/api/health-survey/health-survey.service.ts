@@ -2,21 +2,22 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Repository } from 'typeorm';
 
-import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
-import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
+import { ERROR_CODES } from '@/common/constants/error-codes';
+import { CustomException } from '@/common/exceptions/custom-exception';
 import { CommonCode } from '@/database/entity/common-code.entity';
-import {
-  GetHealthSurveyPreparationResponseDto,
-  HealthSurveyCodeOptionDto,
-} from './dto/get-health-survey-preparation.dto';
+import { UserCompletedRecipe } from '@/database/entity/user-completed-recipe.entity';
+import { UserHealthSurveyEffect } from '@/database/entity/user-health-survey-effect.entity';
 import { UserHealthSurvey } from '@/database/entity/user-health-survey.entity';
+import { HEALTH_SURVEY_CONSTANTS } from './constants/health-survey.constants';
+import { HealthSurveyEligibilityResponseDto } from './dto/check-health-survey-eligibility.dto';
 import {
   CreateHealthSurveyRequestDto,
   CreateHealthSurveyResponseDto,
 } from './dto/create-health-survey.dto';
-import { CustomException } from '@/common/exceptions/custom-exception';
-import { ERROR_CODES } from '@/common/constants/error-codes';
-import { UserHealthSurveyEffect } from '@/database/entity/user-health-survey-effect.entity';
+import {
+  GetHealthSurveyPreparationResponseDto,
+  HealthSurveyCodeOptionDto,
+} from './dto/get-health-survey-preparation.dto';
 
 const PERSISTENT_ISSUE_GROUP = 'H01';
 const EFFECT_GROUP = 'H02';
@@ -101,6 +102,27 @@ export class HealthSurveyService {
     });
     if (!persistentIssueCode) {
       throw new CustomException(ERROR_CODES.COMMON_CODE_NOT_FOUND);
+    }
+
+    // effectCodes 검증
+    const requiresEffectCodes = (
+      HEALTH_SURVEY_CONSTANTS.REQUIRES_EFFECT_CODES as readonly string[]
+    ).includes(dto.persistentIssueCode);
+
+    if (requiresEffectCodes && dto.effectCodes.length === 0) {
+      // H01003 등 effectCodes가 필수인 경우
+      throw new CustomException(
+        ERROR_CODES.HEALTH_SURVEY_EFFECT_CODES_REQUIRED,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!requiresEffectCodes && dto.effectCodes.length > 0) {
+      // H01003이 아닌 경우 effectCodes는 빈 배열이어야 함
+      throw new CustomException(
+        ERROR_CODES.HEALTH_SURVEY_EFFECT_CODES_NOT_ALLOWED,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const effectCodes = await this.commonCodeRepository.find({
