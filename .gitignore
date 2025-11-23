@@ -6,7 +6,6 @@ dist/
 
 # Docker
 docker/
-!docker/mariadb/init/
 
 # IDE
 *.iml

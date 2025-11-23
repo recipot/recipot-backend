@@ -4,15 +4,16 @@ services:
     image: mariadb:10.8.2
     ports: 
       - "3306:3306"
+    env_file:
+      - .env.local
     environment:
-      MYSQL_DATABASE: recipot
-      MYSQL_USER: recipot
-      MYSQL_PASSWORD: recipot1!11
-      MYSQL_ROOT_PASSWORD: recipot1!11
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Seoul
     volumes:
       - ./docker/mariadb/data:/var/lib/mysql
-      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 30s
@@ -28,8 +29,10 @@ services:
     depends_on:
       recipot-mariadb:
         condition: service_healthy
+    env_file:
+      - .env.local
     environment:
-      MYSQL_ROOT_PASSWORD: recipot1!11
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     command: >
       bash -c "
       until mysqladmin ping -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD --silent; do sleep 1; done &&
@@ -38,8 +41,6 @@ services:
     networks:
       - docker-network
     restart: "no"
-    profiles:
-      - init
 
   recipot-redis:
     container_name: recipot-redis
