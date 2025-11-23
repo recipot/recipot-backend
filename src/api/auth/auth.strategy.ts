@@ -65,7 +65,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // JWT 서비스를 통해 토큰 검증
       const verifiedPayload = await this.authService.verifyAccessToken(token);
 
-      // 데이터베이스에서 사용자 조회하여 role 가져오기
+      // 디버그 토큰인 경우 DB 조회 제외하고 토큰의 role 사용
+      if (verifiedPayload.isDebug) {
+        return {
+          sub: parseInt(verifiedPayload.sub),
+          role: verifiedPayload.role,
+          iat: verifiedPayload.iat,
+          exp: verifiedPayload.exp,
+        };
+      }
+
+      // 일반 토큰인 경우 데이터베이스에서 사용자 조회하여 role 가져오기
       const user = await this.userRepository.findOne({
         where: { id: userId },
       });

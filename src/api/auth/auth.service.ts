@@ -54,6 +54,7 @@ export class AuthService {
   public async generateAccessToken(
     userId: number,
     role: string,
+    isDebug: boolean = false,
   ): Promise<string> {
     const accessSecret = process.env.JWT_ACCESS_SECRET;
     const accessExpire = process.env.JWT_ACCESS_EXPIRE;
@@ -63,6 +64,7 @@ export class AuthService {
       sub: userId.toString(),
       role: role,
       type: 'access',
+      isDebug: isDebug,
     };
 
     const token = this.jwt.sign(payload, {
@@ -71,8 +73,10 @@ export class AuthService {
       expiresIn: secondsToJwtFormat(parseInt(accessExpire)),
     });
 
-    // Redis에 Access Token 저장
-    await this.saveAccessTokenToRedis(userId, token, accessExpire);
+    // 디버그 토큰이 아닌 경우에만 Redis에 Access Token 저장
+    if (!isDebug) {
+      await this.saveAccessTokenToRedis(userId, token, accessExpire);
+    }
 
     return token;
   }
@@ -252,12 +256,17 @@ export class AuthService {
         );
       }
 
-      // Redis에서 토큰 유효성 확인
-      const isValid = await this.validateAccessTokenInRedis(payload.sub, token);
-      if (!isValid) {
-        throw new UnauthorizedException(
-          ERROR_CODES.AUTH_ACCESS_TOKEN_NOT_IN_REDIS.message,
+      // 디버그 토큰이 아닌 경우에만 Redis에서 토큰 유효성 확인
+      if (!payload.isDebug) {
+        const isValid = await this.validateAccessTokenInRedis(
+          payload.sub,
+          token,
         );
+        if (!isValid) {
+          throw new UnauthorizedException(
+            ERROR_CODES.AUTH_ACCESS_TOKEN_NOT_IN_REDIS.message,
+          );
+        }
       }
 
       return payload;
@@ -430,7 +439,7 @@ export class AuthService {
     accessExpiresAt: string;
     refreshExpiresAt: string;
   }> {
-    const accessToken = await this.generateAccessToken(userId, role);
+    const accessToken = await this.generateAccessToken(userId, role, true);
     const refreshToken = await this.generateRefreshToken(userId);
 
     // 토큰 만료 시간 계산
