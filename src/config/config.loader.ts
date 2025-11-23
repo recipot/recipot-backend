@@ -17,15 +17,21 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     );
   }
 
-  // 카카오 OAuth 환경변수 검증
-  if (!env.KAKAO_CLIENT_ID || !env.KAKAO_REDIRECT_URI) {
+  // 카카오 OAuth 환경변수 검증 (테스트 환경 제외)
+  if (
+    env.NODE_ENV !== 'test' &&
+    (!env.KAKAO_CLIENT_ID || !env.KAKAO_REDIRECT_URI)
+  ) {
     throw new Error(
       'KAKAO_CLIENT_ID and KAKAO_REDIRECT_URI environment variables are required',
     );
   }
 
-  // 구글 OAuth 환경변수 검증
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI) {
+  // 구글 OAuth 환경변수 검증 (테스트 환경 제외)
+  if (
+    env.NODE_ENV !== 'test' &&
+    (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI)
+  ) {
     throw new Error(
       'GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI environment variables are required',
     );
@@ -72,12 +78,17 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     },
 
     db: {
-      type: env.DB_TYPE ?? 'mysql',
-      host: env.DB_HOST,
-      port: env.DB_PORT ? Number(env.DB_PORT) : 3306,
-      username: env.DB_USERNAME,
-      password: env.DB_PASSWORD,
-      database: env.DB_DATABASE,
+      // 테스트 환경에서는 TEST_DB_* 환경 변수를 우선 사용
+      type: ((env.TEST_DB_TYPE || env.DB_TYPE) ?? 'mysql') as any,
+      host: env.TEST_DB_HOST || env.DB_HOST,
+      port: env.TEST_DB_PORT
+        ? Number(env.TEST_DB_PORT)
+        : env.DB_PORT
+          ? Number(env.DB_PORT)
+          : 3306,
+      username: env.TEST_DB_USERNAME || env.DB_USERNAME,
+      password: env.TEST_DB_PASSWORD || env.DB_PASSWORD,
+      database: env.TEST_DB_DATABASE || env.DB_DATABASE,
     },
 
     frontendUrl: {

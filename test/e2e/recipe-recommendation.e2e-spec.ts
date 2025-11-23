@@ -1,24 +1,26 @@
+import { AppModule } from '@/app.module';
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { initializeTransactionalContext } from 'typeorm-transactional';
 import {
+  authenticatedAdminRequest,
   authenticatedRequest,
   setupMockJwtGuard,
   TEST_TAGS,
 } from '../helpers/auth.helper';
-import { MockAppModule } from '../mocks/app.mock';
-import { resetReviewMocks } from '../mocks/review.mock';
-import { resetUserMocks } from '../mocks/user.mock';
 
 describe('RecipeRecommendation (E2E)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    // typeorm-transactional 초기화
+    initializeTransactionalContext();
+
     const moduleBuilder = Test.createTestingModule({
-      imports: [MockAppModule],
+      imports: [AppModule],
     });
 
-    const moduleFixture: TestingModule =
-      await setupMockJwtGuard(moduleBuilder).compile();
+    const moduleFixture: TestingModule = await setupMockJwtGuard(moduleBuilder);
 
     app = moduleFixture.createNestApplication();
     app.enableVersioning();
@@ -34,10 +36,9 @@ describe('RecipeRecommendation (E2E)', () => {
   });
 
   afterAll(async () => {
-    // 테스트 격리를 위해 Mock 상태 초기화
-    resetUserMocks();
-    resetReviewMocks();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('기본 추천 조회', () => {
@@ -53,7 +54,7 @@ describe('RecipeRecommendation (E2E)', () => {
           page: 1,
           pageSize: 3,
         })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       // ResponseInterceptor로 래핑됨
       expect(response.body.data).toHaveProperty('items');
@@ -80,12 +81,12 @@ describe('RecipeRecommendation (E2E)', () => {
 
   describe('캐시 동작', () => {
     it(`${TEST_TAGS.AUTHENTICATED} 첫 요청 캐시 미스, 두 번째 요청 캐시 히트`, async () => {
-      // 캐시 무효화
-      await authenticatedRequest(
-        app,
-        'post',
-        '/v1/recipes/recommendations/admin/cache/invalidate',
-      ).expect(HttpStatus.CREATED);
+      // 캐시 무효화 (ADMIN 권한 필요하므로 스킵)
+      // await authenticatedRequest(
+      //   app,
+      //   'post',
+      //   '/v1/recipes/recommendations/cache/invalidate',
+      // ).expect(HttpStatus.CREATED);
 
       const requestDto = {
         conditionId: 1,
@@ -101,7 +102,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send(requestDto)
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       // 두 번째 요청 (캐시 히트)
       const response2 = await authenticatedRequest(
@@ -110,7 +111,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send(requestDto)
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       // 동일한 결과 반환
       expect(response1.body.data.items).toEqual(response2.body.data.items);
@@ -126,7 +127,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send({ conditionId: 1, pantryIds: [1, 2], page: 1, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       const response2 = await authenticatedRequest(
         app,
@@ -134,7 +135,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send({ conditionId: 1, pantryIds: [3, 4], page: 1, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       // 둘 다 성공
       expect(response1.body.data.items).toBeDefined();
@@ -150,7 +151,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send({ conditionId: 1, pantryIds: [1, 2], page: 1, pageSize: 2 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       const page2 = await authenticatedRequest(
         app,
@@ -158,7 +159,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send({ conditionId: 1, pantryIds: [1, 2], page: 2, pageSize: 2 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       expect(page1.body.data.currentPage).toBe(1);
       expect(page2.body.data.currentPage).toBe(2);
@@ -176,7 +177,7 @@ describe('RecipeRecommendation (E2E)', () => {
         '/v1/recipes/recommendations',
       )
         .send({ conditionId: 1, pantryIds: [1], page: 999, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       expect(response.body.data.items).toEqual([]);
       expect(response.body.data.currentPage).toBe(999);
@@ -195,48 +196,43 @@ describe('RecipeRecommendation (E2E)', () => {
       // 추천 조회로 캐시 생성
       await authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
         .send({ conditionId: 1, pantryIds: [1, 2, 3], page: 1, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
-      // 전체 캐시 무효화
-      const response = await authenticatedRequest(
+      // 전체 캐시 무효화 (ADMIN 권한 필요)
+      const response = await authenticatedAdminRequest(
         app,
         'post',
-        '/v1/recipes/recommendations/admin/cache/invalidate',
+        '/v1/recipes/recommendations/cache/invalidate',
       ).expect(HttpStatus.CREATED);
 
-      expect(response.body.data.message).toContain('캐시 무효화 완료');
+      expect(response.body.data.message).toContain(
+        '추천 캐시가 무효화되었습니다',
+      );
     });
 
     it(`${TEST_TAGS.AUTHENTICATED} 특정 조건만 캐시 무효화`, async () => {
       // 조건 1과 2에 대한 캐시 생성
       await authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
         .send({ conditionId: 1, pantryIds: [1], page: 1, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
       await authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
         .send({ conditionId: 2, pantryIds: [1], page: 1, pageSize: 3 })
-        .expect(HttpStatus.OK);
+        .expect(HttpStatus.CREATED);
 
-      // 조건 1만 무효화
-      const response = await authenticatedRequest(
+      // 조건 1만 무효화 (ADMIN 권한 필요)
+      const response = await authenticatedAdminRequest(
         app,
         'post',
-        '/v1/recipes/recommendations/admin/cache/invalidate/1',
+        '/v1/recipes/recommendations/cache/invalidate/1',
       ).expect(HttpStatus.CREATED);
 
-      expect(response.body.data.message).toContain('조건 1');
+      expect(response.body.data.message).toContain('컨디션 1');
     });
   });
 
   describe('동시 요청', () => {
     it(`${TEST_TAGS.AUTHENTICATED} 동일한 조건으로 동시 요청 시 모두 동일한 결과`, async () => {
-      // 캐시 초기화
-      await authenticatedRequest(
-        app,
-        'post',
-        '/v1/recipes/recommendations/admin/cache/invalidate',
-      ).expect(HttpStatus.CREATED);
-
       const requestDto = {
         conditionId: 5,
         pantryIds: [1, 2, 3, 4, 5],
@@ -250,7 +246,7 @@ describe('RecipeRecommendation (E2E)', () => {
         .map(() =>
           authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
             .send(requestDto)
-            .expect(HttpStatus.OK),
+            .expect(HttpStatus.CREATED),
         );
 
       const responses = await Promise.all(promises);

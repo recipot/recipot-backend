@@ -1,7 +1,8 @@
 import { DataSource } from 'typeorm';
 import { CommonCodeSeed } from './common-code.seed';
-import { UserSeed } from './user.seed';
 import { ConditionSeed } from './condition.seed';
+import { RecipeSeed } from './recipe.seed';
+import { UserSeed } from './user.seed';
 
 export class DatabaseSeeder {
   constructor(
@@ -16,21 +17,25 @@ export class DatabaseSeeder {
     const commonCodeSeed = new CommonCodeSeed(this.dataSource);
     await commonCodeSeed.run();
 
-    // UserSeed 실행
-    const userSeed = new UserSeed(this.dataSource);
-    await userSeed.run();
-
     // ConditionSeed 실행
     const conditionSeed = new ConditionSeed(this.dataSource);
     await conditionSeed.run();
 
-    // RecipeSeed 실행 (현재 주석 처리됨)
-    // const recipeSeed = new RecipeSeed(this.dataSource);
-    // await recipeSeed.run();
+    // UserSeed, RecipeSeed 실행 (테스트 환경에서만)
+    if (process.env.NODE_ENV === 'test') {
+      this.logger.log(
+        'Running UserSeed and RecipeSeed for test environment...',
+      );
+      const userSeed = new UserSeed(this.dataSource);
+      await userSeed.run();
+
+      const recipeSeed = new RecipeSeed(this.dataSource);
+      await recipeSeed.run();
+    }
 
     this.logger.log('All seeding completed successfully');
   }
 }
 
 // 개별 seeder들도 export
-export { CommonCodeSeed, UserSeed, ConditionSeed };
+export { CommonCodeSeed, ConditionSeed, RecipeSeed, UserSeed };

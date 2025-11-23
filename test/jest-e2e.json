@@ -7,10 +7,11 @@
   },
   "testEnvironment": "node",
   "globalSetup": "<rootDir>/test/e2e/setup.ts",
+  "globalTeardown": "<rootDir>/test/e2e/teardown.ts",
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/src/$1"
   },
-  "setupFiles": ["dotenv/config"],
+  "setupFiles": ["dotenv/config", "<rootDir>/test/setup-crypto.ts"],
   "forceExit": true,
   "detectOpenHandles": true,
   "moduleDirectories": [

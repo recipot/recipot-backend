@@ -1,12 +1,14 @@
 import { CacheModule } from '@/common/cache/cache.module';
+import { User } from '@/database/entity/user.entity';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
-import { JwtGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './auth.strategy';
+import { JwtGuard } from './guards/auth.guard';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { JwtStrategy } from './auth.strategy';
       }),
       inject: [],
     }),
+    TypeOrmModule.forFeature([User]),
     CacheModule,
   ],
   controllers: [AuthController],
