@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mariadb:
-        image: mariadb:10.8.2
+        image: mariadb:10.11
         env:
           MYSQL_ROOT_PASSWORD: test_password
           MYSQL_DATABASE: recipot_test
@@ -119,10 +119,11 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-cmd="mysql -u root -ptest_password -e 'SELECT 1'"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
+          --health-start-period=40s
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -138,6 +139,22 @@ jobs:
 
       - name: Build project
         run: npm run build
+
+      - name: Wait for MariaDB to be ready
+        run: |
+          echo "⏳ Waiting for MariaDB to be ready..."
+          for i in {1..30}; do
+            if timeout 2 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/3306" 2>/dev/null; then
+              echo "✅ MariaDB port is open!"
+              sleep 5
+              echo "✅ MariaDB is ready!"
+              exit 0
+            fi
+            echo "Waiting for MariaDB... ($i/30)"
+            sleep 2
+          done
+          echo "❌ MariaDB failed to start"
+          exit 1
 
       - name: Run E2E tests
         env:
