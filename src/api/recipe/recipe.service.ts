@@ -22,6 +22,7 @@ import { Transactional } from 'typeorm-transactional';
 import { CommonCodeService } from '../common-code/common-code.service';
 import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
+import { AdminRecipeListItemDto } from './dto/get-admin-recipe-list.dto';
 import {
   GetRecipeResponseDto,
   RecipeHealthPointDto,
@@ -764,5 +765,213 @@ export class RecipeService {
       }
       throw new CustomException(ERROR_CODES.RECIPE_DELETE_FAILED);
     }
+  }
+
+  /**
+   * 어드민용 레시피 목록 전체 조회
+   * priorityScore가 1.0인 컨디션 정보를 포함하여 반환
+   */
+  async getAllRecipesForAdmin(): Promise<AdminRecipeListItemDto[]> {
+    // 모든 레시피 조회 (삭제되지 않은 것만)
+    const recipes = await this.recipeRepository.find({
+      where: {},
+      order: { id: 'ASC' },
+    });
+
+    if (recipes.length === 0) {
+      return [];
+    }
+
+    const recipeIds = recipes.map((recipe) => recipe.id);
+
+    // 모든 관련 데이터를 한 번에 조회
+    const [
+      allImages,
+      allRecipeIngredients,
+      allRecipeSeasonings,
+      allRecipeTools,
+      allSteps,
+      allRecommendationConditions,
+    ] = await Promise.all([
+      this.recipeImageRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeIngredientRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeSeasoningRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeToolRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeStepRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeRecommendationConditionRepository.find({
+        where: { recipeId: In(recipeIds), priorityScore: 1.0 },
+      }),
+    ]);
+
+    // 재료, 양념, 도구 ID 수집
+    const ingredientIds = [
+      ...new Set(allRecipeIngredients.map((ri) => ri.ingredientId)),
+    ];
+    const seasoningIds = [
+      ...new Set(allRecipeSeasonings.map((rs) => rs.seasoningId)),
+    ];
+    const toolIds = [...new Set(allRecipeTools.map((rt) => rt.toolId))];
+
+    // 컨디션 ID 수집
+    const conditionIds = [
+      ...new Set(allRecommendationConditions.map((rc) => rc.conditionId)),
+    ];
+
+    // 관련 엔티티 조회
+    const [ingredients, seasonings, tools, conditions] = await Promise.all([
+      ingredientIds.length
+        ? this.ingredientRepository.find({ where: { id: In(ingredientIds) } })
+        : [],
+      seasoningIds.length
+        ? this.seasoningRepository.find({ where: { id: In(seasoningIds) } })
+        : [],
+      toolIds.length
+        ? this.toolRepository.find({ where: { id: In(toolIds) } })
+        : [],
+      conditionIds.length
+        ? this.conditionRepository.find({ where: { id: In(conditionIds) } })
+        : [],
+    ]);
+
+    // Map으로 변환하여 빠른 조회
+    const ingredientMap = new Map<number, Ingredient>();
+    ingredients.forEach((ingredient) =>
+      ingredientMap.set(ingredient.id, ingredient),
+    );
+
+    const seasoningMap = new Map<number, Seasoning>();
+    seasonings.forEach((seasoning) =>
+      seasoningMap.set(seasoning.id, seasoning),
+    );
+
+    const toolMap = new Map<number, Tool>();
+    tools.forEach((tool) => toolMap.set(tool.id, tool));
+
+    const conditionMap = new Map<number, Condition>();
+    conditions.forEach((condition) =>
+      conditionMap.set(condition.id, condition),
+    );
+
+    // 레시피별로 그룹화
+    const imagesByRecipe = new Map<number, RecipeImage[]>();
+    allImages.forEach((image) => {
+      if (!imagesByRecipe.has(image.recipeId)) {
+        imagesByRecipe.set(image.recipeId, []);
+      }
+      imagesByRecipe.get(image.recipeId)!.push(image);
+    });
+
+    const ingredientsByRecipe = new Map<number, RecipeIngredient[]>();
+    allRecipeIngredients.forEach((ri) => {
+      if (!ingredientsByRecipe.has(ri.recipeId)) {
+        ingredientsByRecipe.set(ri.recipeId, []);
+      }
+      ingredientsByRecipe.get(ri.recipeId)!.push(ri);
+    });
+
+    const seasoningsByRecipe = new Map<number, RecipeSeasoning[]>();
+    allRecipeSeasonings.forEach((rs) => {
+      if (!seasoningsByRecipe.has(rs.recipeId)) {
+        seasoningsByRecipe.set(rs.recipeId, []);
+      }
+      seasoningsByRecipe.get(rs.recipeId)!.push(rs);
+    });
+
+    const toolsByRecipe = new Map<number, RecipeTool[]>();
+    allRecipeTools.forEach((rt) => {
+      if (!toolsByRecipe.has(rt.recipeId)) {
+        toolsByRecipe.set(rt.recipeId, []);
+      }
+      toolsByRecipe.get(rt.recipeId)!.push(rt);
+    });
+
+    const stepsByRecipe = new Map<number, RecipeStep[]>();
+    allSteps.forEach((step) => {
+      if (!stepsByRecipe.has(step.recipeId)) {
+        stepsByRecipe.set(step.recipeId, []);
+      }
+      stepsByRecipe.get(step.recipeId)!.push(step);
+    });
+
+    // priorityScore가 1.0인 컨디션 매핑
+    const conditionByRecipe = new Map<number, RecipeRecommendationCondition>();
+    allRecommendationConditions.forEach((rc) => {
+      conditionByRecipe.set(rc.recipeId, rc);
+    });
+
+    // DTO 변환
+    const recipeList: AdminRecipeListItemDto[] = recipes.map((recipe) => {
+      const recipeCondition = conditionByRecipe.get(recipe.id);
+      const condition = recipeCondition
+        ? conditionMap.get(recipeCondition.conditionId)
+        : null;
+
+      const recipeImages = imagesByRecipe.get(recipe.id) || [];
+      const recipeIngredients = ingredientsByRecipe.get(recipe.id) || [];
+      const recipeSeasonings = seasoningsByRecipe.get(recipe.id) || [];
+      const recipeTools = toolsByRecipe.get(recipe.id) || [];
+      const recipeSteps = stepsByRecipe.get(recipe.id) || [];
+
+      return {
+        id: recipe.id,
+        title: recipe.title,
+        description: recipe.description,
+        duration: recipe.duration,
+        condition_info: condition
+          ? {
+              id: condition.id,
+              name: condition.name,
+            }
+          : null,
+        images: recipeImages.map((image) => ({
+          id: image.id,
+          image_url: image.imageUrl,
+        })),
+        ingredients: recipeIngredients.map((ri) => {
+          const ingredient = ingredientMap.get(ri.ingredientId);
+          return {
+            id: ri.ingredientId,
+            name: ingredient?.name || '',
+            amount: ri.amount,
+            is_alternative: ri.isAlternative,
+          };
+        }),
+        seasonings: recipeSeasonings.map((rs) => {
+          const seasoning = seasoningMap.get(rs.seasoningId);
+          return {
+            id: rs.seasoningId,
+            name: seasoning?.name || '',
+            amount: rs.amount,
+          };
+        }),
+        tools: recipeTools.map((rt) => {
+          const tool = toolMap.get(rt.toolId);
+          return {
+            id: rt.toolId,
+            name: tool?.name || '',
+          };
+        }),
+        steps: recipeSteps
+          .sort((a, b) => a.orderNum - b.orderNum)
+          .map((step) => ({
+            order_num: step.orderNum,
+            summary: step.summary,
+            content: step.content,
+            image_url: step.imageUrl,
+          })),
+      };
+    });
+
+    return recipeList;
   }
 }
