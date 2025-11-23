@@ -124,6 +124,15 @@ jobs:
           --health-timeout=5s
           --health-retries=10
           --health-start-period=40s
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -164,6 +173,11 @@ jobs:
           DB_USERNAME: test_user
           DB_PASSWORD: test_password
           DB_DATABASE: recipot_test
+          # Redis 설정
+          REDIS_CONNECTION_TYPE: redis
+          REDIS_CONNECTION_HOST: 127.0.0.1
+          REDIS_CONNECTION_PORT: 6379
+          REDIS_CONNECTION_TTL: 3600
           # JWT 설정 (테스트용 - AuthModule 로드 시 필요)
           JWT_ALGORITHM: HS256
           JWT_ACCESS_SECRET: test-access-secret-key-for-ci-cd

@@ -36,7 +36,9 @@ describe('RecipeRecommendation (E2E)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('기본 추천 조회', () => {

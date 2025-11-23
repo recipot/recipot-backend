@@ -40,7 +40,9 @@ describe('UserController (E2E)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('레시피 조회 -> 요리 시작 -> 요리 완료 플로우', () => {
