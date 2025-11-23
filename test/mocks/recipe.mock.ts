@@ -1,6 +1,9 @@
+import { Roles } from '@/api/auth/decorators/roles.decorator';
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
+import { RolesGuard } from '@/api/auth/guards/roles.guard';
 import { RecipeService } from '@/api/recipe/recipe.service';
 import { cacheKey as buildCacheKey } from '@/api/recipe/utils/cache-key.util';
+import { UserRole } from '@/api/user/enums/role.enum';
 import {
   BadRequestException,
   Body,
@@ -18,6 +21,55 @@ import {
 import { MockJwtGuard } from './auth.mock';
 
 const mockRecipeService = {
+  getAllRecipes: async () => {
+    return [
+      {
+        id: 1,
+        title: '테스트 레시피 1',
+        description: '테스트 레시피 설명 1',
+        duration: 30,
+        condition_info: {
+          id: 1,
+          name: '힘들어',
+        },
+        images: [
+          {
+            id: 1,
+            image_url: 'https://example.com/recipe1.jpg',
+          },
+        ],
+        ingredients: [
+          {
+            id: 1,
+            name: '고등어',
+            amount: '1마리',
+            is_alternative: false,
+          },
+        ],
+        seasonings: [
+          {
+            id: 1,
+            name: '간장',
+            amount: '2큰술',
+          },
+        ],
+        tools: [
+          {
+            id: 1,
+            name: '팬',
+          },
+        ],
+        steps: [
+          {
+            order_num: 1,
+            summary: '고등어를 손질합니다.',
+            content: '고등어를 깨끗이 씻어서 3등분으로 자릅니다.',
+            image_url: null,
+          },
+        ],
+      },
+    ];
+  },
   getRecipe: async (userId: number, recipeId: number) => {
     return {
       id: recipeId,
@@ -118,6 +170,13 @@ const paginate = (items: any[], page: number, pageSize: number) => {
 export class MockRecipeController {
   constructor(private readonly recipeService: RecipeService) {}
 
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async getAllRecipes() {
+    return await this.recipeService.getAllRecipes();
+  }
+
   @Get(':id')
   async getRecipe(
     @Param('id', ParseIntPipe) recipeId: number,
@@ -198,6 +257,7 @@ export class MockRecipeController {
       provide: JwtGuard,
       useClass: MockJwtGuard,
     },
+    RolesGuard,
   ],
 })
 export class MockRecipeModule {}

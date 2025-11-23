@@ -771,7 +771,7 @@ export class RecipeService {
    * 어드민용 레시피 목록 전체 조회
    * priorityScore가 1.0인 컨디션 정보를 포함하여 반환
    */
-  async getAllRecipesForAdmin(): Promise<AdminRecipeListItemDto[]> {
+  async getAllRecipes(): Promise<AdminRecipeListItemDto[]> {
     // 모든 레시피 조회 (삭제되지 않은 것만)
     const recipes = await this.recipeRepository.find({
       where: {},

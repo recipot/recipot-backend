@@ -352,25 +352,6 @@ export class RecipeController {
     return { message: '레시피가 삭제되었습니다.' };
   }
 
-  @Get('')
-  @UseGuards(JwtGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
-  @ApiOperation({
-    summary: '[어드민] 레시피 목록 전체 조회',
-    description:
-      '모든 레시피의 상세 정보를 조회합니다. priorityScore가 1.0인 컨디션 정보를 포함합니다.',
-  })
-  @ApiSuccessResponse('레시피 목록 조회 성공', {
-    type: 'array',
-    items: { $ref: '#/components/schemas/AdminRecipeListItemDto' },
-  })
-  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
-  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
-  async getAllRecipesForAdmin(): Promise<AdminRecipeListItemDto[]> {
-    return await this.recipeService.getAllRecipesForAdmin();
-  }
-
   @Get('/public/:id')
   @Public()
   @ApiOperation({
@@ -486,6 +467,25 @@ export class RecipeController {
     @Param('id', ParseIntPipe) recipeId: number,
   ): Promise<GetRecipeResponseDto> {
     return await this.recipeService.getRecipe(undefined, recipeId);
+  }
+
+  @Get()
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 레시피 목록 전체 조회',
+    description:
+      '모든 레시피의 상세 정보를 조회합니다. priorityScore가 1.0인 컨디션 정보를 포함합니다.',
+  })
+  @ApiSuccessResponse('레시피 목록 조회 성공', {
+    type: 'array',
+    items: { $ref: '#/components/schemas/AdminRecipeListItemDto' },
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  async getAllRecipes(): Promise<AdminRecipeListItemDto[]> {
+    return await this.recipeService.getAllRecipes();
   }
 
   @Get(':id')
