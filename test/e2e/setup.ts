@@ -9,6 +9,9 @@ const envPath = path.resolve(process.cwd(), '.env.local');
 dotenv.config({ path: envPath });
 dotenvFlow.config();
 
+// 테스트 환경 변수 설정
+process.env.NODE_ENV = 'test';
+
 import {
   createTestDataSource,
   seedTestDatabase,

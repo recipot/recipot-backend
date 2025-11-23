@@ -12,6 +12,7 @@ services:
       TZ: Asia/Seoul
     volumes:
       - ./docker/mariadb/data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 30s
@@ -21,6 +22,24 @@ services:
     networks:
       - docker-network
     restart: always
+
+  recipot-mariadb-init:
+    image: mariadb:10.8.2
+    depends_on:
+      recipot-mariadb:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: recipot1!11
+    command: >
+      bash -c "
+      until mysqladmin ping -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD --silent; do sleep 1; done &&
+      mysql -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD -e \"CREATE DATABASE IF NOT EXISTS \`recipot_test\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON \`recipot_test\`.* TO 'recipot'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true
+      "
+    networks:
+      - docker-network
+    restart: "no"
+    profiles:
+      - init
 
   recipot-redis:
     container_name: recipot-redis
@@ -45,3 +64,5 @@ services:
 networks:
   docker-network:
     external: true
+
+

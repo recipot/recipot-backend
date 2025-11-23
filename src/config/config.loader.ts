@@ -78,17 +78,13 @@ export const loadConfig = async (env: NodeJS.ProcessEnv = process.env) => {
     },
 
     db: {
-      // 테스트 환경에서는 TEST_DB_* 환경 변수를 우선 사용
-      type: ((env.TEST_DB_TYPE || env.DB_TYPE) ?? 'mysql') as any,
-      host: env.TEST_DB_HOST || env.DB_HOST,
-      port: env.TEST_DB_PORT
-        ? Number(env.TEST_DB_PORT)
-        : env.DB_PORT
-          ? Number(env.DB_PORT)
-          : 3306,
-      username: env.TEST_DB_USERNAME || env.DB_USERNAME,
-      password: env.TEST_DB_PASSWORD || env.DB_PASSWORD,
-      database: env.TEST_DB_DATABASE || env.DB_DATABASE,
+      // 테스트 환경에서는 무조건 'recipot_test' 데이터베이스 사용
+      type: (env.DB_TYPE ?? 'mysql') as any,
+      host: env.DB_HOST,
+      port: env.DB_PORT ? Number(env.DB_PORT) : 3306,
+      username: env.DB_USERNAME,
+      password: env.DB_PASSWORD,
+      database: env.NODE_ENV === 'test' ? 'recipot_test' : env.DB_DATABASE,
     },
 
     frontendUrl: {
