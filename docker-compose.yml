@@ -4,11 +4,13 @@ services:
     image: mariadb:10.8.2
     ports: 
       - "3306:3306"
+    env_file:
+      - .env.production
     environment:
-      MYSQL_DATABASE: recipot
-      MYSQL_USER: recipot
-      MYSQL_PASSWORD: recipot1!11
-      MYSQL_ROOT_PASSWORD: recipot1!11
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Seoul
       MARIADB_CHARACTER_SET_SERVER: utf8mb4
       MARIADB_COLLATION_SERVER: utf8mb4_general_ci

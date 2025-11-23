@@ -4,11 +4,13 @@ services:
     image: mariadb:10.8.2
     ports: 
       - "3306:3306"
+    env_file:
+      - .env.local
     environment:
-      MYSQL_DATABASE: recipot
-      MYSQL_USER: recipot
-      MYSQL_PASSWORD: recipot1!11
-      MYSQL_ROOT_PASSWORD: recipot1!11
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Seoul
     volumes:
       - ./docker/mariadb/data:/var/lib/mysql
@@ -21,6 +23,24 @@ services:
     networks:
       - docker-network
     restart: always
+
+  recipot-mariadb-init:
+    image: mariadb:10.8.2
+    depends_on:
+      recipot-mariadb:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    command: >
+      bash -c "
+      until mysqladmin ping -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD --silent; do sleep 1; done &&
+      mysql -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD -e \"CREATE DATABASE IF NOT EXISTS \`recipot_test\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON \`recipot_test\`.* TO 'recipot'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true
+      "
+    networks:
+      - docker-network
+    restart: "no"
 
   recipot-redis:
     container_name: recipot-redis
@@ -45,3 +65,5 @@ services:
 networks:
   docker-network:
     external: true
+
+

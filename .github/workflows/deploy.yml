@@ -137,8 +137,10 @@ jobs:
             # Infisical 토큰/이미지 태그 주입 후 배포
             export INFISICAL_TOKEN='${{ secrets.INFISICAL_SERVICE_TOKEN }}'
             export IMAGE_TAG='${{ needs.setup.outputs.image-tag }}'
-            infisical run --env=prod --path=/env -- docker compose pull recipot-api
-            infisical run --env=prod --path=/env -- docker compose up -d --no-deps recipot-api
+            # .env.production 파일 생성 (Infisical에서 환경 변수 export)
+            infisical export --env=prod --path=/env --format=dotenv > .env.production
+            docker compose --env-file .env.production pull recipot-api
+            docker compose --env-file .env.production up -d --no-deps recipot-api
           EOF
 
       - name: Write deployment summary

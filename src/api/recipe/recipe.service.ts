@@ -22,6 +22,9 @@ import { Transactional } from 'typeorm-transactional';
 import { CommonCodeService } from '../common-code/common-code.service';
 import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
+import { GetRecipeIngredientsResponseDto } from './dto/get-recipe-ingredients.dto';
+import { GetRecipeSeasoningsResponseDto } from './dto/get-recipe-seasonings.dto';
+import { GetRecipeToolsResponseDto } from './dto/get-recipe-tools.dto';
 import {
   GetRecipeResponseDto,
   RecipeHealthPointDto,
@@ -211,12 +214,11 @@ export class RecipeService {
     userId: number | undefined,
     recipeId: number,
   ): Promise<GetRecipeResponseDto> {
+    await this.validateRecipeExists(recipeId);
+
     const recipe = await this.recipeRepository.findOne({
       where: { id: recipeId },
     });
-    if (!recipe) {
-      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
-    }
 
     const [
       images,
@@ -313,6 +315,141 @@ export class RecipeService {
         })),
       healthPoint,
       isBookmarked: userId ? !!userBookmark : false,
+    };
+  }
+
+  /**
+   * 레시피 존재 여부 확인
+   */
+  private async validateRecipeExists(recipeId: number): Promise<void> {
+    const recipe = await this.recipeRepository.findOne({
+      where: { id: recipeId },
+    });
+    if (!recipe) {
+      throw new CustomException(ERROR_CODES.RECIPE_NOT_FOUND);
+    }
+  }
+
+  async getRecipeIngredients(
+    recipeId: number,
+  ): Promise<GetRecipeIngredientsResponseDto> {
+    await this.validateRecipeExists(recipeId);
+
+    const recipeIngredients = await this.recipeIngredientRepository.find({
+      where: { recipeId },
+    });
+
+    if (recipeIngredients.length === 0) {
+      return {
+        recipeId,
+        ingredients: [],
+      };
+    }
+
+    const ingredientIds = recipeIngredients.map((item) => item.ingredientId);
+    const ingredients = await this.ingredientRepository.find({
+      where: { id: In(ingredientIds) },
+    });
+
+    const ingredientMap = new Map<number, Ingredient>();
+    ingredients.forEach((ingredient) =>
+      ingredientMap.set(ingredient.id, ingredient),
+    );
+
+    const ingredientsList = recipeIngredients.map((recipeIngredient) => {
+      const ingredient = ingredientMap.get(recipeIngredient.ingredientId);
+      return {
+        id: recipeIngredient.id,
+        ingredientId: recipeIngredient.ingredientId,
+        name: ingredient?.name || '',
+        amount: recipeIngredient.amount,
+        isAlternative: recipeIngredient.isAlternative,
+      };
+    });
+
+    return {
+      recipeId,
+      ingredients: ingredientsList,
+    };
+  }
+
+  async getRecipeSeasonings(
+    recipeId: number,
+  ): Promise<GetRecipeSeasoningsResponseDto> {
+    await this.validateRecipeExists(recipeId);
+
+    const recipeSeasonings = await this.recipeSeasoningRepository.find({
+      where: { recipeId },
+    });
+
+    if (recipeSeasonings.length === 0) {
+      return {
+        recipeId,
+        seasonings: [],
+      };
+    }
+
+    const seasoningIds = recipeSeasonings.map((item) => item.seasoningId);
+    const seasonings = await this.seasoningRepository.find({
+      where: { id: In(seasoningIds) },
+    });
+
+    const seasoningMap = new Map<number, Seasoning>();
+    seasonings.forEach((seasoning) =>
+      seasoningMap.set(seasoning.id, seasoning),
+    );
+
+    const seasoningsList = recipeSeasonings.map((recipeSeasoning) => {
+      const seasoning = seasoningMap.get(recipeSeasoning.seasoningId);
+      return {
+        id: recipeSeasoning.id,
+        seasoningId: recipeSeasoning.seasoningId,
+        name: seasoning?.name || '',
+        amount: recipeSeasoning.amount,
+      };
+    });
+
+    return {
+      recipeId,
+      seasonings: seasoningsList,
+    };
+  }
+
+  async getRecipeTools(recipeId: number): Promise<GetRecipeToolsResponseDto> {
+    await this.validateRecipeExists(recipeId);
+
+    const recipeTools = await this.recipeToolRepository.find({
+      where: { recipeId },
+    });
+
+    if (recipeTools.length === 0) {
+      return {
+        recipeId,
+        tools: [],
+      };
+    }
+
+    const toolIds = recipeTools.map((item) => item.toolId);
+    const tools = await this.toolRepository.find({
+      where: { id: In(toolIds) },
+    });
+
+    const toolMap = new Map<number, Tool>();
+    tools.forEach((tool) => toolMap.set(tool.id, tool));
+
+    const toolsList = recipeTools.map((recipeTool) => {
+      const tool = toolMap.get(recipeTool.toolId);
+      return {
+        id: recipeTool.id,
+        toolId: recipeTool.toolId,
+        name: tool?.name || '',
+        imageUrl: tool?.imageUrl || '',
+      };
+    });
+
+    return {
+      recipeId,
+      tools: toolsList,
     };
   }
 

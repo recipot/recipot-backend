@@ -36,9 +36,12 @@ import { UserRole } from '../user/enums/role.enum';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
 import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
+import { GetRecipeIngredientsResponseDto } from './dto/get-recipe-ingredients.dto';
 import { GetRecipeRecommendationRequestDto } from './dto/get-recipe-recommendation-request.dto';
 import { GetRecipeRecommendationResponseDto } from './dto/get-recipe-recommendation-response.dto';
 import { GetRecipeRecommendationConditionsResponseDto } from './dto/get-recipe-recommends.dto';
+import { GetRecipeSeasoningsResponseDto } from './dto/get-recipe-seasonings.dto';
+import { GetRecipeToolsResponseDto } from './dto/get-recipe-tools.dto';
 import { GetRecipeResponseDto } from './dto/get-recipe.dto';
 import { RecipeRecommendationConditionResponseDto } from './dto/recipe-recommend-response.dto';
 import { UpdateRecipeRecommendationConditionDto } from './dto/update-recipe-recommend.dto';
@@ -466,6 +469,75 @@ export class RecipeController {
     @Param('id', ParseIntPipe) recipeId: number,
   ): Promise<GetRecipeResponseDto> {
     return await this.recipeService.getRecipe(undefined, recipeId);
+  }
+
+  @Get(':id/ingredients')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '특정 레시피 식재료 목록 조회',
+    description: '레시피 ID로 해당 레시피에 필요한 식재료 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '조회할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 식재료 목록 조회 성공', {
+    type: GetRecipeIngredientsResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  async getRecipeIngredients(
+    @Param('id', ParseIntPipe) recipeId: number,
+  ): Promise<GetRecipeIngredientsResponseDto> {
+    return await this.recipeService.getRecipeIngredients(recipeId);
+  }
+
+  @Get(':id/seasonings')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '특정 레시피 양념 목록 조회',
+    description: '레시피 ID로 해당 레시피에 필요한 양념 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '조회할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 양념 목록 조회 성공', {
+    type: GetRecipeSeasoningsResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  async getRecipeSeasonings(
+    @Param('id', ParseIntPipe) recipeId: number,
+  ): Promise<GetRecipeSeasoningsResponseDto> {
+    return await this.recipeService.getRecipeSeasonings(recipeId);
+  }
+
+  @Get(':id/tools')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '특정 레시피 조리도구 목록 조회',
+    description: '레시피 ID로 해당 레시피에 필요한 조리도구 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '조회할 레시피 ID',
+    type: 'number',
+    example: 1,
+  })
+  @ApiSuccessResponse('레시피 조리도구 목록 조회 성공', {
+    type: GetRecipeToolsResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
+  async getRecipeTools(
+    @Param('id', ParseIntPipe) recipeId: number,
+  ): Promise<GetRecipeToolsResponseDto> {
+    return await this.recipeService.getRecipeTools(recipeId);
   }
 
   @Get(':id')
