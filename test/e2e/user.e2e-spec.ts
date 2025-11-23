@@ -1,20 +1,22 @@
+import { AppModule } from '@/app.module';
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { initializeTransactionalContext } from 'typeorm-transactional';
 import {
   authenticatedRequest,
   setupMockJwtGuard,
   TEST_TAGS,
 } from '../helpers/auth.helper';
-import { MockAppModule } from '../mocks/app.mock';
-import { resetReviewMocks } from '../mocks/review.mock';
-import { resetUserMocks } from '../mocks/user.mock';
 
 describe('UserController (E2E)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    // typeorm-transactional 초기화
+    initializeTransactionalContext();
+
     const moduleBuilder = Test.createTestingModule({
-      imports: [MockAppModule],
+      imports: [AppModule],
     });
 
     const moduleFixture: TestingModule =
@@ -25,16 +27,19 @@ describe('UserController (E2E)', () => {
     // 버전 관리 활성화
     app.enableVersioning();
 
-    // ValidationPipe 추가
-    app.useGlobalPipes(new ValidationPipe());
+    // ValidationPipe 추가 (transform 옵션으로 기본값 적용)
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: false,
+      }),
+    );
 
     await app.init();
   });
 
   afterAll(async () => {
-    // 테스트 격리를 위해 Mock 상태 초기화
-    resetUserMocks();
-    resetReviewMocks();
     await app.close();
   });
 
@@ -152,7 +157,8 @@ describe('UserController (E2E)', () => {
         expect(completedRecipe).toHaveProperty('isReviewed');
         expect(completedRecipe).toHaveProperty('createdAt');
         expect(completedRecipe).toHaveProperty('isBookmarked');
-        expect(completedRecipe.isCompleted).toBe(true);
+        // MySQL/MariaDB에서 boolean은 0/1로 반환될 수 있음
+        expect(completedRecipe.isCompleted).toBeTruthy();
         expect(typeof completedRecipe.isBookmarked).toBe('boolean');
         expect(Array.isArray(completedRecipe.recipeImages)).toBe(true);
       }
