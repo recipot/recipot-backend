@@ -11,7 +11,7 @@
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/src/$1"
   },
-  "setupFiles": ["dotenv/config"],
+  "setupFiles": ["dotenv/config", "<rootDir>/test/setup-crypto.ts"],
   "forceExit": true,
   "detectOpenHandles": true,
   "moduleDirectories": [
