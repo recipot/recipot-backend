@@ -10,19 +10,10 @@ import { Repository } from 'typeorm';
 export const mockAccessToken = 'mock-jwt-token-for-testing';
 export const mockAdminAccessToken = 'mock-admin-jwt-token-for-testing';
 
-// 토큰을 사용자 ID로 매핑
-// 일반 토큰은 user1 (ID 1), ADMIN 토큰은 ADMIN 사용자 (ID 2)
-// 실제 사용자는 데이터베이스에서 조회하여 role을 가져옵니다.
-const getUserIdFromToken = (token: string): number | null => {
-  if (token === mockAccessToken) {
-    return 1; // user1
-  }
-  if (token === mockAdminAccessToken) {
-    return 2; // ADMIN 사용자
-  }
-  // 토큰에서 숫자 추출 시도 (예: "user-1" -> 1)
-  const match = token.match(/\d+/);
-  return match ? parseInt(match[0], 10) : null;
+// 토큰과 role 매핑
+const TOKEN_ROLE_MAP: Record<string, UserRole> = {
+  [mockAccessToken]: UserRole.GENERAL,
+  [mockAdminAccessToken]: UserRole.ADMIN,
 };
 
 /**
@@ -74,12 +65,20 @@ export const TEST_TAGS = {
 } as const;
 
 /**
- * 테스트용 JWT 가드 모킹 함수
- * 모든 E2E 테스트에서 공통으로 사용
- * 실제 데이터베이스에서 사용자를 조회하여 role을 가져옵니다.
+ * 토큰에서 role을 가져옵니다.
  */
-export const createMockJwtGuard = (moduleRef: TestingModule) => ({
-  canActivate: async (context) => {
+const getRoleFromToken = (token: string): UserRole | null => {
+  return TOKEN_ROLE_MAP[token] || null;
+};
+
+/**
+ * 공통 가드 로직: 토큰에서 사용자를 조회하여 request.user에 설정
+ */
+const createGuardCanActivate = (
+  userRepository: Repository<User>,
+  context: any,
+): (() => Promise<boolean>) => {
+  return async () => {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
@@ -88,31 +87,19 @@ export const createMockJwtGuard = (moduleRef: TestingModule) => ({
       throw new UnauthorizedException('인증이 필요합니다.');
     }
 
-    // UserRepository 가져오기
-    const userRepository = moduleRef.get<Repository<User>>(
-      getRepositoryToken(User),
-    );
-
     // 토큰 추출
     const token = authHeader.replace('Bearer ', '');
 
-    let user: User | null = null;
-
-    // ADMIN 토큰인 경우 ADMIN role을 가진 사용자 조회
-    if (token === mockAdminAccessToken) {
-      user = await userRepository.findOne({
-        where: { role: UserRole.ADMIN },
-      });
-    } else {
-      // 일반 토큰인 경우 사용자 ID로 조회
-      const userId = getUserIdFromToken(token);
-      if (!userId) {
-        throw new UnauthorizedException('유효하지 않은 토큰입니다.');
-      }
-      user = await userRepository.findOne({
-        where: { id: userId },
-      });
+    // 토큰에서 role 가져오기
+    const role = getRoleFromToken(token);
+    if (!role) {
+      throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
+
+    // 데이터베이스에서 해당 role을 가진 사용자 조회
+    const user = await userRepository.findOne({
+      where: { role },
+    });
 
     if (!user) {
       throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
@@ -127,6 +114,20 @@ export const createMockJwtGuard = (moduleRef: TestingModule) => ({
     };
 
     return true;
+  };
+};
+
+/**
+ * 테스트용 JWT 가드 모킹 함수
+ * 모든 E2E 테스트에서 공통으로 사용
+ * 실제 데이터베이스에서 사용자를 조회하여 role을 가져옵니다.
+ */
+export const createMockJwtGuard = (moduleRef: TestingModule) => ({
+  canActivate: async (context: any) => {
+    const userRepository = moduleRef.get<Repository<User>>(
+      getRepositoryToken(User),
+    );
+    return createGuardCanActivate(userRepository, context)();
   },
 });
 
@@ -147,53 +148,10 @@ export const setupMockJwtGuard = async (
         throw new Error('Module reference not available');
       }
 
-      const request = context.switchToHttp().getRequest();
-      const authHeader = request.headers.authorization;
-
-      // 인증 헤더가 없으면 401 Unauthorized 예외 발생
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('인증이 필요합니다.');
-      }
-
-      // UserRepository 가져오기
       const userRepository = currentModuleRef.get<Repository<User>>(
         getRepositoryToken(User),
       );
-
-      // 토큰 추출
-      const token = authHeader.replace('Bearer ', '');
-
-      let user: User | null = null;
-
-      // ADMIN 토큰인 경우 ADMIN role을 가진 사용자 조회
-      if (token === mockAdminAccessToken) {
-        user = await userRepository.findOne({
-          where: { role: UserRole.ADMIN },
-        });
-      } else {
-        // 일반 토큰인 경우 사용자 ID로 조회
-        const userId = getUserIdFromToken(token);
-        if (!userId) {
-          throw new UnauthorizedException('유효하지 않은 토큰입니다.');
-        }
-        user = await userRepository.findOne({
-          where: { id: userId },
-        });
-      }
-
-      if (!user) {
-        throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
-      }
-
-      // request.user에 사용자 정보 설정
-      request.user = {
-        sub: user.id,
-        email: user.email,
-        username: user.nickname,
-        role: user.role,
-      };
-
-      return true;
+      return createGuardCanActivate(userRepository, context)();
     },
   });
 
