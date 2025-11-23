@@ -19,8 +19,7 @@ describe('UserController (E2E)', () => {
       imports: [AppModule],
     });
 
-    const moduleFixture: TestingModule =
-      await setupMockJwtGuard(moduleBuilder).compile();
+    const moduleFixture: TestingModule = await setupMockJwtGuard(moduleBuilder);
 
     app = moduleFixture.createNestApplication();
 

@@ -1,7 +1,7 @@
+import { UserRole } from '@/api/user/enums/role.enum';
 import { DataSource } from 'typeorm';
 import { SocialLogin } from '../entity/social-login.entity';
 import { User } from '../entity/user.entity';
-import { UserRole } from '@/api/user/enums/role.enum';
 
 export class UserSeed {
   constructor(private dataSource: DataSource) {}
@@ -34,6 +34,15 @@ export class UserSeed {
       role: UserRole.GENERAL,
     };
 
+    const adminData = {
+      email: 'admin@example.com',
+      profileImageUrl: 'https://example.com/profile-admin.jpg',
+      nickname: '관리자',
+      recipeCompleteCount: 0,
+      isFirstEntry: false,
+      role: UserRole.ADMIN,
+    };
+
     // 기존 사용자 확인 및 생성
     let savedUser1 = await userRepository.findOne({
       where: { email: user1Data.email },
@@ -51,6 +60,16 @@ export class UserSeed {
     if (!savedUser2) {
       const user2 = userRepository.create(user2Data);
       savedUser2 = await userRepository.save(user2);
+    }
+
+    // ADMIN 사용자 확인 및 생성
+    let savedAdmin = await userRepository.findOne({
+      where: { email: adminData.email },
+    });
+
+    if (!savedAdmin) {
+      const admin = userRepository.create(adminData);
+      savedAdmin = await userRepository.save(admin);
     }
 
     // social_logins 테이블에 데이터 삽입

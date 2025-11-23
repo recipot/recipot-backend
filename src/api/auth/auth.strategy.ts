@@ -1,10 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { Strategy } from 'passport-jwt';
+import { Repository } from 'typeorm';
 
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { ConfigService } from '@/config/config.service';
+import { User } from '@/database/entity/user.entity';
 import { AuthService } from './auth.service';
 
 @Injectable()
@@ -12,6 +15,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly config: ConfigService,
     private readonly authService: AuthService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {
     super({
       jwtFromRequest: JwtStrategy.extractJwtFromCookieOrHeader,
@@ -60,10 +65,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // JWT 서비스를 통해 토큰 검증
       const verifiedPayload = await this.authService.verifyAccessToken(token);
 
-      // 검증된 페이로드 반환
+      // 데이터베이스에서 사용자 조회하여 role 가져오기
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException(
+          ERROR_CODES.AUTH_TOKEN_INFO_FAILED.message,
+        );
+      }
+
+      // 검증된 페이로드 반환 (실제 DB에서 조회한 role 사용)
       return {
         sub: parseInt(verifiedPayload.sub),
-        role: payload.role,
+        role: user.role,
         iat: verifiedPayload.iat,
         exp: verifiedPayload.exp,
       };

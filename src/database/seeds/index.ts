@@ -17,17 +17,18 @@ export class DatabaseSeeder {
     const commonCodeSeed = new CommonCodeSeed(this.dataSource);
     await commonCodeSeed.run();
 
-    // UserSeed 실행
-    const userSeed = new UserSeed(this.dataSource);
-    await userSeed.run();
-
     // ConditionSeed 실행
     const conditionSeed = new ConditionSeed(this.dataSource);
     await conditionSeed.run();
 
-    // RecipeSeed 실행 (테스트 환경에서만)
+    // UserSeed, RecipeSeed 실행 (테스트 환경에서만)
     if (process.env.NODE_ENV === 'test') {
-      this.logger.log('Running RecipeSeed for test environment...');
+      this.logger.log(
+        'Running UserSeed and RecipeSeed for test environment...',
+      );
+      const userSeed = new UserSeed(this.dataSource);
+      await userSeed.run();
+
       const recipeSeed = new RecipeSeed(this.dataSource);
       await recipeSeed.run();
     }

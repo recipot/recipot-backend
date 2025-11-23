@@ -3,6 +3,7 @@ import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import {
+  authenticatedAdminRequest,
   authenticatedRequest,
   setupMockJwtGuard,
   TEST_TAGS,
@@ -19,8 +20,7 @@ describe('RecipeRecommendation (E2E)', () => {
       imports: [AppModule],
     });
 
-    const moduleFixture: TestingModule =
-      await setupMockJwtGuard(moduleBuilder).compile();
+    const moduleFixture: TestingModule = await setupMockJwtGuard(moduleBuilder);
 
     app = moduleFixture.createNestApplication();
     app.enableVersioning();
@@ -192,24 +192,25 @@ describe('RecipeRecommendation (E2E)', () => {
   });
 
   describe('캐시 무효화', () => {
-    // ADMIN 권한이 필요하므로 스킵
-    it.skip(`${TEST_TAGS.AUTHENTICATED} 전체 캐시 무효화`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 전체 캐시 무효화`, async () => {
       // 추천 조회로 캐시 생성
       await authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
         .send({ conditionId: 1, pantryIds: [1, 2, 3], page: 1, pageSize: 3 })
         .expect(HttpStatus.CREATED);
 
       // 전체 캐시 무효화 (ADMIN 권한 필요)
-      const response = await authenticatedRequest(
+      const response = await authenticatedAdminRequest(
         app,
         'post',
         '/v1/recipes/recommendations/cache/invalidate',
       ).expect(HttpStatus.CREATED);
 
-      expect(response.body.data.message).toContain('캐시 무효화 완료');
+      expect(response.body.data.message).toContain(
+        '추천 캐시가 무효화되었습니다',
+      );
     });
 
-    it.skip(`${TEST_TAGS.AUTHENTICATED} 특정 조건만 캐시 무효화`, async () => {
+    it(`${TEST_TAGS.AUTHENTICATED} 특정 조건만 캐시 무효화`, async () => {
       // 조건 1과 2에 대한 캐시 생성
       await authenticatedRequest(app, 'post', '/v1/recipes/recommendations')
         .send({ conditionId: 1, pantryIds: [1], page: 1, pageSize: 3 })
@@ -220,13 +221,13 @@ describe('RecipeRecommendation (E2E)', () => {
         .expect(HttpStatus.CREATED);
 
       // 조건 1만 무효화 (ADMIN 권한 필요)
-      const response = await authenticatedRequest(
+      const response = await authenticatedAdminRequest(
         app,
         'post',
         '/v1/recipes/recommendations/cache/invalidate/1',
       ).expect(HttpStatus.CREATED);
 
-      expect(response.body.data.message).toContain('조건 1');
+      expect(response.body.data.message).toContain('컨디션 1');
     });
   });
 
