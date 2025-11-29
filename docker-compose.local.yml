@@ -16,10 +16,10 @@ services:
       - ./docker/mariadb/data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 10s
     networks:
       - docker-network
     restart: always
@@ -28,7 +28,7 @@ services:
     image: mariadb:10.8.2
     depends_on:
       recipot-mariadb:
-        condition: service_healthy
+        condition: service_started
     env_file:
       - .env.local
     environment:
