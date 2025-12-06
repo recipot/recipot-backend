@@ -37,6 +37,7 @@ import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-
 import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
 import { GetRecipeIngredientsResponseDto } from './dto/get-recipe-ingredients.dto';
+import { GetRecipeListResponseDto } from './dto/get-recipe-list.dto';
 import { GetRecipeRecommendationRequestDto } from './dto/get-recipe-recommendation-request.dto';
 import { GetRecipeRecommendationResponseDto } from './dto/get-recipe-recommendation-response.dto';
 import { GetRecipeRecommendationConditionsResponseDto } from './dto/get-recipe-recommends.dto';
@@ -658,6 +659,25 @@ export class RecipeController {
   ): Promise<GetRecipeResponseDto> {
     const userId = req.user.sub;
     return await this.recipeService.getRecipe(userId, recipeId);
+  }
+
+  // 어드민용 레시피 목록 조회
+  @Get('')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 레시피 목록 조회',
+    description:
+      '어드민용 레시피 목록을 조회합니다. 레시피 타이틀, 이미지, 조리시간, 컨디션, 한줄 카피, 조리도구, 재료, 양념, 단계별 정보를 포함합니다. 모든 레시피를 반환합니다.',
+  })
+  @ApiSuccessResponse('레시피 목록 조회 성공', {
+    type: GetRecipeListResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  async getRecipeList(): Promise<GetRecipeListResponseDto> {
+    return await this.recipeService.getRecipeList();
   }
 
   // 레시피 추천 관련 엔드포인트들
