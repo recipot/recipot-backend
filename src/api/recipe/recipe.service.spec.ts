@@ -823,20 +823,20 @@ describe('RecipeService', () => {
       imageUrl: 'https://example.com/image.jpg',
       ingredients: [
         {
-          ingredientId: 1,
+          id: 1,
           amount: '100g',
           isAlternative: false,
         },
       ],
       seasonings: [
         {
-          seasoningId: 1,
+          id: 1,
           amount: '1큰술',
         },
       ],
       tools: [
         {
-          toolId: 1,
+          id: 1,
         },
       ],
       steps: [

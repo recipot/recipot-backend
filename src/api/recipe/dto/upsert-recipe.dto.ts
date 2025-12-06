@@ -19,7 +19,7 @@ export class UpsertRecipeToolDto {
   })
   @IsInt()
   @IsNotEmpty()
-  toolId: number;
+  id: number;
 }
 
 export class UpsertRecipeIngredientDto {
@@ -30,7 +30,7 @@ export class UpsertRecipeIngredientDto {
   })
   @IsInt()
   @IsNotEmpty()
-  ingredientId: number;
+  id: number;
 
   @ApiProperty({
     description: '필요량',
@@ -58,7 +58,7 @@ export class UpsertRecipeSeasoningDto {
   })
   @IsInt()
   @IsNotEmpty()
-  seasoningId: number;
+  id: number;
 
   @ApiProperty({
     description: '필요량',

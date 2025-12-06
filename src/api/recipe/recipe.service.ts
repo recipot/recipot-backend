@@ -1235,18 +1235,18 @@ export class RecipeService {
             : undefined,
           ingredients:
             upsertRecipeDto.ingredients?.map((ing) => ({
-              ingredientId: ing.ingredientId,
+              ingredientId: ing.id,
               amount: ing.amount,
               isAlternative: ing.isAlternative,
             })) || [],
           seasonings:
             upsertRecipeDto.seasonings?.map((sea) => ({
-              seasoningId: sea.seasoningId,
+              seasoningId: sea.id,
               amount: sea.amount,
             })) || [],
           tools:
             upsertRecipeDto.tools?.map((tool) => ({
-              toolId: tool.toolId,
+              toolId: tool.id,
             })) || [],
           steps:
             upsertRecipeDto.steps?.map((step) => ({
@@ -1270,18 +1270,18 @@ export class RecipeService {
             : undefined,
           ingredients:
             upsertRecipeDto.ingredients?.map((ing) => ({
-              ingredientId: ing.ingredientId,
+              ingredientId: ing.id,
               amount: ing.amount,
               isAlternative: ing.isAlternative,
             })) || [],
           seasonings:
             upsertRecipeDto.seasonings?.map((sea) => ({
-              seasoningId: sea.seasoningId,
+              seasoningId: sea.id,
               amount: sea.amount,
             })) || [],
           tools:
             upsertRecipeDto.tools?.map((tool) => ({
-              toolId: tool.toolId,
+              toolId: tool.id,
             })) || [],
           steps:
             upsertRecipeDto.steps?.map((step) => ({
