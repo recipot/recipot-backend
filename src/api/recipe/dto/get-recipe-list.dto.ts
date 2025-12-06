@@ -15,13 +15,13 @@ export class RecipeListToolDto {
   })
   name: string;
 
-  @ApiProperty({
-    description: '조리도구 이미지 주소',
-    example: 'https://example.com/pan.jpg',
-    nullable: true,
-    type: 'string',
-  })
-  imageUrl: string | null;
+  // TODO: 조리도구 이미지 nullable로 가져갈 것인지 확인 후 추가, 당장 어드민에는 불필요
+  // @ApiProperty({
+  //   description: '조리도구 이미지 주소',
+  //   example: 'https://example.com/pan.jpg',
+  //   type: 'string',
+  // })
+  // imageUrl: string;
 }
 
 export class RecipeListIngredientDto {
