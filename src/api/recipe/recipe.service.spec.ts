@@ -16,7 +16,7 @@ import { Tool } from '@/database/entity/tool.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { CommonCodeService } from '../common-code/common-code.service';
 import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
@@ -519,6 +519,291 @@ describe('RecipeService', () => {
           (ing) => ing.id === 1 && !ing.isAlternative,
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe('getRecipeList', () => {
+    const mockRecipes: Recipe[] = [
+      {
+        id: 1,
+        title: '레시피 1',
+        description: '설명 1',
+        duration: 15,
+        deletedAt: null,
+      } as Recipe,
+      {
+        id: 2,
+        title: '레시피 2',
+        description: '설명 2',
+        duration: 20,
+        deletedAt: null,
+      } as Recipe,
+    ];
+
+    const mockImages: RecipeImage[] = [
+      {
+        id: 1,
+        recipeId: 1,
+        imageUrl: 'https://example.com/image1.jpg',
+      } as RecipeImage,
+      {
+        id: 2,
+        recipeId: 2,
+        imageUrl: 'https://example.com/image2.jpg',
+      } as RecipeImage,
+    ];
+
+    const mockRecipeIngredients: RecipeIngredient[] = [
+      {
+        id: 1,
+        recipeId: 1,
+        ingredientId: 1,
+        amount: '100g',
+        isAlternative: false,
+      } as RecipeIngredient,
+      {
+        id: 2,
+        recipeId: 1,
+        ingredientId: 2,
+        amount: '2개',
+        isAlternative: true,
+      } as RecipeIngredient,
+    ];
+
+    const mockRecipeSeasonings: RecipeSeasoning[] = [
+      {
+        id: 1,
+        recipeId: 1,
+        seasoningId: 1,
+        amount: '1큰술',
+      } as RecipeSeasoning,
+    ];
+
+    const mockRecipeTools: RecipeTool[] = [
+      {
+        id: 1,
+        recipeId: 1,
+        toolId: 1,
+      } as RecipeTool,
+    ];
+
+    const mockSteps: RecipeStep[] = [
+      {
+        id: 1,
+        recipeId: 1,
+        orderNum: 1,
+        summary: '요약 1',
+        content: '내용 1',
+        imageUrl: 'https://example.com/step1.jpg',
+      } as RecipeStep,
+      {
+        id: 2,
+        recipeId: 1,
+        orderNum: 2,
+        summary: '요약 2',
+        content: '내용 2',
+        imageUrl: null,
+      } as RecipeStep,
+    ];
+
+    const mockRecipeRecommendationConditions: RecipeRecommendationCondition[] =
+      [
+        {
+          id: 1,
+          recipeId: 1,
+          conditionId: 1,
+          priorityScore: 1.0,
+        } as RecipeRecommendationCondition,
+      ];
+
+    const mockIngredients: Ingredient[] = [
+      {
+        id: 1,
+        name: '재료1',
+      } as Ingredient,
+      {
+        id: 2,
+        name: '재료2',
+      } as Ingredient,
+    ];
+
+    const mockSeasonings: Seasoning[] = [
+      {
+        id: 1,
+        name: '양념1',
+      } as Seasoning,
+    ];
+
+    const mockTools: Tool[] = [
+      {
+        id: 1,
+        name: '도구1',
+        imageUrl: 'https://example.com/tool1.jpg',
+      } as Tool,
+    ];
+
+    const mockConditions: Condition[] = [
+      {
+        id: 1,
+        name: '그럭저럭',
+      } as Condition,
+    ];
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('레시피 목록이 없으면 빈 배열을 반환해야 함', async () => {
+      recipeRepository.find.mockResolvedValue([]);
+
+      const result = await service.getRecipeList();
+
+      expect(result.items).toEqual([]);
+      expect(recipeRepository.find).toHaveBeenCalledWith({
+        where: { deletedAt: IsNull() },
+        order: { id: 'ASC' },
+      });
+    });
+
+    it('레시피 목록을 정상적으로 반환해야 함', async () => {
+      recipeRepository.find.mockResolvedValue(mockRecipes);
+      recipeImageRepository.find.mockResolvedValue(mockImages);
+      recipeIngredientRepository.find.mockResolvedValue(mockRecipeIngredients);
+      recipeSeasoningRepository.find.mockResolvedValue(mockRecipeSeasonings);
+      recipeToolRepository.find.mockResolvedValue(mockRecipeTools);
+      recipeStepRepository.find.mockResolvedValue(mockSteps);
+      recipeRecommendationConditionRepository.find.mockResolvedValue(
+        mockRecipeRecommendationConditions,
+      );
+      ingredientRepository.find.mockResolvedValue(mockIngredients);
+      seasoningRepository.find.mockResolvedValue(mockSeasonings);
+      toolRepository.find.mockResolvedValue(mockTools);
+      conditionRepository.find.mockResolvedValue(mockConditions);
+
+      const result = await service.getRecipeList();
+
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].id).toBe(1);
+      expect(result.items[0].title).toBe('레시피 1');
+      expect(result.items[0].imageUrl).toBe('https://example.com/image1.jpg');
+      expect(result.items[0].duration).toBe(15);
+      expect(result.items[0].condition).toBe('그럭저럭');
+      expect(result.items[0].description).toBe('설명 1');
+      expect(result.items[0].tools).toHaveLength(1);
+      expect(result.items[0].tools[0].name).toBe('도구1');
+      expect(result.items[0].ingredients).toHaveLength(2);
+      expect(result.items[0].ingredients[0].name).toBe('재료1');
+      expect(result.items[0].ingredients[0].amount).toBe('100g');
+      expect(result.items[0].ingredients[0].isAlternative).toBe(false);
+      expect(result.items[0].seasonings).toHaveLength(1);
+      expect(result.items[0].seasonings[0].name).toBe('양념1');
+      expect(result.items[0].steps).toHaveLength(2);
+      expect(result.items[0].steps[0].orderNum).toBe(1);
+      expect(result.items[0].steps[0].summary).toBe('요약 1');
+      expect(result.items[0].steps[0].content).toBe('내용 1');
+      expect(result.items[0].steps[0].imageUrl).toBe(
+        'https://example.com/step1.jpg',
+      );
+    });
+
+    it('레시피가 이미지가 없으면 imageUrl이 null이어야 함', async () => {
+      const recipesWithoutImages = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 15,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(recipesWithoutImages);
+      recipeImageRepository.find.mockResolvedValue([]);
+      recipeIngredientRepository.find.mockResolvedValue([]);
+      recipeSeasoningRepository.find.mockResolvedValue([]);
+      recipeToolRepository.find.mockResolvedValue([]);
+      recipeStepRepository.find.mockResolvedValue([]);
+      recipeRecommendationConditionRepository.find.mockResolvedValue([]);
+      ingredientRepository.find.mockResolvedValue([]);
+      seasoningRepository.find.mockResolvedValue([]);
+      toolRepository.find.mockResolvedValue([]);
+      conditionRepository.find.mockResolvedValue([]);
+
+      const result = await service.getRecipeList();
+
+      expect(result.items[0].imageUrl).toBeNull();
+    });
+
+    it('레시피가 컨디션이 없으면 condition이 null이어야 함', async () => {
+      const recipesWithoutCondition = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 15,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(recipesWithoutCondition);
+      recipeImageRepository.find.mockResolvedValue([]);
+      recipeIngredientRepository.find.mockResolvedValue([]);
+      recipeSeasoningRepository.find.mockResolvedValue([]);
+      recipeToolRepository.find.mockResolvedValue([]);
+      recipeStepRepository.find.mockResolvedValue([]);
+      recipeRecommendationConditionRepository.find.mockResolvedValue([]);
+      ingredientRepository.find.mockResolvedValue([]);
+      seasoningRepository.find.mockResolvedValue([]);
+      toolRepository.find.mockResolvedValue([]);
+      conditionRepository.find.mockResolvedValue([]);
+
+      const result = await service.getRecipeList();
+
+      expect(result.items[0].condition).toBeNull();
+    });
+
+    it('레시피가 ID 오름차순으로 정렬되어야 함', async () => {
+      const recipes = [
+        {
+          id: 3,
+          title: '레시피 3',
+          description: '설명 3',
+          duration: 25,
+          deletedAt: null,
+        } as Recipe,
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 15,
+          deletedAt: null,
+        } as Recipe,
+        {
+          id: 2,
+          title: '레시피 2',
+          description: '설명 2',
+          duration: 20,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(recipes);
+      recipeImageRepository.find.mockResolvedValue([]);
+      recipeIngredientRepository.find.mockResolvedValue([]);
+      recipeSeasoningRepository.find.mockResolvedValue([]);
+      recipeToolRepository.find.mockResolvedValue([]);
+      recipeStepRepository.find.mockResolvedValue([]);
+      recipeRecommendationConditionRepository.find.mockResolvedValue([]);
+      ingredientRepository.find.mockResolvedValue([]);
+      seasoningRepository.find.mockResolvedValue([]);
+      toolRepository.find.mockResolvedValue([]);
+      conditionRepository.find.mockResolvedValue([]);
+
+      const result = await service.getRecipeList();
+
+      expect(result.items[0].id).toBe(3);
+      expect(result.items[1].id).toBe(1);
+      expect(result.items[2].id).toBe(2);
     });
   });
 
