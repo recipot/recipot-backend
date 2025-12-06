@@ -521,4 +521,194 @@ describe('RecipeService', () => {
       ).toBeTruthy();
     });
   });
+
+  describe('deleteRecipes', () => {
+    const recipeIds = [1, 2, 3];
+
+    it('레시피 일괄 삭제 성공 시 캐시 무효화를 호출해야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+        {
+          id: 2,
+          title: '레시피 2',
+          description: '설명 2',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+        {
+          id: 3,
+          title: '레시피 3',
+          description: '설명 3',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockResolvedValue({ affected: 3 } as any);
+
+      const result = await service.deleteRecipes(recipeIds);
+
+      expect(result.deletedCount).toBe(3);
+      expect(result.deletedIds).toEqual([1, 2, 3]);
+      expect(result.failedIds).toEqual([]);
+      expect(recipeRepository.softDelete).toHaveBeenCalledWith([1, 2, 3]);
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).toHaveBeenCalledTimes(3);
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).toHaveBeenCalledWith(1);
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).toHaveBeenCalledWith(2);
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).toHaveBeenCalledWith(3);
+    });
+
+    it('존재하지 않는 레시피 ID는 failedIds에 포함되어야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.deleteRecipes([1, 2, 3, 999]);
+
+      expect(result.deletedCount).toBe(1);
+      expect(result.deletedIds).toEqual([1]);
+      expect(result.failedIds).toEqual([2, 3, 999]);
+      expect(recipeRepository.softDelete).toHaveBeenCalledWith([1]);
+    });
+
+    it('중복된 ID는 자동으로 제거되어야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.deleteRecipes([1, 1, 1, 2, 2]);
+
+      expect(result.deletedCount).toBe(1);
+      expect(result.deletedIds).toEqual([1]);
+      expect(result.failedIds).toEqual([2]);
+      expect(recipeRepository.softDelete).toHaveBeenCalledWith([1]);
+    });
+
+    it('존재하는 레시피가 없으면 빈 결과를 반환해야 함', async () => {
+      recipeRepository.find.mockResolvedValue([]);
+
+      const result = await service.deleteRecipes([999, 1000]);
+
+      expect(result.deletedCount).toBe(0);
+      expect(result.deletedIds).toEqual([]);
+      expect(result.failedIds).toEqual([999, 1000]);
+      expect(recipeRepository.softDelete).not.toHaveBeenCalled();
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('빈 배열이면 에러를 발생시켜야 함', async () => {
+      await expect(service.deleteRecipes([])).rejects.toThrow(CustomException);
+
+      expect(recipeRepository.softDelete).not.toHaveBeenCalled();
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('유효하지 않은 ID는 필터링되어야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.deleteRecipes([
+        1,
+        -1,
+        0,
+        1.5,
+        null,
+        undefined,
+      ] as any);
+
+      expect(result.deletedCount).toBe(1);
+      expect(result.deletedIds).toEqual([1]);
+      expect(recipeRepository.softDelete).toHaveBeenCalledWith([1]);
+    });
+
+    it('이미 삭제된 레시피는 제외되어야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      // 삭제된 레시피는 find에서 제외됨 (deletedAt: IsNull() 조건)
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.deleteRecipes([1, 2]);
+
+      expect(result.deletedCount).toBe(1);
+      expect(result.deletedIds).toEqual([1]);
+      expect(result.failedIds).toEqual([2]);
+    });
+
+    it('삭제 실패 시 에러를 발생시켜야 함', async () => {
+      const existingRecipes = [
+        {
+          id: 1,
+          title: '레시피 1',
+          description: '설명 1',
+          duration: 30,
+          deletedAt: null,
+        } as Recipe,
+      ];
+
+      recipeRepository.find.mockResolvedValue(existingRecipes);
+      recipeRepository.softDelete.mockRejectedValue(new Error('DB 에러'));
+
+      await expect(service.deleteRecipes([1])).rejects.toThrow(CustomException);
+
+      expect(
+        recipeRecommendationService.invalidateCacheByRecipeId,
+      ).not.toHaveBeenCalled();
+    });
+  });
 });
