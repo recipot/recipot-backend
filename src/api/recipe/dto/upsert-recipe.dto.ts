@@ -47,6 +47,7 @@ export class UpsertRecipeIngredientDto {
     type: 'boolean',
   })
   @IsBoolean()
+  @IsNotEmpty()
   isAlternative: boolean;
 }
 
@@ -150,12 +151,11 @@ export class UpsertRecipeDto {
   @ApiProperty({
     description: '유저 컨디션 ID',
     example: 1,
-    nullable: true,
     type: 'number',
   })
   @IsInt()
-  @IsOptional()
-  conditionId?: number | null;
+  @IsNotEmpty()
+  conditionId: number;
 
   @ApiProperty({
     description: '한줄 카피',

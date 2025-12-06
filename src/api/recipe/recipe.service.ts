@@ -1222,6 +1222,10 @@ export class RecipeService {
     try {
       const conditionId = upsertRecipeDto.conditionId;
 
+      if (!conditionId) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
       // id가 있으면 수정, 없으면 생성
       if (upsertRecipeDto.id) {
         // UpdateRecipeDto로 변환
@@ -1229,7 +1233,7 @@ export class RecipeService {
           title: upsertRecipeDto.title,
           description: upsertRecipeDto.description,
           duration: upsertRecipeDto.duration,
-          conditionId: conditionId!,
+          conditionId: conditionId,
           images: upsertRecipeDto.imageUrl
             ? [{ imageUrl: upsertRecipeDto.imageUrl }]
             : undefined,
@@ -1264,7 +1268,7 @@ export class RecipeService {
           title: upsertRecipeDto.title,
           description: upsertRecipeDto.description,
           duration: upsertRecipeDto.duration,
-          conditionId: conditionId!,
+          conditionId: conditionId,
           images: upsertRecipeDto.imageUrl
             ? [{ imageUrl: upsertRecipeDto.imageUrl }]
             : undefined,
