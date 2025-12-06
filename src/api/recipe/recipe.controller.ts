@@ -35,7 +35,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../user/enums/role.enum';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
 import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
-import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
+import { UpdateRecipeDto } from './dto/create-recipe.dto';
 import {
   DeleteRecipesRequestDto,
   DeleteRecipesResponseDto,
@@ -50,6 +50,10 @@ import { GetRecipeToolsResponseDto } from './dto/get-recipe-tools.dto';
 import { GetRecipeResponseDto } from './dto/get-recipe.dto';
 import { RecipeRecommendationConditionResponseDto } from './dto/recipe-recommend-response.dto';
 import { UpdateRecipeRecommendationConditionDto } from './dto/update-recipe-recommend.dto';
+import {
+  UpsertRecipeDto,
+  UpsertRecipesResponseDto,
+} from './dto/upsert-recipe.dto';
 import { RecipeRecommendationConditionService } from './recipe-recommend.service';
 import { RecipeService } from './recipe.service';
 import { FileImportService } from './services/file-import.service';
@@ -66,184 +70,6 @@ export class RecipeController {
     private readonly recipeRecommendationService: RecipeRecommendationService,
     private readonly fileImportService: FileImportService,
   ) {}
-
-  @Post()
-  @UseGuards(JwtGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('Authorization')
-  @ApiOperation({
-    summary: '[어드민] 레시피 생성',
-    description:
-      '새로운 레시피를 생성합니다. 레시피와 함께 이미지, 재료, 양념, 조리도구, 요리순서, 건강포인트를 함께 등록할 수 있습니다.',
-  })
-  @ApiBody({
-    description:
-      '생성할 레시피의 데이터 (이미지, 재료, 양념, 조리도구, 요리순서, 건강포인트 포함)',
-    type: CreateRecipeDto,
-  })
-  @ApiSuccessResponse('레시피 생성 성공', {
-    type: 'object',
-    properties: {
-      id: { type: 'number', example: 1 },
-      title: { type: 'string', example: '간장 고등어 구이' },
-      description: {
-        type: 'string',
-        example: '고소하고 짭짤한 간장 고등어 구이입니다. 밥반찬으로 최고!',
-      },
-      duration: { type: 'string', example: 'TIME01' },
-      condition_id: { type: 'number', example: 1 },
-      created_at: {
-        type: 'string',
-        format: 'date-time',
-        example: '2025-01-01T00:00:00.000Z',
-      },
-      updated_at: {
-        type: 'string',
-        format: 'date-time',
-        example: '2025-01-01T00:00:00.000Z',
-      },
-      images: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            image_url: {
-              type: 'string',
-              example: 'https://example.com/recipe.jpg',
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-            updated_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-          },
-        },
-      },
-      ingredients: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            ingredient_id: { type: 'number', example: 1 },
-            is_alternative: { type: 'boolean', example: false },
-            amount: { type: 'string', example: '1마리' },
-            ingredient: {
-              type: 'object',
-              properties: {
-                id: { type: 'number', example: 1 },
-                name: { type: 'string', example: '고등어' },
-              },
-            },
-          },
-        },
-      },
-      seasonings: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            seasoning_id: { type: 'number', example: 1 },
-            amount: { type: 'string', example: '2큰술' },
-            seasoning: {
-              type: 'object',
-              properties: {
-                id: { type: 'number', example: 1 },
-                name: { type: 'string', example: '간장' },
-              },
-            },
-          },
-        },
-      },
-      tools: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            tool_id: { type: 'number', example: 1 },
-            tool: {
-              type: 'object',
-              properties: {
-                id: { type: 'number', example: 1 },
-                name: { type: 'string', example: '팬' },
-              },
-            },
-          },
-        },
-      },
-      steps: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            order_num: { type: 'number', example: 1 },
-            image_url: {
-              type: 'string',
-              example: 'https://example.com/step1.jpg',
-            },
-            summary: { type: 'string', example: '고등어 손질하기' },
-            content: {
-              type: 'string',
-              example: '고등어를 깨끗이 씻어서 3등분으로 자릅니다.',
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-            updated_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-          },
-        },
-      },
-      healthPoints: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            recipe_id: { type: 'number', example: 1 },
-            content: {
-              type: 'string',
-              example: '고등어의 오메가3가 심혈관 건강에 도움을 줍니다',
-            },
-            created_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-            updated_at: {
-              type: 'string',
-              format: 'date-time',
-              example: '2025-01-01T00:00:00.000Z',
-            },
-          },
-        },
-      },
-    },
-  })
-  async createRecipe(
-    @Body() createRecipeDto: CreateRecipeDto,
-  ): Promise<Recipe> {
-    return await this.recipeService.createRecipe(createRecipeDto);
-  }
 
   // 레시피 추천 API
   @Post('recommendations')
@@ -677,6 +503,32 @@ export class RecipeController {
   @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
   async getRecipeList(): Promise<GetRecipeListResponseDto> {
     return await this.recipeService.getRecipeList();
+  }
+
+  // 어드민용 레시피 upsert (생성/수정)
+  @Post('')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 레시피 생성/수정',
+    description:
+      '레시피를 생성하거나 수정합니다. id가 있으면 수정, 없으면 생성합니다. 레시피 목록 조회 API의 DTO 구조를 그대로 사용합니다. 배열로 여러 레시피를 한 번에 처리할 수 있습니다.',
+  })
+  @ApiBody({
+    description: '레시피 데이터 배열 (id가 있으면 수정, 없으면 생성)',
+    type: [UpsertRecipeDto],
+  })
+  @ApiSuccessResponse('레시피 생성/수정 성공', {
+    type: UpsertRecipesResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @ApiErrorResponse(404, ERROR_CODES.CONDITION_NOT_FOUND)
+  async upsertRecipes(
+    @Body() upsertRecipeDtos: UpsertRecipeDto[],
+  ): Promise<UpsertRecipesResponseDto> {
+    return await this.recipeService.upsertRecipes(upsertRecipeDtos);
   }
 
   // 레시피 추천 관련 엔드포인트들
