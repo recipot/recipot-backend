@@ -912,6 +912,74 @@ export class RecipeService {
   }
 
   /**
+   * 레시피 일괄 삭제 (Soft Delete)
+   * 삭제 시 관련 추천 캐시를 무효화합니다.
+   */
+  @Transactional()
+  async deleteRecipes(recipeIds: number[]): Promise<{
+    deletedCount: number;
+    deletedIds: number[];
+    failedIds: number[];
+  }> {
+    try {
+      if (!recipeIds || recipeIds.length === 0) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // 중복 제거 및 유효성 검사
+      const uniqueIds = Array.from(new Set(recipeIds)).filter(
+        (id) => Number.isInteger(id) && id > 0,
+      );
+
+      if (uniqueIds.length === 0) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // 존재하는 레시피 확인
+      const existingRecipes = await this.recipeRepository.find({
+        where: { id: In(uniqueIds), deletedAt: IsNull() },
+      });
+
+      const existingIds = existingRecipes.map((r) => r.id);
+      const notFoundIds = uniqueIds.filter((id) => !existingIds.includes(id));
+
+      if (existingIds.length === 0) {
+        return {
+          deletedCount: 0,
+          deletedIds: [],
+          failedIds: uniqueIds,
+        };
+      }
+
+      // Soft delete 수행
+      await this.recipeRepository.softDelete(existingIds);
+
+      // 각 레시피의 추천 캐시 무효화
+      await Promise.all(
+        existingIds.map((id) =>
+          this.recipeRecommendationService.invalidateCacheByRecipeId(id),
+        ),
+      );
+
+      this.logger.log(
+        `레시피 일괄 삭제 완료: ${existingIds.length}개 성공, ${notFoundIds.length}개 실패`,
+      );
+
+      return {
+        deletedCount: existingIds.length,
+        deletedIds: existingIds,
+        failedIds: notFoundIds,
+      };
+    } catch (error) {
+      this.logger.error('레시피 일괄 삭제 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_DELETE_FAILED);
+    }
+  }
+
+  /**
    * 어드민용 레시피 목록 조회
    */
   async getRecipeList(): Promise<GetRecipeListResponseDto> {

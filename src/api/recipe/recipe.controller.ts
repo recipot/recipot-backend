@@ -36,6 +36,10 @@ import { UserRole } from '../user/enums/role.enum';
 import { CreateRecipeRecommendationConditionRequest } from './dto/create-recipe-recommend-request.dto';
 import { CreateRecipeRecommendationConditionDto } from './dto/create-recipe-recommend.dto';
 import { UpdateRecipeDto } from './dto/create-recipe.dto';
+import {
+  DeleteRecipesRequestDto,
+  DeleteRecipesResponseDto,
+} from './dto/delete-recipes.dto';
 import { GetRecipeIngredientsResponseDto } from './dto/get-recipe-ingredients.dto';
 import { GetRecipeListResponseDto } from './dto/get-recipe-list.dto';
 import { GetRecipeRecommendationRequestDto } from './dto/get-recipe-recommendation-request.dto';
@@ -150,35 +154,30 @@ export class RecipeController {
     return await this.recipeService.updateRecipe(id, updateRecipeDto);
   }
 
-  @Delete(':id')
+  @Delete('')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('Authorization')
   @ApiOperation({
-    summary: '[어드민] 레시피 삭제',
+    summary: '[어드민] 레시피 일괄 삭제',
     description:
-      '레시피를 삭제합니다. Soft Delete 방식으로 처리되며, 관련 추천 캐시도 자동으로 무효화됩니다.',
+      '여러 레시피를 한 번에 삭제합니다. Soft Delete 방식으로 처리되며, 관련 추천 캐시도 자동으로 무효화됩니다.',
   })
-  @ApiParam({
-    name: 'id',
-    description: '삭제할 레시피 ID',
-    type: 'number',
-    example: 1,
+  @ApiBody({
+    description: '삭제할 레시피 ID 배열',
+    type: DeleteRecipesRequestDto,
   })
-  @ApiSuccessResponse('레시피 삭제 성공', {
-    type: 'object',
-    properties: {
-      message: { type: 'string', example: '레시피가 삭제되었습니다.' },
-    },
+  @ApiSuccessResponse('레시피 일괄 삭제 성공', {
+    type: DeleteRecipesResponseDto,
   })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
   @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
-  @ApiErrorResponse(404, ERROR_CODES.RECIPE_NOT_FOUND)
-  async deleteRecipe(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<{ message: string }> {
-    await this.recipeService.deleteRecipe(id);
-    return { message: '레시피가 삭제되었습니다.' };
+  @ApiErrorResponse(500, ERROR_CODES.RECIPE_DELETE_FAILED)
+  async deleteRecipes(
+    @Body() dto: DeleteRecipesRequestDto,
+  ): Promise<DeleteRecipesResponseDto> {
+    return await this.recipeService.deleteRecipes(dto.recipeIds);
   }
 
   @Get('/public/:id')
