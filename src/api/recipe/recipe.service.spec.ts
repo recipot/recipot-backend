@@ -20,6 +20,7 @@ import { IsNull, Repository } from 'typeorm';
 import { CommonCodeService } from '../common-code/common-code.service';
 import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { UpsertRecipeDto } from './dto/upsert-recipe.dto';
 import { RecipeService } from './recipe.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
@@ -804,6 +805,245 @@ describe('RecipeService', () => {
       expect(result.items[0].id).toBe(3);
       expect(result.items[1].id).toBe(1);
       expect(result.items[2].id).toBe(2);
+    });
+  });
+
+  describe('upsertRecipes', () => {
+    const mockCondition = {
+      id: 1,
+      name: '그럭저럭',
+    } as Condition;
+
+    const createUpsertDto = (id?: number): UpsertRecipeDto => ({
+      id,
+      title: '테스트 레시피',
+      description: '테스트 설명',
+      duration: 30,
+      conditionId: 1,
+      imageUrl: 'https://example.com/image.jpg',
+      ingredients: [
+        {
+          ingredientId: 1,
+          amount: '100g',
+          isAlternative: false,
+        },
+      ],
+      seasonings: [
+        {
+          seasoningId: 1,
+          amount: '1큰술',
+        },
+      ],
+      tools: [
+        {
+          toolId: 1,
+        },
+      ],
+      steps: [
+        {
+          orderNum: 1,
+          summary: '요약',
+          content: '내용',
+          imageUrl: 'https://example.com/step.jpg',
+        },
+      ],
+    });
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('생성과 수정이 모두 포함된 경우 올바른 카운트를 반환해야 함', async () => {
+      const upsertDtos: UpsertRecipeDto[] = [
+        createUpsertDto(), // 생성
+        createUpsertDto(1), // 수정
+        createUpsertDto(), // 생성
+        createUpsertDto(2), // 수정
+      ];
+
+      const createdRecipe1 = {
+        id: 10,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      const createdRecipe2 = {
+        id: 11,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      const updatedRecipe1 = {
+        id: 1,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      const updatedRecipe2 = {
+        id: 2,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      conditionRepository.findOne.mockResolvedValue(mockCondition);
+      conditionRepository.find.mockResolvedValue([mockCondition]);
+
+      // 첫 번째 생성
+      recipeRepository.create.mockReturnValueOnce(createdRecipe1 as any);
+      recipeRepository.save
+        .mockResolvedValueOnce(createdRecipe1 as any)
+        .mockResolvedValueOnce(createdRecipe1);
+      recipeRepository.findOne
+        .mockResolvedValueOnce(createdRecipe1)
+        .mockResolvedValueOnce(createdRecipe1);
+
+      // 첫 번째 수정
+      recipeRepository.findOne
+        .mockResolvedValueOnce(updatedRecipe1)
+        .mockResolvedValueOnce(updatedRecipe1);
+
+      // 두 번째 생성
+      recipeRepository.create.mockReturnValueOnce(createdRecipe2 as any);
+      recipeRepository.save
+        .mockResolvedValueOnce(createdRecipe2 as any)
+        .mockResolvedValueOnce(createdRecipe2);
+      recipeRepository.findOne
+        .mockResolvedValueOnce(createdRecipe2)
+        .mockResolvedValueOnce(createdRecipe2);
+
+      // 두 번째 수정
+      recipeRepository.findOne
+        .mockResolvedValueOnce(updatedRecipe2)
+        .mockResolvedValueOnce(updatedRecipe2);
+
+      const result = await service.upsertRecipes(upsertDtos);
+
+      expect(result.createdCount).toBe(2);
+      expect(result.updatedCount).toBe(2);
+    });
+
+    it('모두 생성인 경우 createdCount만 반환해야 함', async () => {
+      const upsertDtos: UpsertRecipeDto[] = [
+        createUpsertDto(), // 생성
+        createUpsertDto(), // 생성
+      ];
+
+      const createdRecipe1 = {
+        id: 10,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      const createdRecipe2 = {
+        id: 11,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      conditionRepository.findOne.mockResolvedValue(mockCondition);
+      conditionRepository.find.mockResolvedValue([mockCondition]);
+
+      recipeRepository.create
+        .mockReturnValueOnce(createdRecipe1 as any)
+        .mockReturnValueOnce(createdRecipe2 as any);
+      recipeRepository.save
+        .mockResolvedValueOnce(createdRecipe1 as any)
+        .mockResolvedValueOnce(createdRecipe1)
+        .mockResolvedValueOnce(createdRecipe2 as any)
+        .mockResolvedValueOnce(createdRecipe2);
+      recipeRepository.findOne
+        .mockResolvedValueOnce(createdRecipe1)
+        .mockResolvedValueOnce(createdRecipe1)
+        .mockResolvedValueOnce(createdRecipe2)
+        .mockResolvedValueOnce(createdRecipe2);
+
+      const result = await service.upsertRecipes(upsertDtos);
+
+      expect(result.createdCount).toBe(2);
+      expect(result.updatedCount).toBe(0);
+    });
+
+    it('모두 수정인 경우 updatedCount만 반환해야 함', async () => {
+      const upsertDtos: UpsertRecipeDto[] = [
+        createUpsertDto(1), // 수정
+        createUpsertDto(2), // 수정
+      ];
+
+      const updatedRecipe1 = {
+        id: 1,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      const updatedRecipe2 = {
+        id: 2,
+        title: '테스트 레시피',
+        description: '테스트 설명',
+        duration: 30,
+      } as Recipe;
+
+      conditionRepository.findOne.mockResolvedValue(mockCondition);
+      conditionRepository.find.mockResolvedValue([mockCondition]);
+
+      // 첫 번째 수정
+      recipeRepository.findOne
+        .mockResolvedValueOnce(updatedRecipe1) // updateRecipe에서 레시피 찾기
+        .mockResolvedValueOnce(updatedRecipe1); // updateRecipe에서 최종 레시피 찾기
+      recipeRepository.save.mockResolvedValueOnce(updatedRecipe1);
+
+      // 두 번째 수정
+      recipeRepository.findOne
+        .mockResolvedValueOnce(updatedRecipe2) // updateRecipe에서 레시피 찾기
+        .mockResolvedValueOnce(updatedRecipe2); // updateRecipe에서 최종 레시피 찾기
+      recipeRepository.save.mockResolvedValueOnce(updatedRecipe2);
+
+      // updateRecipe에서 필요한 mock들
+      recipeImageRepository.find.mockResolvedValue([]);
+      recipeStepRepository.find.mockResolvedValue([]);
+      recipeImageRepository.delete.mockResolvedValue({ affected: 0 } as any);
+      recipeIngredientRepository.delete.mockResolvedValue({
+        affected: 0,
+      } as any);
+      recipeSeasoningRepository.delete.mockResolvedValue({
+        affected: 0,
+      } as any);
+      recipeToolRepository.delete.mockResolvedValue({ affected: 0 } as any);
+      recipeStepRepository.delete.mockResolvedValue({ affected: 0 } as any);
+      recipeRecommendationConditionRepository.delete.mockResolvedValue({
+        affected: 0,
+      } as any);
+
+      const result = await service.upsertRecipes(upsertDtos);
+
+      expect(result.createdCount).toBe(0);
+      expect(result.updatedCount).toBe(2);
+    });
+
+    it('빈 배열인 경우 0을 반환해야 함', async () => {
+      const result = await service.upsertRecipes([]);
+
+      expect(result.createdCount).toBe(0);
+      expect(result.updatedCount).toBe(0);
+    });
+
+    it('에러 발생 시 CustomException을 throw해야 함', async () => {
+      const upsertDtos: UpsertRecipeDto[] = [createUpsertDto()];
+
+      conditionRepository.findOne.mockResolvedValue(mockCondition);
+      conditionRepository.find.mockResolvedValue([mockCondition]);
+      recipeRepository.create.mockReturnValue({} as any);
+      recipeRepository.save.mockRejectedValue(new Error('DB 에러'));
+
+      await expect(service.upsertRecipes(upsertDtos)).rejects.toThrow(
+        CustomException,
+      );
     });
   });
 });

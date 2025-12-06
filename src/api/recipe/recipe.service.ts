@@ -34,6 +34,10 @@ import {
   RecipeHealthPointDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
+import {
+  UpsertRecipeDto,
+  UpsertRecipesResponseDto,
+} from './dto/upsert-recipe.dto';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 interface RecipeIngredientDetail {
@@ -1142,6 +1146,115 @@ export class RecipeService {
 
     return {
       items,
+    };
+  }
+
+  @Transactional()
+  async upsertRecipe(upsertRecipeDto: UpsertRecipeDto): Promise<Recipe> {
+    try {
+      const conditionId = upsertRecipeDto.conditionId;
+
+      // id가 있으면 수정, 없으면 생성
+      if (upsertRecipeDto.id) {
+        // UpdateRecipeDto로 변환
+        const updateRecipeDto: UpdateRecipeDto = {
+          title: upsertRecipeDto.title,
+          description: upsertRecipeDto.description,
+          duration: upsertRecipeDto.duration,
+          conditionId: conditionId!,
+          images: upsertRecipeDto.imageUrl
+            ? [{ imageUrl: upsertRecipeDto.imageUrl }]
+            : undefined,
+          ingredients:
+            upsertRecipeDto.ingredients?.map((ing) => ({
+              ingredientId: ing.ingredientId,
+              amount: ing.amount,
+              isAlternative: ing.isAlternative,
+            })) || [],
+          seasonings:
+            upsertRecipeDto.seasonings?.map((sea) => ({
+              seasoningId: sea.seasoningId,
+              amount: sea.amount,
+            })) || [],
+          tools:
+            upsertRecipeDto.tools?.map((tool) => ({
+              toolId: tool.toolId,
+            })) || [],
+          steps:
+            upsertRecipeDto.steps?.map((step) => ({
+              orderNum: step.orderNum,
+              summary: step.summary || '',
+              content: step.content || '',
+              imageUrl: step.imageUrl || undefined,
+            })) || [],
+        };
+
+        return await this.updateRecipe(upsertRecipeDto.id, updateRecipeDto);
+      } else {
+        // CreateRecipeDto로 변환
+        const createRecipeDto: CreateRecipeDto = {
+          title: upsertRecipeDto.title,
+          description: upsertRecipeDto.description,
+          duration: upsertRecipeDto.duration,
+          conditionId: conditionId!,
+          images: upsertRecipeDto.imageUrl
+            ? [{ imageUrl: upsertRecipeDto.imageUrl }]
+            : undefined,
+          ingredients:
+            upsertRecipeDto.ingredients?.map((ing) => ({
+              ingredientId: ing.ingredientId,
+              amount: ing.amount,
+              isAlternative: ing.isAlternative,
+            })) || [],
+          seasonings:
+            upsertRecipeDto.seasonings?.map((sea) => ({
+              seasoningId: sea.seasoningId,
+              amount: sea.amount,
+            })) || [],
+          tools:
+            upsertRecipeDto.tools?.map((tool) => ({
+              toolId: tool.toolId,
+            })) || [],
+          steps:
+            upsertRecipeDto.steps?.map((step) => ({
+              orderNum: step.orderNum,
+              summary: step.summary || '',
+              content: step.content || '',
+              imageUrl: step.imageUrl || undefined,
+            })) || [],
+        };
+
+        return await this.createRecipe(createRecipeDto);
+      }
+    } catch (error) {
+      this.logger.error('레시피 upsert 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
+    }
+  }
+
+  @Transactional()
+  async upsertRecipes(
+    upsertRecipeDtos: UpsertRecipeDto[],
+  ): Promise<UpsertRecipesResponseDto> {
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const upsertRecipeDto of upsertRecipeDtos) {
+      await this.upsertRecipe(upsertRecipeDto);
+
+      if (upsertRecipeDto.id) {
+        updatedCount++;
+      } else {
+        createdCount++;
+      }
+    }
+
+    return {
+      createdCount,
+      updatedCount,
     };
   }
 }
