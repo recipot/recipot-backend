@@ -32,6 +32,10 @@ import {
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { GetRestrictedIngredientsResponseDto } from './dto/get-restricted-ingredients.dto';
+import {
+  GetAdminIngredientsDto,
+  GetAdminIngredientsResponseDto,
+} from './dto/get-admin-ingredients.dto';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
@@ -71,6 +75,23 @@ export class IngredientController {
     @Request() req: any,
   ): Promise<GetIngredientsResponseDto> {
     return await this.ingredientService.getIngredients(req.user.sub);
+  }
+
+  @Get('admin')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 식재료 목록 조회',
+    description:
+      '식재료 목록을 페이지네이션하여 조회합니다. 카테고리 정보와 건강 정보를 포함합니다.',
+  })
+  @ApiSuccessResponse('[어드민] 식재료 목록 조회 성공', {
+    type: GetAdminIngredientsResponseDto,
+  })
+  async getAdminIngredients(
+    @Query() query: GetAdminIngredientsDto,
+  ): Promise<GetAdminIngredientsResponseDto> {
+    return await this.ingredientService.getAdminIngredients(query);
   }
 
   @Get('restricted')

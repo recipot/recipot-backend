@@ -2,7 +2,7 @@ services:
   recipot-mariadb:
     container_name: recipot-mariadb
     image: mariadb:10.8.2
-    ports: 
+    ports:
       - "3306:3306"
     env_file:
       - .env.local
@@ -16,10 +16,10 @@ services:
       - ./docker/mariadb/data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 10s
     networks:
       - docker-network
     restart: always
@@ -28,15 +28,15 @@ services:
     image: mariadb:10.8.2
     depends_on:
       recipot-mariadb:
-        condition: service_healthy
+        condition: service_started
     env_file:
       - .env.local
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     command: >
       bash -c "
-      until mysqladmin ping -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD --silent; do sleep 1; done &&
-      mysql -h recipot-mariadb -u root -p$$MYSQL_ROOT_PASSWORD -e \"CREATE DATABASE IF NOT EXISTS \`recipot_test\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON \`recipot_test\`.* TO 'recipot'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true
+      until mysqladmin ping -h recipot-mariadb -u root -p${DB_PASSWORD} --silent; do sleep 1; done &&
+      mysql -h recipot-mariadb -u root -p${DB_PASSWORD} -e \"CREATE DATABASE IF NOT EXISTS recipot_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON recipot_test.* TO 'recipot'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true
       "
     networks:
       - docker-network
@@ -65,5 +65,3 @@ services:
 networks:
   docker-network:
     external: true
-
-
