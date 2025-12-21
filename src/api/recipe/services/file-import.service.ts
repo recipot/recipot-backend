@@ -1337,6 +1337,12 @@ export class FileImportService {
       allCategories.map((c) => [c.name, c]),
     );
 
+    // 재료 일괄 조회 및 Map 생성 (N+1 방지)
+    const allIngredients = await this.ingredientRepository.find();
+    const ingredientMap = new Map<string, Ingredient>(
+      allIngredients.map((i) => [i.name, i]),
+    );
+
     // 각 행 순차 처리
     for (const [index, row] of records.entries()) {
       const rowNumber = index + 1;
@@ -1387,10 +1393,8 @@ export class FileImportService {
           ?.toString()
           .trim();
 
-        // 기존 재료 조회 (이름 기준)
-        const existingIngredient = await this.ingredientRepository.findOne({
-          where: { name },
-        });
+        // 기존 재료 조회 (Map에서 조회, N+1 방지)
+        const existingIngredient = ingredientMap.get(name) || null;
 
         if (existingIngredient) {
           // ========== 수정 로직 ==========
@@ -1424,6 +1428,9 @@ export class FileImportService {
           });
           const savedIngredient =
             await this.ingredientRepository.save(newIngredient);
+
+          // 새로 생성된 재료를 Map에 추가 (중복 방지)
+          ingredientMap.set(name, savedIngredient);
 
           if (healthInfoContent) {
             const healthInfo = this.ingredientHealthInfoRepository.create({
