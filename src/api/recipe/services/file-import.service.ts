@@ -1337,8 +1337,10 @@ export class FileImportService {
       allCategories.map((c) => [c.name, c]),
     );
 
-    // 재료 일괄 조회 및 Map 생성 (N+1 방지)
-    const allIngredients = await this.ingredientRepository.find();
+    // 재료 일괄 조회 및 Map 생성 (N+1 방지, 소프트 삭제된 것도 포함)
+    const allIngredients = await this.ingredientRepository.find({
+      withDeleted: true,
+    });
     const ingredientMap = new Map<string, Ingredient>(
       allIngredients.map((i) => [i.name, i]),
     );
@@ -1398,8 +1400,15 @@ export class FileImportService {
 
         if (existingIngredient) {
           // ========== 수정 로직 ==========
+          // 소프트 삭제된 재료인 경우 복원
+          if (existingIngredient.deletedAt) {
+            await this.ingredientRepository.restore(existingIngredient.id);
+            this.logger.log(`재료 "${name}" 복원됨`);
+          }
+
           existingIngredient.ingredientCategoryId = category.id;
           existingIngredient.isRestrictedIngredient = isRestrictedIngredient;
+          existingIngredient.deletedAt = null;
           await this.ingredientRepository.save(existingIngredient);
 
           // 건강정보 교체 (기존 삭제 후 새로 추가)
