@@ -1,4 +1,4 @@
-import { Column, Entity } from 'typeorm';
+import { Column, DeleteDateColumn, Entity } from 'typeorm';
 import { CommonEntity } from './common.entity';
 
 @Entity('ingredients')
@@ -23,4 +23,12 @@ export class Ingredient extends CommonEntity {
     comment: '온보딩 단계에서 노출하는 제한 식품 여부',
   })
   isRestrictedIngredient: boolean;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'datetime',
+    nullable: true,
+    comment: '삭제일시',
+  })
+  deletedAt: Date | null;
 }

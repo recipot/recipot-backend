@@ -1298,4 +1298,193 @@ export class FileImportService {
       XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
     );
   }
+
+  // ============================================================================
+  // 재료 Upsert 메서드
+  // ============================================================================
+
+  /**
+   * 엑셀 파일을 파싱하여 식재료를 추가/수정합니다. (Upsert)
+   * - 이름으로 조회하여 존재하면 수정, 없으면 생성
+   * - 기존 importIngredientsAndSeasoningsFromExcel과 달리 수정 기능 포함
+   *
+   * @param buffer 엑셀 파일의 버퍼 데이터
+   * @returns Upsert 결과 (생성 수, 수정 수, 스킵 수, 스킵된 데이터 엑셀 파일)
+   */
+  @Transactional()
+  async upsertIngredientsFromExcel(buffer: Buffer): Promise<{
+    createdCount: number;
+    updatedCount: number;
+    skippedCount: number;
+    skippedExcelBuffer: Buffer | null;
+    skippedFileName: string | null;
+  }> {
+    // 엑셀 파일 파싱 (기존 메서드 재사용)
+    const records = this.parseExcelFile(buffer);
+    this.logger.log(
+      `엑셀 파일에서 ${records.length}개의 식재료 데이터를 찾았습니다.`,
+    );
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const skippedRows: Record<string, any>[] = [];
+    const skippedReasons: string[] = [];
+
+    // 카테고리 일괄 조회 및 Map 생성 (N+1 방지)
+    const allCategories = await this.ingredientCategoryRepository.find();
+    const categoryMap = new Map<string, IngredientCategory>(
+      allCategories.map((c) => [c.name, c]),
+    );
+
+    // 재료 일괄 조회 및 Map 생성 (N+1 방지, 소프트 삭제된 것도 포함)
+    const allIngredients = await this.ingredientRepository.find({
+      withDeleted: true,
+    });
+    const ingredientMap = new Map<string, Ingredient>(
+      allIngredients.map((i) => [i.name, i]),
+    );
+
+    // 각 행 순차 처리
+    for (const [index, row] of records.entries()) {
+      const rowNumber = index + 1;
+
+      // 엑셀 데이터 추출
+      const name = row[EXCEL_COLUMNS.INGREDIENT.NAME]?.toString().trim();
+      const categoryName = row[EXCEL_COLUMNS.INGREDIENT.CATEGORY]
+        ?.toString()
+        .trim();
+
+      try {
+        // 필수 필드 검증
+        if (!name) {
+          this.logger.warn(
+            `행 ${rowNumber}: 재료 이름이 없습니다. 건너뜁니다.`,
+          );
+          skippedRows.push(row);
+          skippedReasons.push(`행 ${rowNumber}: 재료 이름이 없습니다.`);
+          skippedCount++;
+          continue;
+        }
+
+        if (!categoryName) {
+          this.logger.warn(`행 ${rowNumber}: 대분류가 없습니다. 건너뜁니다.`);
+          skippedRows.push(row);
+          skippedReasons.push(`행 ${rowNumber}: 대분류가 없습니다.`);
+          skippedCount++;
+          continue;
+        }
+
+        // 카테고리 조회 또는 생성 (기존 패턴)
+        let category = categoryMap.get(categoryName);
+        if (!category) {
+          this.logger.log(`카테고리 "${categoryName}"이 없어 새로 생성합니다.`);
+          category = this.ingredientCategoryRepository.create({
+            name: categoryName,
+          });
+          category = await this.ingredientCategoryRepository.save(category);
+          categoryMap.set(categoryName, category);
+        }
+
+        // 못 먹는 재료 여부 파싱 (기존 유틸 재사용)
+        const isRestrictedIngredient =
+          IngredientSeasoningParserUtil.parseRestrictedIngredientValue(row);
+
+        // 재료 한줄 카피
+        const healthInfoContent = row[EXCEL_COLUMNS.INGREDIENT.COPY]
+          ?.toString()
+          .trim();
+
+        // 기존 재료 조회 (Map에서 조회, N+1 방지)
+        const existingIngredient = ingredientMap.get(name) || null;
+
+        if (existingIngredient) {
+          // ========== 수정 로직 ==========
+          // 소프트 삭제된 재료인 경우 복원
+          if (existingIngredient.deletedAt) {
+            await this.ingredientRepository.restore(existingIngredient.id);
+            this.logger.log(`재료 "${name}" 복원됨`);
+          }
+
+          existingIngredient.ingredientCategoryId = category.id;
+          existingIngredient.isRestrictedIngredient = isRestrictedIngredient;
+          existingIngredient.deletedAt = null;
+          await this.ingredientRepository.save(existingIngredient);
+
+          // 건강정보 교체 (기존 삭제 후 새로 추가)
+          await this.ingredientHealthInfoRepository.delete({
+            ingredientId: existingIngredient.id,
+          });
+
+          if (healthInfoContent) {
+            const healthInfo = this.ingredientHealthInfoRepository.create({
+              ingredientId: existingIngredient.id,
+              content: healthInfoContent,
+            });
+            await this.ingredientHealthInfoRepository.save(healthInfo);
+          }
+
+          updatedCount++;
+          this.logger.log(
+            `재료 수정 완료: ${name} (카테고리: ${category.name}, 못 먹는 재료: ${isRestrictedIngredient})`,
+          );
+        } else {
+          // ========== 생성 로직 ==========
+          const newIngredient = this.ingredientRepository.create({
+            name,
+            ingredientCategoryId: category.id,
+            isRestrictedIngredient,
+          });
+          const savedIngredient =
+            await this.ingredientRepository.save(newIngredient);
+
+          // 새로 생성된 재료를 Map에 추가 (중복 방지)
+          ingredientMap.set(name, savedIngredient);
+
+          if (healthInfoContent) {
+            const healthInfo = this.ingredientHealthInfoRepository.create({
+              ingredientId: savedIngredient.id,
+              content: healthInfoContent,
+            });
+            await this.ingredientHealthInfoRepository.save(healthInfo);
+          }
+
+          createdCount++;
+          this.logger.log(
+            `재료 생성 완료: ${name} (카테고리: ${category.name}, 못 먹는 재료: ${isRestrictedIngredient})`,
+          );
+        }
+      } catch (error) {
+        skippedRows.push(row);
+        skippedReasons.push(`행 ${rowNumber}: ${error.message}`);
+        skippedCount++;
+        this.logger.error(`행 ${rowNumber} 처리 실패: ${name}`, error);
+      }
+    }
+
+    this.logger.log(
+      `식재료 Upsert 완료 - 생성: ${createdCount}개, 수정: ${updatedCount}개, 스킵: ${skippedCount}개`,
+    );
+
+    // 스킵된 데이터 엑셀 생성 (기존 메서드 재사용)
+    let skippedExcelBuffer: Buffer | null = null;
+    let skippedFileName: string | null = null;
+
+    if (skippedRows.length > 0) {
+      skippedExcelBuffer = this.createSkippedDataExcel(
+        skippedRows,
+        skippedReasons,
+      );
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      skippedFileName = `skipped_ingredients_upsert_${timestamp}.xlsx`;
+    }
+
+    return {
+      createdCount,
+      updatedCount,
+      skippedCount,
+      skippedExcelBuffer,
+      skippedFileName,
+    };
+  }
 }

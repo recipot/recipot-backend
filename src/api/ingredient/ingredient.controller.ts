@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Post,
   Query,
@@ -32,6 +33,14 @@ import {
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { GetRestrictedIngredientsResponseDto } from './dto/get-restricted-ingredients.dto';
+import {
+  GetAdminIngredientsDto,
+  GetAdminIngredientsResponseDto,
+} from './dto/get-admin-ingredients.dto';
+import {
+  DeleteAdminIngredientsDto,
+  DeleteAdminIngredientsResponseDto,
+} from './dto/delete-admin-ingredients.dto';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
@@ -71,6 +80,23 @@ export class IngredientController {
     @Request() req: any,
   ): Promise<GetIngredientsResponseDto> {
     return await this.ingredientService.getIngredients(req.user.sub);
+  }
+
+  @Get('admin')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 식재료 목록 조회',
+    description:
+      '식재료 목록을 페이지네이션하여 조회합니다. 카테고리 정보와 건강 정보를 포함합니다.',
+  })
+  @ApiSuccessResponse('[어드민] 식재료 목록 조회 성공', {
+    type: GetAdminIngredientsResponseDto,
+  })
+  async getAdminIngredients(
+    @Query() query: GetAdminIngredientsDto,
+  ): Promise<GetAdminIngredientsResponseDto> {
+    return await this.ingredientService.getAdminIngredients(query);
   }
 
   @Get('restricted')
@@ -222,5 +248,25 @@ export class IngredientController {
     @Body() dto: CreateIngredientDtoTx,
   ): Promise<IngredientResponseDto[]> {
     return this.ingredientService.createIngredient(dto);
+  }
+
+  @Delete('admin')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 식재료 다중 삭제',
+    description: '선택한 식재료들을 소프트 삭제합니다.',
+  })
+  @ApiBody({
+    description: '삭제할 식재료 ID 배열',
+    type: DeleteAdminIngredientsDto,
+  })
+  @ApiSuccessResponse('[어드민] 식재료 삭제 성공', {
+    type: DeleteAdminIngredientsResponseDto,
+  })
+  async deleteAdminIngredients(
+    @Body() dto: DeleteAdminIngredientsDto,
+  ): Promise<DeleteAdminIngredientsResponseDto> {
+    return await this.ingredientService.deleteAdminIngredients(dto);
   }
 }

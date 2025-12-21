@@ -18,6 +18,14 @@ import {
 import { GetIngredientsResponseDto } from './dto/get-ingredients.dto';
 import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { GetRestrictedIngredientsResponseDto } from './dto/get-restricted-ingredients.dto';
+import {
+  GetAdminIngredientsDto,
+  GetAdminIngredientsResponseDto,
+} from './dto/get-admin-ingredients.dto';
+import {
+  DeleteAdminIngredientsDto,
+  DeleteAdminIngredientsResponseDto,
+} from './dto/delete-admin-ingredients.dto';
 
 @Injectable()
 export class IngredientService {
@@ -209,6 +217,93 @@ export class IngredientService {
           categoryMap.get(ingredient.ingredientCategoryId) || '미분류',
         isUserRestricted: unavailableIngredientIds.has(ingredient.id),
       })),
+    };
+  }
+
+  /**
+   * [어드민] 식재료 목록 조회 (페이지네이션)
+   */
+  async getAdminIngredients(
+    query: GetAdminIngredientsDto,
+  ): Promise<GetAdminIngredientsResponseDto> {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    // 식재료 목록 조회 (페이지네이션)
+    const [ingredients, total] = await this.ingredientRepository.findAndCount({
+      order: { id: 'ASC' },
+      take: limit,
+      skip: skip,
+    });
+
+    // 카테고리 일괄 조회
+    const categoryIds = [
+      ...new Set(ingredients.map((i) => i.ingredientCategoryId)),
+    ];
+    const categories = await this.ingredientCategoryRepository.find({
+      where: { id: In(categoryIds) },
+    });
+    const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+
+    // 건강 정보 일괄 조회
+    const ingredientIds = ingredients.map((i) => i.id);
+    const healthInfos = await this.ingredientHealthInfoRepository.find({
+      where: { ingredientId: In(ingredientIds) },
+    });
+
+    // 식재료별 건강 정보 그룹화
+    const healthInfoMap = new Map<number, IngredientHealthInfo[]>();
+    healthInfos.forEach((info) => {
+      if (!healthInfoMap.has(info.ingredientId)) {
+        healthInfoMap.set(info.ingredientId, []);
+      }
+      healthInfoMap.get(info.ingredientId).push(info);
+    });
+
+    return {
+      data: ingredients.map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
+        categoryName:
+          categoryMap.get(ingredient.ingredientCategoryId) || '미분류',
+        isRestrictedIngredient: ingredient.isRestrictedIngredient,
+        healthInfos:
+          healthInfoMap.get(ingredient.id)?.map((info) => ({
+            content: info.content,
+          })) || [],
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * [어드민] 식재료 다중 삭제
+   */
+  async deleteAdminIngredients(
+    dto: DeleteAdminIngredientsDto,
+  ): Promise<DeleteAdminIngredientsResponseDto> {
+    // 존재하는 식재료 확인
+    const existingIngredients = await this.ingredientRepository.find({
+      where: { id: In(dto.ids) },
+      select: ['id'],
+    });
+
+    const existingIds = existingIngredients.map((i) => i.id);
+    const notFoundIds = dto.ids.filter((id) => !existingIds.includes(id));
+
+    // 존재하지 않는 ID가 있으면 에러
+    if (notFoundIds.length > 0) {
+      throw new CustomException(ERROR_CODES.INGREDIENT_NOT_FOUND);
+    }
+
+    const result = await this.ingredientRepository.softDelete({
+      id: In(dto.ids),
+    });
+
+    return {
+      deletedCount: result.affected || 0,
     };
   }
 }
