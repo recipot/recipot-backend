@@ -17,12 +17,16 @@ import { Tool } from '@/database/entity/tool.entity';
 import { UserRecipeBookmark } from '@/database/entity/user-recipe-bookmark.entity';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { CommonCodeService } from '../common-code/common-code.service';
 import { FileCleanupService } from '../file-cleanup/file-cleanup.service';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto/create-recipe.dto';
 import { GetRecipeIngredientsResponseDto } from './dto/get-recipe-ingredients.dto';
+import {
+  GetRecipeListResponseDto,
+  RecipeListItemDto,
+} from './dto/get-recipe-list.dto';
 import { GetRecipeSeasoningsResponseDto } from './dto/get-recipe-seasonings.dto';
 import { GetRecipeToolsResponseDto } from './dto/get-recipe-tools.dto';
 import {
@@ -30,6 +34,10 @@ import {
   RecipeHealthPointDto,
   RecipeIngredientDto,
 } from './dto/get-recipe.dto';
+import {
+  UpsertRecipeDto,
+  UpsertRecipesResponseDto,
+} from './dto/upsert-recipe.dto';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 
 interface RecipeIngredientDetail {
@@ -901,5 +909,424 @@ export class RecipeService {
       }
       throw new CustomException(ERROR_CODES.RECIPE_DELETE_FAILED);
     }
+  }
+
+  /**
+   * 레시피 일괄 삭제 (Soft Delete)
+   * 삭제 시 관련 추천 캐시를 무효화합니다.
+   */
+  @Transactional()
+  async deleteRecipes(recipeIds: number[]): Promise<{
+    deletedCount: number;
+    deletedIds: number[];
+    failedIds: number[];
+  }> {
+    try {
+      if (!recipeIds || recipeIds.length === 0) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // 중복 제거 및 유효성 검사
+      const uniqueIds = Array.from(new Set(recipeIds)).filter(
+        (id) => Number.isInteger(id) && id > 0,
+      );
+
+      if (uniqueIds.length === 0) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // 존재하는 레시피 확인
+      const existingRecipes = await this.recipeRepository.find({
+        where: { id: In(uniqueIds), deletedAt: IsNull() },
+      });
+
+      const existingIds = existingRecipes.map((r) => r.id);
+      const notFoundIds = uniqueIds.filter((id) => !existingIds.includes(id));
+
+      if (existingIds.length === 0) {
+        return {
+          deletedCount: 0,
+          deletedIds: [],
+          failedIds: uniqueIds,
+        };
+      }
+
+      // Soft delete 수행
+      await this.recipeRepository.softDelete(existingIds);
+
+      // 각 레시피의 추천 캐시 무효화
+      await Promise.all(
+        existingIds.map((id) =>
+          this.recipeRecommendationService.invalidateCacheByRecipeId(id),
+        ),
+      );
+
+      this.logger.log(
+        `레시피 일괄 삭제 완료: ${existingIds.length}개 성공, ${notFoundIds.length}개 실패`,
+      );
+
+      return {
+        deletedCount: existingIds.length,
+        deletedIds: existingIds,
+        failedIds: notFoundIds,
+      };
+    } catch (error) {
+      this.logger.error('레시피 일괄 삭제 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_DELETE_FAILED);
+    }
+  }
+
+  /**
+   * 어드민용 레시피 목록 조회
+   */
+  async getRecipeList(): Promise<GetRecipeListResponseDto> {
+    // 레시피 목록 조회 (삭제되지 않은 모든 레시피)
+    const recipes = await this.recipeRepository.find({
+      where: { deletedAt: IsNull() },
+      order: { id: 'ASC' },
+    });
+
+    if (recipes.length === 0) {
+      return {
+        items: [],
+      };
+    }
+
+    const recipeIds = recipes.map((r) => r.id);
+
+    // 관련 데이터 일괄 조회
+    const [
+      images,
+      recipeIngredients,
+      recipeSeasonings,
+      recipeTools,
+      steps,
+      recipeRecommendationConditions,
+    ] = await Promise.all([
+      this.recipeImageRepository.find({
+        where: { recipeId: In(recipeIds) },
+        order: { id: 'ASC' },
+      }),
+      this.recipeIngredientRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeSeasoningRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeToolRepository.find({
+        where: { recipeId: In(recipeIds) },
+      }),
+      this.recipeStepRepository.find({
+        where: { recipeId: In(recipeIds) },
+        order: { orderNum: 'ASC' },
+      }),
+      this.recipeRecommendationConditionRepository.find({
+        where: { recipeId: In(recipeIds) },
+        order: { priorityScore: 'DESC' },
+      }),
+    ]);
+
+    // 재료, 양념, 도구 정보 조회
+    const ingredientIds = [
+      ...new Set(recipeIngredients.map((ri) => ri.ingredientId)),
+    ];
+    const seasoningIds = [
+      ...new Set(recipeSeasonings.map((rs) => rs.seasoningId)),
+    ];
+    const toolIds = [...new Set(recipeTools.map((rt) => rt.toolId))];
+
+    const [ingredients, seasonings, tools, conditions] = await Promise.all([
+      ingredientIds.length
+        ? this.ingredientRepository.find({ where: { id: In(ingredientIds) } })
+        : [],
+      seasoningIds.length
+        ? this.seasoningRepository.find({ where: { id: In(seasoningIds) } })
+        : [],
+      toolIds.length
+        ? this.toolRepository.find({ where: { id: In(toolIds) } })
+        : [],
+      this.conditionRepository.find(),
+    ]);
+
+    // 맵 생성
+    const ingredientMap = new Map<number, Ingredient>();
+    ingredients.forEach((i) => ingredientMap.set(i.id, i));
+
+    const seasoningMap = new Map<number, Seasoning>();
+    seasonings.forEach((s) => seasoningMap.set(s.id, s));
+
+    const toolMap = new Map<number, Tool>();
+    tools.forEach((t) => toolMap.set(t.id, t));
+
+    const conditionMap = new Map<number, string>();
+    conditions.forEach((c) => conditionMap.set(c.id, c.name));
+
+    // 레시피별로 데이터 그룹화
+    const imagesByRecipe = new Map<number, RecipeImage[]>();
+    const ingredientsByRecipe = new Map<number, RecipeIngredient[]>();
+    const seasoningsByRecipe = new Map<number, RecipeSeasoning[]>();
+    const toolsByRecipe = new Map<number, RecipeTool[]>();
+    const stepsByRecipe = new Map<number, RecipeStep[]>();
+    const conditionsByRecipe = new Map<
+      number,
+      RecipeRecommendationCondition[]
+    >();
+
+    images.forEach((img) => {
+      const list = imagesByRecipe.get(img.recipeId) || [];
+      list.push(img);
+      imagesByRecipe.set(img.recipeId, list);
+    });
+
+    recipeIngredients.forEach((ri) => {
+      const list = ingredientsByRecipe.get(ri.recipeId) || [];
+      list.push(ri);
+      ingredientsByRecipe.set(ri.recipeId, list);
+    });
+
+    recipeSeasonings.forEach((rs) => {
+      const list = seasoningsByRecipe.get(rs.recipeId) || [];
+      list.push(rs);
+      seasoningsByRecipe.set(rs.recipeId, list);
+    });
+
+    recipeTools.forEach((rt) => {
+      const list = toolsByRecipe.get(rt.recipeId) || [];
+      list.push(rt);
+      toolsByRecipe.set(rt.recipeId, list);
+    });
+
+    steps.forEach((step) => {
+      const list = stepsByRecipe.get(step.recipeId) || [];
+      list.push(step);
+      stepsByRecipe.set(step.recipeId, list);
+    });
+
+    recipeRecommendationConditions.forEach((rc) => {
+      const list = conditionsByRecipe.get(rc.recipeId) || [];
+      list.push(rc);
+      conditionsByRecipe.set(rc.recipeId, list);
+    });
+
+    // 응답 데이터 생성
+    const items: RecipeListItemDto[] = recipes.map((recipe) => {
+      const recipeImages = imagesByRecipe.get(recipe.id) || [];
+      const recipeIngredientsList = ingredientsByRecipe.get(recipe.id) || [];
+      const recipeSeasoningsList = seasoningsByRecipe.get(recipe.id) || [];
+      const recipeToolsList = toolsByRecipe.get(recipe.id) || [];
+      const recipeSteps = stepsByRecipe.get(recipe.id) || [];
+      const recipeConditions = conditionsByRecipe.get(recipe.id) || [];
+
+      // 첫 번째 이미지 URL
+      const firstImage = recipeImages[0];
+      const imageUrl = firstImage?.imageUrl || null;
+
+      // 가장 높은 우선순위의 컨디션 이름
+      const primaryCondition = recipeConditions[0];
+      const conditionName = primaryCondition
+        ? conditionMap.get(primaryCondition.conditionId) || null
+        : null;
+
+      // 조리도구 DTO 배열 생성
+      const tools = recipeToolsList
+        .map((rt) => {
+          const tool = toolMap.get(rt.toolId);
+          return tool
+            ? {
+                id: tool.id,
+                name: tool.name,
+                imageUrl: tool.imageUrl,
+              }
+            : null;
+        })
+        .filter(
+          (tool): tool is { id: number; name: string; imageUrl: string } =>
+            tool !== null,
+        );
+
+      // 재료 DTO 배열 생성
+      const ingredients = recipeIngredientsList
+        .map((ri) => {
+          const ingredient = ingredientMap.get(ri.ingredientId);
+          return ingredient
+            ? {
+                id: ingredient.id,
+                name: ingredient.name,
+                amount: ri.amount,
+                isAlternative: ri.isAlternative,
+              }
+            : null;
+        })
+        .filter(
+          (
+            ing,
+          ): ing is {
+            id: number;
+            name: string;
+            amount: string;
+            isAlternative: boolean;
+          } => ing !== null,
+        );
+
+      // 양념 DTO 배열 생성
+      const seasonings = recipeSeasoningsList
+        .map((rs) => {
+          const seasoning = seasoningMap.get(rs.seasoningId);
+          return seasoning
+            ? {
+                id: seasoning.id,
+                name: seasoning.name,
+                amount: rs.amount,
+              }
+            : null;
+        })
+        .filter(
+          (sea): sea is { id: number; name: string; amount: string } =>
+            sea !== null,
+        );
+
+      // Step 데이터 생성 (순서대로 정렬)
+      const steps = recipeSteps
+        .sort((a, b) => a.orderNum - b.orderNum)
+        .map((step) => ({
+          orderNum: step.orderNum,
+          summary: step.summary,
+          content: step.content,
+          imageUrl: step.imageUrl,
+        }));
+
+      return {
+        id: recipe.id,
+        title: recipe.title,
+        imageUrl,
+        duration: recipe.duration,
+        condition: conditionName,
+        description: recipe.description,
+        tools,
+        ingredients,
+        seasonings,
+        steps,
+      };
+    });
+
+    return {
+      items,
+    };
+  }
+
+  @Transactional()
+  async upsertRecipe(upsertRecipeDto: UpsertRecipeDto): Promise<Recipe> {
+    try {
+      const conditionId = upsertRecipeDto.conditionId;
+
+      if (!conditionId) {
+        throw new CustomException(ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // id가 있으면 수정, 없으면 생성
+      if (upsertRecipeDto.id) {
+        // UpdateRecipeDto로 변환
+        const updateRecipeDto: UpdateRecipeDto = {
+          title: upsertRecipeDto.title,
+          description: upsertRecipeDto.description,
+          duration: upsertRecipeDto.duration,
+          conditionId: conditionId,
+          images: upsertRecipeDto.imageUrl
+            ? [{ imageUrl: upsertRecipeDto.imageUrl }]
+            : undefined,
+          ingredients:
+            upsertRecipeDto.ingredients?.map((ing) => ({
+              ingredientId: ing.id,
+              amount: ing.amount,
+              isAlternative: ing.isAlternative,
+            })) || [],
+          seasonings:
+            upsertRecipeDto.seasonings?.map((sea) => ({
+              seasoningId: sea.id,
+              amount: sea.amount,
+            })) || [],
+          tools:
+            upsertRecipeDto.tools?.map((tool) => ({
+              toolId: tool.id,
+            })) || [],
+          steps:
+            upsertRecipeDto.steps?.map((step) => ({
+              orderNum: step.orderNum,
+              summary: step.summary || '',
+              content: step.content || '',
+              imageUrl: step.imageUrl || undefined,
+            })) || [],
+        };
+
+        return await this.updateRecipe(upsertRecipeDto.id, updateRecipeDto);
+      } else {
+        // CreateRecipeDto로 변환
+        const createRecipeDto: CreateRecipeDto = {
+          title: upsertRecipeDto.title,
+          description: upsertRecipeDto.description,
+          duration: upsertRecipeDto.duration,
+          conditionId: conditionId,
+          images: upsertRecipeDto.imageUrl
+            ? [{ imageUrl: upsertRecipeDto.imageUrl }]
+            : undefined,
+          ingredients:
+            upsertRecipeDto.ingredients?.map((ing) => ({
+              ingredientId: ing.id,
+              amount: ing.amount,
+              isAlternative: ing.isAlternative,
+            })) || [],
+          seasonings:
+            upsertRecipeDto.seasonings?.map((sea) => ({
+              seasoningId: sea.id,
+              amount: sea.amount,
+            })) || [],
+          tools:
+            upsertRecipeDto.tools?.map((tool) => ({
+              toolId: tool.id,
+            })) || [],
+          steps:
+            upsertRecipeDto.steps?.map((step) => ({
+              orderNum: step.orderNum,
+              summary: step.summary || '',
+              content: step.content || '',
+              imageUrl: step.imageUrl || undefined,
+            })) || [],
+        };
+
+        return await this.createRecipe(createRecipeDto);
+      }
+    } catch (error) {
+      this.logger.error('레시피 upsert 중 에러 발생', error);
+      if (error instanceof CustomException) {
+        throw error;
+      }
+      throw new CustomException(ERROR_CODES.RECIPE_CREATE_FAILED);
+    }
+  }
+
+  @Transactional()
+  async upsertRecipes(
+    upsertRecipeDtos: UpsertRecipeDto[],
+  ): Promise<UpsertRecipesResponseDto> {
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const upsertRecipeDto of upsertRecipeDtos) {
+      await this.upsertRecipe(upsertRecipeDto);
+
+      if (upsertRecipeDto.id) {
+        updatedCount++;
+      } else {
+        createdCount++;
+      }
+    }
+
+    return {
+      createdCount,
+      updatedCount,
+    };
   }
 }
