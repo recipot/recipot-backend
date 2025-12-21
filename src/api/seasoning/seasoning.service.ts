@@ -8,6 +8,10 @@ import {
   CreateSeasoningDtoTx,
   SeasoningResponseDto,
 } from './dto/create-seasoning.dto';
+import {
+  GetAdminSeasoningsDto,
+  GetAdminSeasoningsResponseDto,
+} from './dto/get-admin-seasonings.dto';
 
 @Injectable()
 export class SeasoningService {
@@ -43,5 +47,31 @@ export class SeasoningService {
       id: seasoning.id,
       name: seasoning.name,
     }));
+  }
+
+  /**
+   * [어드민] 양념 목록 조회 (페이지네이션)
+   */
+  async getAdminSeasonings(
+    query: GetAdminSeasoningsDto,
+  ): Promise<GetAdminSeasoningsResponseDto> {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [seasonings, total] = await this.seasoningRepository.findAndCount({
+      order: { id: 'ASC' },
+      take: limit,
+      skip: skip,
+    });
+
+    return {
+      data: seasonings.map((seasoning) => ({
+        id: seasoning.id,
+        name: seasoning.name,
+      })),
+      total,
+      page,
+      limit,
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SeasoningService } from './seasoning.service';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
@@ -9,12 +9,33 @@ import {
   CreateSeasoningDtoTx,
   SeasoningResponseDto,
 } from './dto/create-seasoning.dto';
+import {
+  GetAdminSeasoningsDto,
+  GetAdminSeasoningsResponseDto,
+} from './dto/get-admin-seasonings.dto';
 import { JwtGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('양념')
 @Controller({ path: 'seasonings', version: '1' })
 export class SeasoningController {
   constructor(private readonly seasoningService: SeasoningService) {}
+
+  @Get('admin')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 양념 목록 조회',
+    description: '양념 목록을 페이지네이션하여 조회합니다.',
+  })
+  @ApiSuccessResponse('[어드민] 양념 목록 조회 성공', {
+    type: GetAdminSeasoningsResponseDto,
+  })
+  async getAdminSeasonings(
+    @Query() query: GetAdminSeasoningsDto,
+  ): Promise<GetAdminSeasoningsResponseDto> {
+    return await this.seasoningService.getAdminSeasonings(query);
+  }
 
   @Post()
   @UseGuards(JwtGuard, RolesGuard)
