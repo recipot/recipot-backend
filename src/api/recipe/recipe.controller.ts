@@ -49,6 +49,7 @@ import { RecipeRecommendationConditionService } from './recipe-recommend.service
 import { RecipeService } from './recipe.service';
 import { FileImportService } from './services/file-import.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
+import { UpsertAdminIngredientsResponseDto } from '../ingredient/dto/upsert-admin-ingredients.dto';
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
@@ -933,6 +934,73 @@ export class RecipeController {
       createdSeasoningCount: result.createdSeasoningCount,
       skippedIngredientCount: result.skippedIngredientCount,
       skippedSeasoningCount: result.skippedSeasoningCount,
+    });
+  }
+
+  @Put('import/ingredients')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 엑셀 파일로 식재료 일괄 추가/수정 (Upsert)',
+    description: `엑셀 파일을 업로드하여 식재료를 추가하거나 수정합니다.
+- 이름이 존재하면 → 수정 (카테고리, 못먹는재료 여부, 한줄카피)
+- 이름이 없으면 → 새로 생성
+
+엑셀 컬럼: 재료, 대분류, 못 먹는 재료 여부, 재료 한줄 카피
+스킵된 데이터가 있으면 엑셀 파일로 반환됩니다.`,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '엑셀 파일 (.xlsx, .xls)',
+        },
+      },
+    },
+  })
+  @ApiSuccessResponse('[어드민] 식재료 Upsert 성공', {
+    type: UpsertAdminIngredientsResponseDto,
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @UseInterceptors(FileInterceptor('file'))
+  async upsertIngredientsFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 파일 검증 (기존 패턴)
+    this.fileImportService.validateExcelFile(file);
+
+    const result = await this.fileImportService.upsertIngredientsFromExcel(
+      file.buffer,
+    );
+
+    // 스킵된 데이터가 있으면 엑셀 파일 다운로드 (기존 패턴)
+    if (result.skippedExcelBuffer && result.skippedFileName) {
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.skippedFileName}"`,
+      );
+      res.send(result.skippedExcelBuffer);
+      return;
+    }
+
+    // 스킵된 데이터가 없으면 JSON 응답
+    res.json({
+      message: `식재료 ${result.createdCount}개 생성, ${result.updatedCount}개 수정되었습니다.`,
+      createdCount: result.createdCount,
+      updatedCount: result.updatedCount,
+      skippedCount: result.skippedCount,
     });
   }
 

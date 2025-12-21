@@ -62,6 +62,7 @@ export const ERROR_CODES = {
   INGREDIENT_CATEGORY_NOT_FOUND: { code: 'E10002', message: '재료 카테고리를 찾을 수 없습니다.' },
   INGREDIENT_ALREADY_EXISTS: { code: 'E10003', message: '이미 존재하는 재료입니다.' },
   INGREDIENT_CREATE_FAILED: { code: 'E10004', message: '재료 생성에 실패했습니다.' },
+  INGREDIENT_NOT_FOUND: { code: 'E10005', message: '존재하지 않는 식재료가 포함되어 있습니다.' },
 
   // 양념 관련 오류
   SEASONING_ALREADY_EXISTS: { code: 'E11001', message: '이미 존재하는 양념입니다.' },

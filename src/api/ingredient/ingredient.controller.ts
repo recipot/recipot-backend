@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Post,
   Query,
@@ -36,6 +37,10 @@ import {
   GetAdminIngredientsDto,
   GetAdminIngredientsResponseDto,
 } from './dto/get-admin-ingredients.dto';
+import {
+  DeleteAdminIngredientsDto,
+  DeleteAdminIngredientsResponseDto,
+} from './dto/delete-admin-ingredients.dto';
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
@@ -243,5 +248,25 @@ export class IngredientController {
     @Body() dto: CreateIngredientDtoTx,
   ): Promise<IngredientResponseDto[]> {
     return this.ingredientService.createIngredient(dto);
+  }
+
+  @Delete('admin')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: '[어드민] 식재료 다중 삭제',
+    description: '선택한 식재료들을 소프트 삭제합니다.',
+  })
+  @ApiBody({
+    description: '삭제할 식재료 ID 배열',
+    type: DeleteAdminIngredientsDto,
+  })
+  @ApiSuccessResponse('[어드민] 식재료 삭제 성공', {
+    type: DeleteAdminIngredientsResponseDto,
+  })
+  async deleteAdminIngredients(
+    @Body() dto: DeleteAdminIngredientsDto,
+  ): Promise<DeleteAdminIngredientsResponseDto> {
+    return await this.ingredientService.deleteAdminIngredients(dto);
   }
 }

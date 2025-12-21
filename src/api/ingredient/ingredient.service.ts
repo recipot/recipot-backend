@@ -22,6 +22,10 @@ import {
   GetAdminIngredientsDto,
   GetAdminIngredientsResponseDto,
 } from './dto/get-admin-ingredients.dto';
+import {
+  DeleteAdminIngredientsDto,
+  DeleteAdminIngredientsResponseDto,
+} from './dto/delete-admin-ingredients.dto';
 
 @Injectable()
 export class IngredientService {
@@ -271,6 +275,35 @@ export class IngredientService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * [어드민] 식재료 다중 삭제
+   */
+  async deleteAdminIngredients(
+    dto: DeleteAdminIngredientsDto,
+  ): Promise<DeleteAdminIngredientsResponseDto> {
+    // 존재하는 식재료 확인
+    const existingIngredients = await this.ingredientRepository.find({
+      where: { id: In(dto.ids) },
+      select: ['id'],
+    });
+
+    const existingIds = existingIngredients.map((i) => i.id);
+    const notFoundIds = dto.ids.filter((id) => !existingIds.includes(id));
+
+    // 존재하지 않는 ID가 있으면 에러
+    if (notFoundIds.length > 0) {
+      throw new CustomException(ERROR_CODES.INGREDIENT_NOT_FOUND);
+    }
+
+    const result = await this.ingredientRepository.softDelete({
+      id: In(dto.ids),
+    });
+
+    return {
+      deletedCount: result.affected || 0,
     };
   }
 }
