@@ -1487,4 +1487,148 @@ export class FileImportService {
       skippedFileName,
     };
   }
+
+  // ============================================================================
+  // 양념 Upsert 메서드
+  // ============================================================================
+
+  /**
+   * 엑셀 파일을 파싱하여 양념을 추가/수정합니다. (Upsert)
+   * - 이름으로 조회하여 존재하면 복원(소프트 삭제된 경우), 없으면 생성
+   * - 양념은 이름만 있으므로 수정할 속성이 없음 (복원만 해당)
+   *
+   * @param buffer 엑셀 파일의 버퍼 데이터
+   * @returns Upsert 결과 (생성 수, 수정 수, 스킵 수, 스킵된 데이터 엑셀 파일)
+   */
+  @Transactional()
+  async upsertSeasoningsFromExcel(buffer: Buffer): Promise<{
+    createdCount: number;
+    updatedCount: number;
+    skippedCount: number;
+    skippedExcelBuffer: Buffer | null;
+    skippedFileName: string | null;
+  }> {
+    // 엑셀 파일 파싱
+    const records = this.parseExcelFile(buffer);
+    this.logger.log(
+      `엑셀 파일에서 ${records.length}개의 양념 데이터를 찾았습니다.`,
+    );
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const skippedRows: Record<string, any>[] = [];
+    const skippedReasons: string[] = [];
+
+    // 양념 일괄 조회 및 Map 생성 (N+1 방지, 소프트 삭제된 것도 포함)
+    const allSeasonings = await this.seasoningRepository.find({
+      withDeleted: true,
+    });
+    const seasoningMap = new Map<string, Seasoning>(
+      allSeasonings.map((s) => [s.name, s]),
+    );
+
+    // 각 행 순차 처리
+    for (const [index, row] of records.entries()) {
+      const rowNumber = index + 1;
+
+      // 엑셀 데이터 추출 (양념은 이름만 필요)
+      const name = row[EXCEL_COLUMNS.INGREDIENT.NAME]?.toString().trim();
+
+      try {
+        // 필수 필드 검증
+        if (!name) {
+          this.logger.warn(
+            `행 ${rowNumber}: 양념 이름이 없습니다. 건너뜁니다.`,
+          );
+          skippedRows.push(row);
+          skippedReasons.push(`행 ${rowNumber}: 양념 이름이 없습니다.`);
+          skippedCount++;
+          continue;
+        }
+
+        // 기존 양념 조회 (Map에서 조회)
+        const existingSeasoning = seasoningMap.get(name) || null;
+
+        if (existingSeasoning) {
+          // ========== 수정 로직 (복원) ==========
+          // 소프트 삭제된 양념인 경우 복원
+          if (existingSeasoning.deletedAt) {
+            await this.seasoningRepository.restore(existingSeasoning.id);
+            existingSeasoning.deletedAt = null;
+            updatedCount++;
+            this.logger.log(`양념 복원 완료: ${name}`);
+          } else {
+            // 이미 존재하고 삭제되지 않은 경우 스킵
+            this.logger.log(`양념 "${name}"이 이미 존재합니다. 건너뜁니다.`);
+            skippedRows.push(row);
+            skippedReasons.push(
+              `행 ${rowNumber}: 양념 "${name}"이 이미 존재합니다.`,
+            );
+            skippedCount++;
+          }
+        } else {
+          // ========== 생성 로직 ==========
+          const newSeasoning = this.seasoningRepository.create({ name });
+          const savedSeasoning =
+            await this.seasoningRepository.save(newSeasoning);
+
+          // 새로 생성된 양념을 Map에 추가 (중복 방지)
+          seasoningMap.set(name, savedSeasoning);
+
+          createdCount++;
+          this.logger.log(`양념 생성 완료: ${name}`);
+        }
+      } catch (error) {
+        skippedRows.push(row);
+        skippedReasons.push(`행 ${rowNumber}: ${error.message}`);
+        skippedCount++;
+        this.logger.error(`행 ${rowNumber} 처리 실패: ${name}`, error);
+      }
+    }
+
+    this.logger.log(
+      `양념 Upsert 완료 - 생성: ${createdCount}개, 복원: ${updatedCount}개, 스킵: ${skippedCount}개`,
+    );
+
+    // 스킵된 데이터 엑셀 생성
+    let skippedExcelBuffer: Buffer | null = null;
+    let skippedFileName: string | null = null;
+
+    if (skippedRows.length > 0) {
+      skippedExcelBuffer = this.createSkippedSeasoningDataExcel(
+        skippedRows,
+        skippedReasons,
+      );
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      skippedFileName = `skipped_seasonings_upsert_${timestamp}.xlsx`;
+    }
+
+    return {
+      createdCount,
+      updatedCount,
+      skippedCount,
+      skippedExcelBuffer,
+      skippedFileName,
+    };
+  }
+
+  /**
+   * 스킵된 양념 데이터를 엑셀 파일로 변환합니다.
+   */
+  private createSkippedSeasoningDataExcel(
+    skippedRows: Record<string, any>[],
+    skippedReasons: string[],
+  ): Buffer | null {
+    if (skippedRows.length === 0) {
+      return null;
+    }
+
+    const data = skippedRows.map((row, index) => ({
+      [EXCEL_COLUMNS.INGREDIENT.NAME]: row[EXCEL_COLUMNS.INGREDIENT.NAME] || '',
+      [EXCEL_SHEET_NAME.SKIP_REASON_COLUMN]: skippedReasons[index] || '',
+    }));
+
+    return this.createExcelBuffer(data, EXCEL_SHEET_NAME.SKIPPED);
+  }
 }

@@ -59,6 +59,7 @@ import { RecipeService } from './recipe.service';
 import { FileImportService } from './services/file-import.service';
 import { RecipeRecommendationService } from './services/recipe-recommendation.service';
 import { UpsertAdminIngredientsResponseDto } from '../ingredient/dto/upsert-admin-ingredients.dto';
+import { UpsertAdminSeasoningsResponseDto } from '../seasoning/dto/upsert-admin-seasonings.dto';
 
 @ApiTags('레시피')
 @Controller({ path: 'recipes', version: '1' })
@@ -869,6 +870,74 @@ export class RecipeController {
     // 스킵된 데이터가 없으면 JSON 응답
     res.json({
       message: `식재료 ${result.createdCount}개 생성, ${result.updatedCount}개 수정되었습니다.`,
+      createdCount: result.createdCount,
+      updatedCount: result.updatedCount,
+      skippedCount: result.skippedCount,
+    });
+  }
+
+  @Post('seasonings/upsert')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary: '[어드민] 엑셀 파일로 양념 일괄 추가/수정 (Upsert)',
+    description: `엑셀 파일을 업로드하여 양념을 추가하거나 복원합니다.
+- 이름이 존재하고 삭제됨 → 복원
+- 이름이 존재하고 삭제 안됨 → 스킵
+- 이름이 없으면 → 새로 생성
+
+엑셀 컬럼: 재료 (양념 이름)
+스킵된 데이터가 있으면 엑셀 파일로 반환됩니다.`,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '엑셀 파일 (.xlsx, .xls)',
+        },
+      },
+    },
+  })
+  @ApiSuccessResponse('[어드민] 양념 Upsert 성공', {
+    type: UpsertAdminSeasoningsResponseDto,
+  })
+  @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  @ApiErrorResponse(403, ERROR_CODES.AUTH_PERMISSION_DENIED)
+  @UseInterceptors(FileInterceptor('file'))
+  async upsertSeasoningsFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 파일 검증
+    this.fileImportService.validateExcelFile(file);
+
+    const result = await this.fileImportService.upsertSeasoningsFromExcel(
+      file.buffer,
+    );
+
+    // 스킵된 데이터가 있으면 엑셀 파일 다운로드
+    if (result.skippedExcelBuffer && result.skippedFileName) {
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.skippedFileName}"`,
+      );
+      res.send(result.skippedExcelBuffer);
+      return;
+    }
+
+    // 스킵된 데이터가 없으면 JSON 응답
+    res.json({
+      message: `양념 ${result.createdCount}개 생성, ${result.updatedCount}개 복원되었습니다.`,
       createdCount: result.createdCount,
       updatedCount: result.updatedCount,
       skippedCount: result.skippedCount,
