@@ -12,6 +12,10 @@ import {
   GetAdminSeasoningsDto,
   GetAdminSeasoningsResponseDto,
 } from './dto/get-admin-seasonings.dto';
+import {
+  DeleteAdminSeasoningsDto,
+  DeleteAdminSeasoningsResponseDto,
+} from './dto/delete-admin-seasonings.dto';
 
 @Injectable()
 export class SeasoningService {
@@ -72,6 +76,35 @@ export class SeasoningService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * [어드민] 양념 다중 삭제
+   */
+  async deleteAdminSeasonings(
+    dto: DeleteAdminSeasoningsDto,
+  ): Promise<DeleteAdminSeasoningsResponseDto> {
+    // 존재하는 양념 확인
+    const existingSeasonings = await this.seasoningRepository.find({
+      where: { id: In(dto.ids) },
+      select: ['id'],
+    });
+
+    const existingIds = existingSeasonings.map((s) => s.id);
+    const notFoundIds = dto.ids.filter((id) => !existingIds.includes(id));
+
+    // 존재하지 않는 ID가 있으면 에러
+    if (notFoundIds.length > 0) {
+      throw new CustomException(ERROR_CODES.SEASONING_NOT_FOUND);
+    }
+
+    const result = await this.seasoningRepository.softDelete({
+      id: In(dto.ids),
+    });
+
+    return {
+      deletedCount: result.affected || 0,
     };
   }
 }
