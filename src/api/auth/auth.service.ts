@@ -4,12 +4,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { v4 as uuidv4 } from 'uuid';
 
 import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { secondsToJwtFormat } from '@/common/utils/time.util';
+import { CreateGuestSessionResponseDto } from '@/api/auth/dto/create-guest-session-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -518,5 +520,25 @@ export class AuthService {
       }
       throw new CustomException(ERROR_CODES.LOGOUT_FAILED);
     }
+  }
+
+  /**
+   * 게스트 세션 생성
+   * 비로그인 사용자를 위한 임시 세션 ID 발급
+   */
+  public async createGuestSession(): Promise<CreateGuestSessionResponseDto> {
+    const guestSessionId = uuidv4();
+    const ttlDays = 7;
+    const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
+
+    const key = `${CONSTANTS.GUEST_SESSION_PREFIX}:${guestSessionId}`;
+    await this.cacheService.set(key, 'valid', ttlMs);
+
+    const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+
+    return {
+      guestSessionId,
+      expiresAt,
+    };
   }
 }

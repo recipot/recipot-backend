@@ -21,11 +21,12 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { Public } from './decorators/auth.decorators';
-import { JwtToken } from './dto/jwt-token.dto';
-import { RefreshTokenRequestDto } from './dto/refresh-token-request.dto';
-import { TokenVerificationRequestDto } from './dto/token-verification-request.dto';
-import { TokenVerificationResponseDto } from './dto/token-verification-response.dto';
+import { Public } from '@/api/auth/decorators/auth.decorators';
+import { CreateGuestSessionResponseDto } from '@/api/auth/dto/create-guest-session-response.dto';
+import { JwtToken } from '@/api/auth/dto/jwt-token.dto';
+import { RefreshTokenRequestDto } from '@/api/auth/dto/refresh-token-request.dto';
+import { TokenVerificationRequestDto } from '@/api/auth/dto/token-verification-request.dto';
+import { TokenVerificationResponseDto } from '@/api/auth/dto/token-verification-response.dto';
 
 @ApiTags('인증 관리')
 @Controller({ path: 'auth', version: '1' })
@@ -263,5 +264,19 @@ export class AuthController {
 
     const result = await this.authService.logout(token);
     return { status: 200, data: result };
+  }
+
+  @Post('guest-session')
+  @Public()
+  @ApiOperation({
+    summary: '게스트 세션 발급',
+    description:
+      '비로그인 사용자를 위한 임시 세션 ID를 발급합니다. 7일간 유효합니다.',
+  })
+  @ApiSuccessResponse('게스트 세션 발급 성공', {
+    type: CreateGuestSessionResponseDto,
+  })
+  async createGuestSession(): Promise<CreateGuestSessionResponseDto> {
+    return await this.authService.createGuestSession();
   }
 }
