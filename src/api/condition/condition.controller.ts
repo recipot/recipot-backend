@@ -7,10 +7,11 @@ import {
   ConditionResponseDto,
 } from './dto/create-condition.dto';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../user/enums/role.enum';
-import { JwtGuard } from '../auth/guards/auth.guard';
+import { Public } from '@/api/auth/decorators/auth.decorators';
+import { RolesGuard } from '@/api/auth/guards/roles.guard';
+import { Roles } from '@/api/auth/decorators/roles.decorator';
+import { UserRole } from '@/api/user/enums/role.enum';
+import { JwtGuard } from '@/api/auth/guards/auth.guard';
 
 @ApiTags('컨디션')
 @Controller({ path: 'conditions', version: '1' })
@@ -19,6 +20,7 @@ export class ConditionController {
   constructor(private readonly conditionService: ConditionService) {}
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: '컨디션 목록 조회',
     description: '모든 컨디션을 조회합니다.',
