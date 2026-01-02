@@ -271,7 +271,8 @@ export class AuthController {
   @ApiOperation({
     summary: '게스트 세션 발급',
     description:
-      '비로그인 사용자를 위한 임시 세션 ID를 발급합니다. 7일간 유효합니다.',
+      '비로그인 사용자를 위한 임시 세션 ID를 발급합니다. 7일간 유효합니다.\n\n' +
+      '발급받은 guestSessionId를 이후 API 호출 시 `X-Guest-Session` 헤더에 담아 보내주세요.',
   })
   @ApiSuccessResponse('게스트 세션 발급 성공', {
     type: CreateGuestSessionResponseDto,
