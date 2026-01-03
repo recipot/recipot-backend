@@ -290,39 +290,62 @@ export class UserService {
   /**
    * 유저의 보유 재료 설문을 처리합니다.
    * 사용자가 선택한 재료 ID들을 캐시에 저장합니다.
+   * 비로그인 시 guestSessionId 기반으로 캐시에 저장
    */
   async saveUserIngredientsSurvey(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     surveyDto: SaveUserIngredientsSurveyDto,
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
     try {
-      // 사용자 존재 여부 확인
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-      }
-
-      // 사용자가 선택한 재료 ID들
       const ingredientIds = surveyDto.ingredientIds;
-
-      // 캐시에 저장 (TTL: 일주일)
-      const cacheKey = `user:${userId}:owned_ingredients`;
       const ttl = 7 * 24 * 60 * 60; // 일주일 (초)
 
-      await this.cacheService.set(cacheKey, JSON.stringify(ingredientIds), ttl);
+      // 비로그인 유저 (guestSessionId만 있는 경우)
+      if (!userId && guestSessionId) {
+        const cacheKey = `guest:${guestSessionId}:owned_ingredients`;
+        await this.cacheService.set(
+          cacheKey,
+          JSON.stringify(ingredientIds),
+          ttl,
+        );
+        this.logger.log(
+          `Guest ${guestSessionId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+        );
+        return {
+          ingredientIds,
+          cacheTtl: ttl,
+          message: '보유 재료 설문이 완료되었습니다.',
+        };
+      }
 
-      this.logger.log(
-        `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
-      );
+      // 로그인 유저
+      if (userId) {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (!user) {
+          throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+        }
 
-      return {
-        ingredientIds: ingredientIds,
-        cacheTtl: ttl,
-        message: '보유 재료 설문이 완료되었습니다.',
-      };
+        const cacheKey = `user:${userId}:owned_ingredients`;
+        await this.cacheService.set(
+          cacheKey,
+          JSON.stringify(ingredientIds),
+          ttl,
+        );
+        this.logger.log(
+          `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+        );
+        return {
+          ingredientIds,
+          cacheTtl: ttl,
+          message: '보유 재료 설문이 완료되었습니다.',
+        };
+      }
+
+      // userId도 guestSessionId도 없는 경우
+      throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
     } catch (error) {
       this.logger.error('보유 재료 설문 저장 중 에러 발생', error);
       if (error instanceof CustomException) {

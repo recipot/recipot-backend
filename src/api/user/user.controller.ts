@@ -103,22 +103,34 @@ export class UserController {
    * @description 사용자의 보유 재료 설문을 저장합니다.
    */
   @Post('/ingredients-survey')
+  @Public()
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
   @ApiOperation({
     summary: '보유 재료 설문 저장',
-    description: '사용자가 보유한 재료 ID 목록을 캐시에 저장합니다.',
+    description:
+      '사용자가 보유한 재료 ID 목록을 캐시에 저장합니다.\n\n' +
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
   })
   @ApiSuccessResponse(
     '보유 재료 설문 저장 성공',
     SaveUserIngredientsSurveyResponseDto,
   )
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async saveIngredientsSurvey(
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
     @Body() surveyDto: SaveUserIngredientsSurveyDto,
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
-    const userId = req.user.sub;
-    return await this.userService.saveUserIngredientsSurvey(userId, surveyDto);
+    const userId = req.user?.sub;
+    return await this.userService.saveUserIngredientsSurvey(
+      userId,
+      guestSessionId,
+      surveyDto,
+    );
   }
 
   /**
