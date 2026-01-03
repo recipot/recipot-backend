@@ -565,6 +565,14 @@ export class AuthService {
     const guestOwnedKey = `guest:${guestSessionId}:owned_ingredients`;
     const guestSessionKey = `${CONSTANTS.GUEST_SESSION_PREFIX}:${guestSessionId}`;
 
+    // 게스트 세션 유효성 검증
+    const sessionValid = await this.cacheService.get(guestSessionKey);
+    if (!sessionValid) {
+      throw new BadRequestException(
+        '유효하지 않거나 만료된 게스트 세션입니다.',
+      );
+    }
+
     // 유저 캐시 키
     const userConditionKey = `user:${userId}:daily_condition`;
     const userOwnedKey = `user:${userId}:owned_ingredients`;
