@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 import { v4 as uuidv4 } from 'uuid';
 
 import { CacheService } from '@/common/cache/cache.service';
@@ -555,6 +556,7 @@ export class AuthService {
    * 게스트 데이터를 유저 데이터로 마이그레이션
    * 로그인 후 게스트 세션의 캐시 데이터를 유저 DB/캐시로 이관
    */
+  @Transactional()
   public async migrateGuestData(
     userId: number,
     guestSessionId: string,
