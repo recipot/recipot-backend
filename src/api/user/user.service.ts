@@ -654,53 +654,72 @@ export class UserService {
 
   /**
    * 유저의 컨디션을 저장
+   * 비로그인 시 guestSessionId 기반으로 캐시에만 저장
    */
   async saveUserCondition(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     dto: SaveUserConditionDto,
   ): Promise<SaveUserConditionResponseDto> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-      if (!user) {
-        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-      }
       const { conditionId, isRecommendationStarted } = dto;
-      const cacheKey = `user:${userId}:daily_condition`;
       const ttl = 24 * 60 * 60 * 1000; // 24시간 (밀리초)
       const cachedData = {
         conditionId,
         savedAt: new Date().toISOString(),
       };
-      await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
-      this.logger.log(
-        `User ${userId} condition saved to cache: conditionId=${conditionId}`,
-      );
-      if (isRecommendationStarted) {
-        let timeSlot: TimeSlot;
-        const currentHour = new Date().getHours();
-        if (currentHour >= 5 && currentHour < 12) {
-          timeSlot = TimeSlot.MORNING;
-        } else if (currentHour >= 12 && currentHour < 18) {
-          timeSlot = TimeSlot.LUNCH;
-        } else {
-          timeSlot = TimeSlot.DINNER;
-        }
-        const userDailyCondition = this.userDailyConditionsRepository.create({
-          userId,
-          conditionId,
-          date: new Date(),
-          timeSlot,
-        });
-        await this.userDailyConditionsRepository.save(userDailyCondition);
+
+      // 비로그인 유저 (guestSessionId만 있는 경우)
+      if (!userId && guestSessionId) {
+        const cacheKey = `guest:${guestSessionId}:daily_condition`;
+        await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
         this.logger.log(
-          `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+          `Guest ${guestSessionId} condition saved to cache: conditionId=${conditionId}`,
         );
+        return { conditionId };
       }
-      return {
-        conditionId: conditionId,
-      };
+
+      // 로그인 유저
+      if (userId) {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (!user) {
+          throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+        }
+
+        const cacheKey = `user:${userId}:daily_condition`;
+        await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
+        this.logger.log(
+          `User ${userId} condition saved to cache: conditionId=${conditionId}`,
+        );
+
+        if (isRecommendationStarted) {
+          let timeSlot: TimeSlot;
+          const currentHour = new Date().getHours();
+          if (currentHour >= 5 && currentHour < 12) {
+            timeSlot = TimeSlot.MORNING;
+          } else if (currentHour >= 12 && currentHour < 18) {
+            timeSlot = TimeSlot.LUNCH;
+          } else {
+            timeSlot = TimeSlot.DINNER;
+          }
+          const userDailyCondition = this.userDailyConditionsRepository.create({
+            userId,
+            conditionId,
+            date: new Date(),
+            timeSlot,
+          });
+          await this.userDailyConditionsRepository.save(userDailyCondition);
+          this.logger.log(
+            `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+          );
+        }
+        return { conditionId };
+      }
+
+      // userId도 guestSessionId도 없는 경우
+      throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
     } catch (error) {
       this.logger.error('사용자 컨디션 저장 중 에러 발생', error);
       if (error instanceof CustomException) {

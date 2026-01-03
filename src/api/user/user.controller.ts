@@ -12,13 +12,14 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 
-import { Public } from '@/api/auth/decorators/auth.decorators';
+import { GuestSession, Public } from '@/api/auth/decorators/auth.decorators';
 import { JwtGuard } from '@/api/auth/guards/auth.guard';
 import { GetCompletionCountResponseDto } from '@/api/user/dto/get-completion-count.dto';
 import { GetRecentRecipesRequestDto } from '@/api/user/dto/get-recent-recipes-request.dto';
@@ -124,20 +125,31 @@ export class UserController {
    * @description 사용자의 컨디션을 저장합니다.
    */
   @Post('/conditions/daily')
+  @Public()
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
   @ApiOperation({
     summary: '컨디션 저장',
     description:
-      '사용자가 선택한 컨디션을 저장합니다. 추천 단계 진행 여부에 따라 캐시 또는 DB에 저장합니다.',
+      '사용자가 선택한 컨디션을 저장합니다. 추천 단계 진행 여부에 따라 캐시 또는 DB에 저장합니다.\n\n' +
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
   })
   @ApiSuccessResponse('컨디션 저장 성공', SaveUserConditionResponseDto)
-  @ApiErrorResponse(HttpStatus.UNAUTHORIZED, ERROR_CODES.AUTH_REQUIRED)
   @ApiErrorResponse(HttpStatus.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND)
   async saveUserCondition(
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
     @Body() conditionDto: SaveUserConditionDto,
   ): Promise<SaveUserConditionResponseDto> {
-    const userId = req.user.sub;
-    return await this.userService.saveUserCondition(userId, conditionDto);
+    const userId = req.user?.sub;
+    return await this.userService.saveUserCondition(
+      userId,
+      guestSessionId,
+      conditionDto,
+    );
   }
 
   @Get('/conditions/daily')
