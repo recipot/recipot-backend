@@ -323,17 +323,32 @@ export class UserController {
    * @description 못 먹는 음식 저장(교체)
    */
   @Post('ingredients/unavailable')
-  @ApiOperation({ summary: '못 먹는 음식 저장(교체)' })
+  @Public()
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: '못 먹는 음식 저장(교체)',
+    description:
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
+  })
   @ApiOkResponse({
     description: '저장된 개수',
     type: SaveUnavailableIngredientsResponseDto,
   })
   async saveUnavailableIngredients(
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
     @Body() body: SaveUnavailableIngredientsDto,
   ): Promise<SaveUnavailableIngredientsResponseDto> {
     const userId = req.user?.sub;
-    return this.userService.saveUnavailableIngredients(userId, body);
+    return this.userService.saveUnavailableIngredients(
+      userId,
+      guestSessionId,
+      body,
+    );
   }
 
   /**

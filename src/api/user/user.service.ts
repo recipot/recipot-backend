@@ -537,48 +537,67 @@ export class UserService {
   /**
    * Replace the user's unavailable-ingredients set with the provided list.
    * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   * 비로그인 시 guestSessionId 기반으로 캐시에만 저장
    */
   async saveUnavailableIngredients(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     dto: SaveUnavailableIngredientsDto,
   ): Promise<SaveUnavailableIngredientsResponseDto> {
-    // 1) Verify user exists
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-
-    // 2) Deduplicate & coerce to positive integers
+    // Deduplicate & coerce to positive integers
     const ids = Array.from(new Set(dto.ingredientIds ?? []))
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
 
-    // 3) Atomic replace inside a transaction
-    await this.userRepository.manager.transaction(async (m) => {
-      // delete old rows
-      await m
-        .createQueryBuilder()
-        .delete()
-        .from(UserUnavailableIngredient) // entity
-        .where('user_id = :userId', { userId }) // raw column name is fine here
-        .execute();
+    // 비로그인 유저 (guestSessionId만 있는 경우)
+    if (!userId && guestSessionId) {
+      const cacheKey = `guest:${guestSessionId}:unavailable_ingredients`;
+      const ttl = 7 * 24 * 60 * 60 * 1000; // 7일 (밀리초)
+      await this.cacheService.set(cacheKey, JSON.stringify(ids), ttl);
+      this.logger.log(
+        `Guest ${guestSessionId} unavailable ingredients saved to cache: ${ids.length} items`,
+      );
+      return { savedCount: ids.length };
+    }
 
-      // bulk insert new rows (if any)
-      if (ids.length > 0) {
+    // 로그인 유저
+    if (userId) {
+      // 1) Verify user exists
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+      // 2) Atomic replace inside a transaction
+      await this.userRepository.manager.transaction(async (m) => {
+        // delete old rows
         await m
           .createQueryBuilder()
-          .insert()
-          .into(UserUnavailableIngredient) // entity
-          .values(
-            ids.map((ingredientId) => ({
-              userId,
-              ingredientId,
-            })),
-          )
-          .orIgnore() // MySQL/MariaDB duplicate-safe (requires UNIQUE(user_id, ingredient_id))
+          .delete()
+          .from(UserUnavailableIngredient) // entity
+          .where('user_id = :userId', { userId }) // raw column name is fine here
           .execute();
-      }
-    });
 
-    return { savedCount: ids.length };
+        // bulk insert new rows (if any)
+        if (ids.length > 0) {
+          await m
+            .createQueryBuilder()
+            .insert()
+            .into(UserUnavailableIngredient) // entity
+            .values(
+              ids.map((ingredientId) => ({
+                userId,
+                ingredientId,
+              })),
+            )
+            .orIgnore() // MySQL/MariaDB duplicate-safe (requires UNIQUE(user_id, ingredient_id))
+            .execute();
+        }
+      });
+
+      return { savedCount: ids.length };
+    }
+
+    // userId도 guestSessionId도 없는 경우
+    throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
   }
 
   async getCompletedCount(userId: number): Promise<number> {
