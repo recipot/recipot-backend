@@ -2,14 +2,23 @@ import { ERROR_CODES } from '@/common/constants/error-codes';
 import {
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/auth.decorators';
 
+// Request 객체 확장 타입
+interface RequestWithPublicRoute extends Request {
+  isPublicRoute?: boolean;
+  user?: any;
+}
+
 @Injectable()
 export class JwtGuard extends AuthGuard('jwt') {
+  private readonly logger = new Logger(JwtGuard.name);
+
   constructor(private reflector: Reflector) {
     super();
   }
@@ -24,13 +33,18 @@ export class JwtGuard extends AuthGuard('jwt') {
     if (isPublic) {
       // Public 엔드포인트여도 토큰이 있으면 파싱 시도 (Optional Auth)
       // 실패해도 에러 던지지 않고 통과
-      const request = context.switchToHttp().getRequest();
+      const request = context
+        .switchToHttp()
+        .getRequest<RequestWithPublicRoute>();
       request.isPublicRoute = true; // handleRequest에서 참조
 
       try {
         await super.canActivate(context);
-      } catch {
-        // 토큰 없거나 유효하지 않아도 통과
+      } catch (error: any) {
+        // 인증 관련 에러는 무시, 예상 외 에러는 로깅
+        if (error?.name !== 'UnauthorizedException') {
+          this.logger.warn(`Optional auth failed: ${error?.message}`);
+        }
       }
       return true;
     }
