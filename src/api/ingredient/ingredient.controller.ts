@@ -46,6 +46,7 @@ import {
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
+@UseGuards(JwtGuard)
 @ApiBearerAuth('Authorization')
 export class IngredientController {
   constructor(private readonly ingredientService: IngredientService) {}

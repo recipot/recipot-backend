@@ -23,12 +23,13 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
+  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
-import { Public } from '../auth/decorators/auth.decorators';
+import { GuestSession, Public } from '../auth/decorators/auth.decorators';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -75,12 +76,18 @@ export class RecipeController {
 
   // 레시피 추천 API
   @Post('recommendations')
-  @UseGuards(JwtGuard)
+  @Public()
   @ApiBearerAuth('Authorization')
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
   @ApiOperation({
     summary: '레시피 추천',
     description:
-      '컨디션과 보유 재료를 기반으로 레시피를 추천합니다. Redis 캐싱을 통해 성능을 최적화합니다.',
+      '컨디션과 보유 재료를 기반으로 레시피를 추천합니다. Redis 캐싱을 통해 성능을 최적화합니다.\n\n' +
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
   })
   @ApiBody({
     description: '레시피 추천 요청 데이터',
@@ -90,15 +97,16 @@ export class RecipeController {
     type: GetRecipeRecommendationResponseDto,
   })
   @ApiErrorResponse(400, ERROR_CODES.VALIDATION_ERROR)
-  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
   async getRecipeRecommendations(
     @Body() dto: GetRecipeRecommendationRequestDto,
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
   ): Promise<GetRecipeRecommendationResponseDto> {
     const userId = req.user?.sub;
     return await this.recipeRecommendationService.getRecipeRecommendationsWithCache(
       dto,
       userId,
+      guestSessionId,
     );
   }
 
