@@ -5,6 +5,7 @@ import { In, Repository } from 'typeorm';
 import { CreateIngredientCategoryDtoTx } from './dto/create-ingredient-category.dto';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { ERROR_CODES } from '@/common/constants/error-codes';
+import { CacheService } from '@/common/cache/cache.service';
 import {
   GetIngredientCategoriesDto,
   GetIngredientCategoriesResponseDto,
@@ -40,6 +41,7 @@ export class IngredientService {
     private readonly ingredientHealthInfoRepository: Repository<IngredientHealthInfo>,
     @InjectRepository(UserUnavailableIngredient)
     private readonly userUnavailableIngredientRepository: Repository<UserUnavailableIngredient>,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**
@@ -148,8 +150,13 @@ export class IngredientService {
 
   /**
    * 재료 목록 조회
+   * @param userId 로그인 사용자 ID (비로그인 시 undefined)
+   * @param guestSessionId 게스트 세션 ID (비로그인 시 사용)
    */
-  async getIngredients(userId: number): Promise<GetIngredientsResponseDto> {
+  async getIngredients(
+    userId: number | undefined,
+    guestSessionId: string | undefined,
+  ): Promise<GetIngredientsResponseDto> {
     const ingredients = await this.ingredientRepository.find({
       order: { id: 'ASC' },
     });
@@ -160,14 +167,29 @@ export class IngredientService {
       where: { id: In(categoryIds) },
     });
     const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
-    const unavailableIngredients =
-      await this.userUnavailableIngredientRepository.find({
-        where: { userId },
-        select: ['ingredientId'],
-      });
-    const unavailableIngredientIds = new Set(
-      unavailableIngredients.map((item) => item.ingredientId),
-    );
+
+    // 못먹는 재료 ID 조회: 로그인 시 DB, 게스트 시 캐시
+    let unavailableIngredientIds: Set<number> = new Set();
+
+    if (userId) {
+      // 로그인 사용자: DB에서 조회
+      const unavailableIngredients =
+        await this.userUnavailableIngredientRepository.find({
+          where: { userId },
+          select: ['ingredientId'],
+        });
+      unavailableIngredientIds = new Set(
+        unavailableIngredients.map((item) => item.ingredientId),
+      );
+    } else if (guestSessionId) {
+      // 게스트 사용자: 캐시에서 조회
+      const cacheKey = `guest:${guestSessionId}:unavailable_ingredients`;
+      const cachedIds = await this.cacheService.get(cacheKey);
+      if (cachedIds && Array.isArray(cachedIds)) {
+        unavailableIngredientIds = new Set(cachedIds);
+      }
+    }
+
     return {
       data: ingredients.map((ingredient) => ({
         id: ingredient.id,
@@ -182,9 +204,12 @@ export class IngredientService {
 
   /**
    * 못먹는 음식 조회 (온보딩용)
+   * @param userId 로그인 사용자 ID (비로그인 시 undefined)
+   * @param guestSessionId 게스트 세션 ID (비로그인 시 사용)
    */
   async getRestrictedIngredients(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
   ): Promise<GetRestrictedIngredientsResponseDto> {
     const restrictedIngredients = await this.ingredientRepository.find({
       where: { isRestrictedIngredient: true },
@@ -200,14 +225,27 @@ export class IngredientService {
     });
     const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
-    const unavailableIngredients =
-      await this.userUnavailableIngredientRepository.find({
-        where: { userId },
-        select: ['ingredientId'],
-      });
-    const unavailableIngredientIds = new Set(
-      unavailableIngredients.map((item) => item.ingredientId),
-    );
+    // 못먹는 재료 ID 조회: 로그인 시 DB, 게스트 시 캐시
+    let unavailableIngredientIds: Set<number> = new Set();
+
+    if (userId) {
+      // 로그인 사용자: DB에서 조회
+      const unavailableIngredients =
+        await this.userUnavailableIngredientRepository.find({
+          where: { userId },
+          select: ['ingredientId'],
+        });
+      unavailableIngredientIds = new Set(
+        unavailableIngredients.map((item) => item.ingredientId),
+      );
+    } else if (guestSessionId) {
+      // 게스트 사용자: 캐시에서 조회
+      const cacheKey = `guest:${guestSessionId}:unavailable_ingredients`;
+      const cachedIds = await this.cacheService.get(cacheKey);
+      if (cachedIds && Array.isArray(cachedIds)) {
+        unavailableIngredientIds = new Set(cachedIds);
+      }
+    }
 
     return {
       data: restrictedIngredients.map((ingredient) => ({

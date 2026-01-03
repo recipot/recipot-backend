@@ -1,21 +1,33 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
+import { v4 as uuidv4 } from 'uuid';
 
 import { CacheService } from '@/common/cache/cache.service';
 import { CONSTANTS } from '@/common/constants/constants';
 import { ERROR_CODES } from '@/common/constants/error-codes';
 import { CustomException } from '@/common/exceptions/custom-exception';
 import { secondsToJwtFormat } from '@/common/utils/time.util';
+import { CreateGuestSessionResponseDto } from '@/api/auth/dto/create-guest-session-response.dto';
+import { MigrateGuestResponseDto } from '@/api/auth/dto/migrate-guest.dto';
+import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly jwt: JwtService,
     private readonly cacheService: CacheService,
+    @InjectRepository(UserUnavailableIngredient)
+    private readonly userUnavailableIngredientRepository: Repository<UserUnavailableIngredient>,
   ) {}
 
   /**
@@ -518,5 +530,108 @@ export class AuthService {
       }
       throw new CustomException(ERROR_CODES.LOGOUT_FAILED);
     }
+  }
+
+  /**
+   * 게스트 세션 생성
+   * 비로그인 사용자를 위한 임시 세션 ID 발급
+   */
+  public async createGuestSession(): Promise<CreateGuestSessionResponseDto> {
+    const guestSessionId = uuidv4();
+    const ttlDays = 7;
+    const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
+
+    const key = `guest:${guestSessionId}:session`;
+    await this.cacheService.set(key, 'valid', ttlMs);
+
+    const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+
+    return {
+      guestSessionId,
+      expiresAt,
+    };
+  }
+
+  /**
+   * 게스트 데이터를 유저 데이터로 마이그레이션
+   * 로그인 후 게스트 세션의 캐시 데이터를 유저 DB/캐시로 이관
+   */
+  @Transactional()
+  public async migrateGuestData(
+    userId: number,
+    guestSessionId: string,
+  ): Promise<MigrateGuestResponseDto> {
+    // 게스트 캐시 키
+    const guestUnavailableKey = `guest:${guestSessionId}:unavailable_ingredients`;
+    const guestConditionKey = `guest:${guestSessionId}:daily_condition`;
+    const guestOwnedKey = `guest:${guestSessionId}:owned_ingredients`;
+    const guestSessionKey = `guest:${guestSessionId}:session`;
+
+    // 게스트 세션 유효성 검증
+    const sessionValid = await this.cacheService.get(guestSessionKey);
+    if (!sessionValid) {
+      throw new BadRequestException(
+        '유효하지 않거나 만료된 게스트 세션입니다.',
+      );
+    }
+
+    // 유저 캐시 키
+    const userConditionKey = `user:${userId}:daily_condition`;
+    const userOwnedKey = `user:${userId}:owned_ingredients`;
+
+    let migratedCount = 0;
+
+    // 1. 못먹는 재료: 게스트 캐시 → 유저 DB
+    const cachedUnavailable = await this.cacheService.get(guestUnavailableKey);
+
+    if (
+      cachedUnavailable &&
+      Array.isArray(cachedUnavailable) &&
+      cachedUnavailable.length > 0
+    ) {
+      // 기존 유저의 못먹는 재료 삭제 후 새로 저장
+      await this.userUnavailableIngredientRepository.delete({ userId });
+
+      const entities = cachedUnavailable.map((ingredientId) => {
+        const entity = new UserUnavailableIngredient();
+        entity.userId = userId;
+        entity.ingredientId = ingredientId;
+        return entity;
+      });
+
+      await this.userUnavailableIngredientRepository.save(entities);
+      migratedCount = entities.length;
+    }
+
+    // 2. 컨디션: 게스트 캐시 → 유저 캐시
+    const cachedCondition = await this.cacheService.get(guestConditionKey);
+    if (cachedCondition) {
+      const ttl = 24 * 60 * 60 * 1000; // 24시간
+      await this.cacheService.set(userConditionKey, cachedCondition, ttl);
+    }
+
+    // 3. 보유 재료: 게스트 캐시 → 유저 캐시
+    const cachedOwned = await this.cacheService.get(guestOwnedKey);
+    if (cachedOwned) {
+      const ttl = 24 * 60 * 60 * 1000; // 24시간
+      await this.cacheService.set(userOwnedKey, cachedOwned, ttl);
+    }
+
+    // 4. 게스트 캐시 데이터 삭제
+    await Promise.all([
+      this.cacheService.del(guestUnavailableKey),
+      this.cacheService.del(guestConditionKey),
+      this.cacheService.del(guestOwnedKey),
+      this.cacheService.del(guestSessionKey),
+    ]);
+
+    this.logger.log(
+      `게스트 데이터 마이그레이션 완료: userId=${userId}, guestSessionId=${guestSessionId}, 못먹는 재료 ${migratedCount}개`,
+    );
+
+    return {
+      migratedUnavailableIngredientsCount: migratedCount,
+      success: true,
+    };
   }
 }

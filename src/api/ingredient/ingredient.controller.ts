@@ -11,17 +11,19 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiHeader,
   ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { IngredientService } from './ingredient.service';
 import { ApiSuccessResponse } from '@/common/decorators/api-success-response.decorator';
+import { GuestSession, Public } from '@/api/auth/decorators/auth.decorators';
 import { IngredientCategory } from '@/database/entity/ingredient-category.entity';
 import { CreateIngredientCategoryDtoTx } from './dto/create-ingredient-category.dto';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../user/enums/role.enum';
+import { RolesGuard } from '@/api/auth/guards/roles.guard';
+import { Roles } from '@/api/auth/decorators/roles.decorator';
+import { UserRole } from '@/api/user/enums/role.enum';
 import {
   GetIngredientCategoriesDto,
   GetIngredientCategoriesResponseDto,
@@ -44,15 +46,23 @@ import {
 
 @ApiTags('재료')
 @Controller({ path: 'ingredients', version: '1' })
+@UseGuards(JwtGuard)
 @ApiBearerAuth('Authorization')
 export class IngredientController {
   constructor(private readonly ingredientService: IngredientService) {}
 
   @Get()
-  @UseGuards(JwtGuard)
+  @Public()
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
   @ApiOperation({
     summary: '재료 목록 조회',
-    description: '모든 재료를 조회합니다.',
+    description:
+      '모든 재료를 조회합니다.\n\n' +
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
   })
   @ApiSuccessResponse('재료 목록 조회 성공', {
     type: 'object',
@@ -78,8 +88,10 @@ export class IngredientController {
   })
   async getIngredients(
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
   ): Promise<GetIngredientsResponseDto> {
-    return await this.ingredientService.getIngredients(req.user.sub);
+    const userId = req.user?.sub;
+    return await this.ingredientService.getIngredients(userId, guestSessionId);
   }
 
   @Get('admin')
@@ -100,10 +112,17 @@ export class IngredientController {
   }
 
   @Get('restricted')
-  @UseGuards(JwtGuard)
+  @Public()
+  @ApiHeader({
+    name: 'X-Guest-Session',
+    description: '게스트 세션 ID (비로그인 시 필수)',
+    required: false,
+  })
   @ApiOperation({
     summary: '못 먹는 음식 목록 조회 (온보딩)',
-    description: '사용자가 선택할 수 있는 제한 재료 목록을 반환합니다.',
+    description:
+      '사용자가 선택할 수 있는 제한 재료 목록을 반환합니다.\n\n' +
+      '비로그인 시 X-Guest-Session 헤더에 게스트 세션 ID를 담아 보내주세요.',
   })
   @ApiSuccessResponse('못 먹는 음식 조회 성공', {
     type: 'object',
@@ -127,8 +146,13 @@ export class IngredientController {
   })
   async getRestrictedIngredients(
     @Request() req: any,
+    @GuestSession() guestSessionId: string | undefined,
   ): Promise<GetRestrictedIngredientsResponseDto> {
-    return await this.ingredientService.getRestrictedIngredients(req.user.sub);
+    const userId = req.user?.sub;
+    return await this.ingredientService.getRestrictedIngredients(
+      userId,
+      guestSessionId,
+    );
   }
 
   @Get('categories')

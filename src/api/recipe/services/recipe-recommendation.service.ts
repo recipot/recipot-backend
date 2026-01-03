@@ -58,16 +58,39 @@ export class RecipeRecommendationService {
   /**
    * 캐시를 활용한 레시피 추천 (페이지네이션 지원)
    * 캐시 → DB → 재계산 순서로 추천 결과를 조회합니다.
+   *
+   * 못먹는 재료 조회 우선순위:
+   * 1. userId가 있으면 DB에서 조회
+   * 2. userId가 없고 guestSessionId가 있으면 캐시에서 조회
+   * 3. 둘 다 없으면 빈 배열 사용
+   *
+   * @param params 추천 요청 파라미터
+   * @param userId 로그인 사용자 ID (비로그인 시 undefined)
+   * @param guestSessionId 게스트 세션 ID (비로그인 시 사용, userId보다 우선순위 낮음)
    */
   async getRecipeRecommendationsWithCache(
     params: GetRecipeRecommendationRequestDto,
     userId?: number,
+    guestSessionId?: string,
   ): Promise<GetRecipeRecommendationResponseDto> {
     const { conditionId, pantryIds, page = 1, pageSize = 3 } = params;
 
-    const unavailableIds = userId
-      ? await this.getUserUnavailableIngredients(userId)
-      : [];
+    // 못먹는 재료 ID 조회: 로그인 시 DB, 게스트 시 캐시
+    let unavailableIds: number[] = [];
+    if (userId) {
+      unavailableIds = await this.getUserUnavailableIngredients(userId);
+    } else if (guestSessionId) {
+      const guestCacheKey = `guest:${guestSessionId}:unavailable_ingredients`;
+      const cachedIds =
+        await this.cacheLockService.getFromCache<number[]>(guestCacheKey);
+      if (cachedIds && Array.isArray(cachedIds)) {
+        // number 타입만 필터링 (손상된 캐시 데이터 방어)
+        unavailableIds = cachedIds.filter(
+          (id): id is number => typeof id === 'number',
+        );
+      }
+    }
+
     const key = cacheKey(conditionId, pantryIds, unavailableIds);
 
     // 1단계: Redis 캐시 조회

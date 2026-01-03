@@ -290,39 +290,62 @@ export class UserService {
   /**
    * 유저의 보유 재료 설문을 처리합니다.
    * 사용자가 선택한 재료 ID들을 캐시에 저장합니다.
+   * 비로그인 시 guestSessionId 기반으로 캐시에 저장
    */
   async saveUserIngredientsSurvey(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     surveyDto: SaveUserIngredientsSurveyDto,
   ): Promise<SaveUserIngredientsSurveyResponseDto> {
     try {
-      // 사용자 존재 여부 확인
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-      }
-
-      // 사용자가 선택한 재료 ID들
       const ingredientIds = surveyDto.ingredientIds;
-
-      // 캐시에 저장 (TTL: 일주일)
-      const cacheKey = `user:${userId}:owned_ingredients`;
       const ttl = 7 * 24 * 60 * 60; // 일주일 (초)
 
-      await this.cacheService.set(cacheKey, JSON.stringify(ingredientIds), ttl);
+      // 비로그인 유저 (guestSessionId만 있는 경우)
+      if (!userId && guestSessionId) {
+        const cacheKey = `guest:${guestSessionId}:owned_ingredients`;
+        await this.cacheService.set(
+          cacheKey,
+          JSON.stringify(ingredientIds),
+          ttl,
+        );
+        this.logger.log(
+          `Guest ${guestSessionId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+        );
+        return {
+          ingredientIds,
+          cacheTtl: ttl,
+          message: '보유 재료 설문이 완료되었습니다.',
+        };
+      }
 
-      this.logger.log(
-        `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
-      );
+      // 로그인 유저
+      if (userId) {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (!user) {
+          throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+        }
 
-      return {
-        ingredientIds: ingredientIds,
-        cacheTtl: ttl,
-        message: '보유 재료 설문이 완료되었습니다.',
-      };
+        const cacheKey = `user:${userId}:owned_ingredients`;
+        await this.cacheService.set(
+          cacheKey,
+          JSON.stringify(ingredientIds),
+          ttl,
+        );
+        this.logger.log(
+          `User ${userId} ingredients survey saved: ${ingredientIds.length} ingredients`,
+        );
+        return {
+          ingredientIds,
+          cacheTtl: ttl,
+          message: '보유 재료 설문이 완료되었습니다.',
+        };
+      }
+
+      // userId도 guestSessionId도 없는 경우
+      throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
     } catch (error) {
       this.logger.error('보유 재료 설문 저장 중 에러 발생', error);
       if (error instanceof CustomException) {
@@ -537,48 +560,67 @@ export class UserService {
   /**
    * Replace the user's unavailable-ingredients set with the provided list.
    * Strategy: delete all existing rows for the user, then bulk-insert the new list (if any).
+   * 비로그인 시 guestSessionId 기반으로 캐시에만 저장
    */
   async saveUnavailableIngredients(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     dto: SaveUnavailableIngredientsDto,
   ): Promise<SaveUnavailableIngredientsResponseDto> {
-    // 1) Verify user exists
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-
-    // 2) Deduplicate & coerce to positive integers
+    // Deduplicate & coerce to positive integers
     const ids = Array.from(new Set(dto.ingredientIds ?? []))
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
 
-    // 3) Atomic replace inside a transaction
-    await this.userRepository.manager.transaction(async (m) => {
-      // delete old rows
-      await m
-        .createQueryBuilder()
-        .delete()
-        .from(UserUnavailableIngredient) // entity
-        .where('user_id = :userId', { userId }) // raw column name is fine here
-        .execute();
+    // 비로그인 유저 (guestSessionId만 있는 경우)
+    if (!userId && guestSessionId) {
+      const cacheKey = `guest:${guestSessionId}:unavailable_ingredients`;
+      const ttl = 7 * 24 * 60 * 60 * 1000; // 7일 (밀리초)
+      await this.cacheService.set(cacheKey, JSON.stringify(ids), ttl);
+      this.logger.log(
+        `Guest ${guestSessionId} unavailable ingredients saved to cache: ${ids.length} items`,
+      );
+      return { savedCount: ids.length };
+    }
 
-      // bulk insert new rows (if any)
-      if (ids.length > 0) {
+    // 로그인 유저
+    if (userId) {
+      // 1) Verify user exists
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+
+      // 2) Atomic replace inside a transaction
+      await this.userRepository.manager.transaction(async (m) => {
+        // delete old rows
         await m
           .createQueryBuilder()
-          .insert()
-          .into(UserUnavailableIngredient) // entity
-          .values(
-            ids.map((ingredientId) => ({
-              userId,
-              ingredientId,
-            })),
-          )
-          .orIgnore() // MySQL/MariaDB duplicate-safe (requires UNIQUE(user_id, ingredient_id))
+          .delete()
+          .from(UserUnavailableIngredient) // entity
+          .where('user_id = :userId', { userId }) // raw column name is fine here
           .execute();
-      }
-    });
 
-    return { savedCount: ids.length };
+        // bulk insert new rows (if any)
+        if (ids.length > 0) {
+          await m
+            .createQueryBuilder()
+            .insert()
+            .into(UserUnavailableIngredient) // entity
+            .values(
+              ids.map((ingredientId) => ({
+                userId,
+                ingredientId,
+              })),
+            )
+            .orIgnore() // MySQL/MariaDB duplicate-safe (requires UNIQUE(user_id, ingredient_id))
+            .execute();
+        }
+      });
+
+      return { savedCount: ids.length };
+    }
+
+    // userId도 guestSessionId도 없는 경우
+    throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
   }
 
   async getCompletedCount(userId: number): Promise<number> {
@@ -654,53 +696,72 @@ export class UserService {
 
   /**
    * 유저의 컨디션을 저장
+   * 비로그인 시 guestSessionId 기반으로 캐시에만 저장
    */
   async saveUserCondition(
-    userId: number,
+    userId: number | undefined,
+    guestSessionId: string | undefined,
     dto: SaveUserConditionDto,
   ): Promise<SaveUserConditionResponseDto> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-      if (!user) {
-        throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
-      }
       const { conditionId, isRecommendationStarted } = dto;
-      const cacheKey = `user:${userId}:daily_condition`;
       const ttl = 24 * 60 * 60 * 1000; // 24시간 (밀리초)
       const cachedData = {
         conditionId,
         savedAt: new Date().toISOString(),
       };
-      await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
-      this.logger.log(
-        `User ${userId} condition saved to cache: conditionId=${conditionId}`,
-      );
-      if (isRecommendationStarted) {
-        let timeSlot: TimeSlot;
-        const currentHour = new Date().getHours();
-        if (currentHour >= 5 && currentHour < 12) {
-          timeSlot = TimeSlot.MORNING;
-        } else if (currentHour >= 12 && currentHour < 18) {
-          timeSlot = TimeSlot.LUNCH;
-        } else {
-          timeSlot = TimeSlot.DINNER;
-        }
-        const userDailyCondition = this.userDailyConditionsRepository.create({
-          userId,
-          conditionId,
-          date: new Date(),
-          timeSlot,
-        });
-        await this.userDailyConditionsRepository.save(userDailyCondition);
+
+      // 비로그인 유저 (guestSessionId만 있는 경우)
+      if (!userId && guestSessionId) {
+        const cacheKey = `guest:${guestSessionId}:daily_condition`;
+        await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
         this.logger.log(
-          `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+          `Guest ${guestSessionId} condition saved to cache: conditionId=${conditionId}`,
         );
+        return { conditionId };
       }
-      return {
-        conditionId: conditionId,
-      };
+
+      // 로그인 유저
+      if (userId) {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (!user) {
+          throw new CustomException(ERROR_CODES.USER_NOT_FOUND);
+        }
+
+        const cacheKey = `user:${userId}:daily_condition`;
+        await this.cacheService.set(cacheKey, JSON.stringify(cachedData), ttl);
+        this.logger.log(
+          `User ${userId} condition saved to cache: conditionId=${conditionId}`,
+        );
+
+        if (isRecommendationStarted) {
+          let timeSlot: TimeSlot;
+          const currentHour = new Date().getHours();
+          if (currentHour >= 5 && currentHour < 12) {
+            timeSlot = TimeSlot.MORNING;
+          } else if (currentHour >= 12 && currentHour < 18) {
+            timeSlot = TimeSlot.LUNCH;
+          } else {
+            timeSlot = TimeSlot.DINNER;
+          }
+          const userDailyCondition = this.userDailyConditionsRepository.create({
+            userId,
+            conditionId,
+            date: new Date(),
+            timeSlot,
+          });
+          await this.userDailyConditionsRepository.save(userDailyCondition);
+          this.logger.log(
+            `User ${userId} condition saved to database: conditionId=${conditionId}, timeSlot=${timeSlot}`,
+          );
+        }
+        return { conditionId };
+      }
+
+      // userId도 guestSessionId도 없는 경우
+      throw new CustomException(ERROR_CODES.AUTH_REQUIRED);
     } catch (error) {
       this.logger.error('사용자 컨디션 저장 중 에러 발생', error);
       if (error instanceof CustomException) {
