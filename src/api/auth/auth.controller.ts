@@ -23,6 +23,10 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from '@/api/auth/decorators/auth.decorators';
 import { CreateGuestSessionResponseDto } from '@/api/auth/dto/create-guest-session-response.dto';
+import {
+  MigrateGuestDto,
+  MigrateGuestResponseDto,
+} from '@/api/auth/dto/migrate-guest.dto';
 import { JwtToken } from '@/api/auth/dto/jwt-token.dto';
 import { RefreshTokenRequestDto } from '@/api/auth/dto/refresh-token-request.dto';
 import { TokenVerificationRequestDto } from '@/api/auth/dto/token-verification-request.dto';
@@ -279,5 +283,27 @@ export class AuthController {
   })
   async createGuestSession(): Promise<CreateGuestSessionResponseDto> {
     return await this.authService.createGuestSession();
+  }
+
+  @Post('migrate-guest')
+  @ApiOperation({
+    summary: '게스트 데이터 마이그레이션',
+    description:
+      '로그인 후 게스트 세션에 저장된 데이터를 유저 계정으로 이관합니다.\n\n' +
+      '- 못먹는 재료: 유저 DB에 저장\n' +
+      '- 컨디션/보유재료: 유저 캐시로 이관\n' +
+      '- 마이그레이션 후 게스트 세션 데이터는 삭제됩니다.',
+  })
+  @ApiBody({ type: MigrateGuestDto })
+  @ApiSuccessResponse('마이그레이션 성공', {
+    type: MigrateGuestResponseDto,
+  })
+  @ApiErrorResponse(401, ERROR_CODES.AUTH_REQUIRED)
+  async migrateGuestData(
+    @Req() req: any,
+    @Body() dto: MigrateGuestDto,
+  ): Promise<MigrateGuestResponseDto> {
+    const userId = parseInt(req.user.sub);
+    return await this.authService.migrateGuestData(userId, dto.guestSessionId);
   }
 }

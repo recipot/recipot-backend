@@ -1,5 +1,6 @@
 import { CacheModule } from '@/common/cache/cache.module';
 import { User } from '@/database/entity/user.entity';
+import { UserUnavailableIngredient } from '@/database/entity/user-unavailable-ingredient.entity';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -24,7 +25,7 @@ import { JwtGuard } from './guards/auth.guard';
       }),
       inject: [],
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, UserUnavailableIngredient]),
     CacheModule,
   ],
   controllers: [AuthController],
