@@ -541,7 +541,7 @@ export class AuthService {
     const ttlDays = 7;
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
-    const key = `${CONSTANTS.GUEST_SESSION_PREFIX}:${guestSessionId}`;
+    const key = `guest:${guestSessionId}:session`;
     await this.cacheService.set(key, 'valid', ttlMs);
 
     const expiresAt = new Date(Date.now() + ttlMs).toISOString();
@@ -565,7 +565,7 @@ export class AuthService {
     const guestUnavailableKey = `guest:${guestSessionId}:unavailable_ingredients`;
     const guestConditionKey = `guest:${guestSessionId}:daily_condition`;
     const guestOwnedKey = `guest:${guestSessionId}:owned_ingredients`;
-    const guestSessionKey = `${CONSTANTS.GUEST_SESSION_PREFIX}:${guestSessionId}`;
+    const guestSessionKey = `guest:${guestSessionId}:session`;
 
     // 게스트 세션 유효성 검증
     const sessionValid = await this.cacheService.get(guestSessionKey);
